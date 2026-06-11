@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IRB Tracker</title>
-<meta property="og:title" content="IRB Tracker">
-<meta name="twitter:title" content="IRB Tracker">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:#f7f7f5;color:#37352f;min-height:100vh}
@@ -38,7 +36,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans
 .chevron{color:#999;font-size:11px;transition:transform .2s;display:inline-block}
 .chevron.open{transform:rotate(90deg)}
 .table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px;min-width:1180px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:1380px}
 th{padding:7px 10px;text-align:left;font-weight:500;color:#787774;border-bottom:1px solid #e9e9e7;white-space:nowrap;font-size:11px;background:#fafafa}
 td{padding:7px 10px;border-bottom:1px solid #f0f0ef;vertical-align:middle}
 tr:last-child td{border-bottom:none}
@@ -55,7 +53,7 @@ tr:hover td{background:#f7f7f5}
 .ver-input:focus{border-color:#0f7b6c}
 .text-input{font-size:12px;border:none;background:transparent;color:#37352f;width:100%;font-family:inherit;outline:none;padding:0;min-width:70px}
 .text-input::placeholder{color:#c7c7c5}
-.tmf-input{font-size:11px;border:1px solid #e9e9e7;border-radius:4px;padding:3px 6px;color:#444;background:#f7f7f5;width:100%;font-family:'Courier New',monospace;outline:none;min-width:360px}
+.tmf-input{font-size:11px;border:1px solid #e9e9e7;border-radius:4px;padding:3px 6px;color:#444;background:#f7f7f5;width:100%;font-family:'Courier New',monospace;outline:none;min-width:260px}
 .tmf-input:focus{border-color:#0f7b6c;background:#fff}
 .tmf-input::placeholder{color:#bbb}
 .dtype{font-size:11px;padding:1px 6px;border-radius:4px;font-weight:500;white-space:nowrap}
@@ -115,6 +113,10 @@ tr:hover td{background:#f7f7f5}
 .protocol-label{font-size:12px;color:#787774;font-weight:600}
 .protocol-name-input{font-size:13px;border:1px solid #e9e9e7;border-radius:6px;padding:6px 10px;min-width:280px;max-width:520px;flex:1;background:#fff;color:#37352f;outline:none;font-family:inherit}
 .protocol-name-input:focus{border-color:#0f7b6c}
+.protocol-select{font-size:13px;border:1px solid #e9e9e7;border-radius:6px;padding:6px 10px;min-width:150px;background:#fff;color:#37352f;outline:none;font-family:inherit}
+.protocol-select:focus{border-color:#0f7b6c}
+.protocol-name-input.small{min-width:170px;max-width:260px;flex:0 1 220px}
+
 .protocol-tabs-wrap{background:#fff;border-bottom:1px solid #e9e9e7;padding:0 2rem;display:flex;overflow-x:auto;gap:0}
 .protocol-tab{padding:9px 16px;font-size:13px;font-weight:600;color:#787774;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
 .protocol-tab:hover{color:#37352f}
@@ -147,8 +149,22 @@ tr:hover td{background:#f7f7f5}
   <div class="progress-bar"><div class="progress-fill" id="globalProg"></div></div>
 </div>
 <div class="protocol-bar">
-  <span class="protocol-label">Protocol Name:</span>
+  <span class="protocol-label">Contract No.</span>
+  <select class="protocol-select" id="contractSelect" onchange="applyProjectMaster(this.value)">
+    <option value="">직접 입력</option>
+  </select>
+  <span class="protocol-label">Protocol No.</span>
   <input class="protocol-name-input" id="protocolNameInput" placeholder="예: CSL654-5017 / PG-102-P2-01" onchange="renameProtocol(this.value)">
+  <span class="protocol-label">Project</span>
+  <input class="protocol-name-input small" id="projectNameInput" placeholder="예: Afstyla / Tavneos" onchange="setProjectField('projectName',this.value)">
+  <span class="protocol-label">Sponsor</span>
+  <input class="protocol-name-input small" id="sponsorInput" placeholder="예: CSL Korea" onchange="setProjectField('sponsor',this.value)">
+  <span class="protocol-label">Study Type</span>
+  <select class="protocol-select" id="studyTypeSelect" onchange="setProjectField('studyType',this.value); refreshInitialSectionsForCurrentProtocol();">
+    <option value="PMS">PMS</option>
+    <option value="임상시험">임상시험</option>
+    <option value="기타">기타</option>
+  </select>
   <button class="btn" onclick="openProtocolModal()">+ Protocol</button>
   <button class="btn btn-danger" onclick="deleteProtocol()">Protocol 삭제</button>
 </div>
@@ -173,7 +189,7 @@ tr:hover td{background:#f7f7f5}
 <div class="modal-bg" id="protocolModal">
   <div class="modal">
     <h3>Protocol 추가</h3>
-    <input id="protocolNameAddInput" placeholder="Protocol Name (예: CSL654-5017)">
+    <input id="protocolNameAddInput" placeholder="Protocol No. 또는 Project Name">
     <div class="modal-btns">
       <button class="btn" onclick="closeProtocolModal()">취소</button>
       <button class="btn btn-primary" onclick="addProtocol()">추가</button>
@@ -182,18 +198,53 @@ tr:hover td{background:#f7f7f5}
 </div>
 
 <script>
+
+// ── Project Master ───────────────────────────────────────────────
+const PROJECT_MASTER = [
+  {contractNo:'2402CBR03', projectName:'Afstyla (앱스틸라)', protocolNo:'CSL627_5005', sponsor:'CSL Korea', studyType:'PMS'},
+  {contractNo:'2402CVF01', projectName:'Tavneos (타브네오스)', protocolNo:'CS-AVA-2022-051', sponsor:'CSL Korea', studyType:'PMS'},
+  {contractNo:'2407CBR04', projectName:'Idelvion', protocolNo:'CSL654-5017', sponsor:'CSL Korea', studyType:'PMS'},
+  {contractNo:'2410PRO03', projectName:'PG-102', protocolNo:'PG-102-P2-01', sponsor:'프로젠(ProGen)', studyType:'임상시험'},
+  {contractNo:'2505BIS03', projectName:'CartiLife 재심사', protocolNo:'BS-CTL-PMS', sponsor:'바이오솔루션', studyType:'PMS'},
+];
+
+function pmsInitialDocs(){
+  return [
+    {name:'초기심의 신청서', dtype:'app', needVer:false},
+    {name:'연구계획서', dtype:'doc', needVer:true},
+    {name:'제품설명서', dtype:'doc', needVer:true},
+    {name:'첨부문서', dtype:'doc', needVer:true},
+    {name:'품목허가증', dtype:'doc', needVer:false},
+    {name:'연구비 산정 내역서', dtype:'doc', needVer:false},
+    {name:'동의서', dtype:'consent', needVer:true},
+    {name:'초기심의 통지서', dtype:'notice', needVer:false},
+  ];
+}
+
+function clinicalInitialDocs(){
+  return [
+    {name:'초기심의 신청서', dtype:'app', needVer:false},
+    {name:'Protocol', dtype:'doc', needVer:true},
+    {name:'IB', dtype:'doc', needVer:true},
+    {name:'ICF', dtype:'consent', needVer:true},
+    {name:'CRF', dtype:'doc', needVer:true},
+    {name:'모집공고', dtype:'doc', needVer:false},
+    {name:'연구비 산정 내역서', dtype:'doc', needVer:false},
+    {name:'초기심의 통지서', dtype:'notice', needVer:false},
+  ];
+}
+
+function getInitialDocsForCurrentProtocol(){
+  const cur=getCurProtocol?.();
+  const type=cur?.studyType || 'PMS';
+  if(type==='임상시험') return clinicalInitialDocs();
+  if(type==='PMS') return pmsInitialDocs();
+  return pmsInitialDocs();
+}
+
 // ── 섹션 템플릿 ─────────────────────────────────────────────────
 const TMPL = {
-  initial: { emoji:'🗂️', name:'초기심의', docs:[
-    {name:'초기심의 신청서',   dtype:'app',     needVer:false},
-    {name:'연구계획서',        dtype:'doc',     needVer:true},
-    {name:'동의서',            dtype:'consent', needVer:true},
-    {name:'연구자 CV',         dtype:'doc',     needVer:false},
-    {name:'GCP 이수증',        dtype:'doc',     needVer:false},
-    {name:'제품설명서',        dtype:'doc',     needVer:true},
-    {name:'첨부문서',          dtype:'doc',     needVer:true},
-    {name:'초기심의 통지서',   dtype:'notice',  needVer:false},
-  ]},
+  initial: { emoji:'🗂️', name:'초기심의', docs:[]},
   change: { emoji:'🔄', name:'변경보고', docs:[
     {name:'변경보고 신청서',   dtype:'app',     needVer:false},
     {name:'변경보고 의뢰서',   dtype:'req',     needVer:false},
@@ -201,54 +252,42 @@ const TMPL = {
     {name:'동의서 (변경)',     dtype:'consent', needVer:true},
     {name:'제품설명서 (변경)', dtype:'doc',     needVer:true},
     {name:'첨부문서 (변경)',   dtype:'doc',     needVer:true},
-    {name:'변경보고 통지서',   dtype:'notice',  needVer:false},
+    {name:'변경보고 승인서',   dtype:'doc',     needVer:false},
   ]},
   interim: { emoji:'📊', name:'중간보고', docs:[
     {name:'중간보고서 신청서', dtype:'app', needVer:false},
     {name:'중간보고서 의뢰서', dtype:'req', needVer:false},
-    {name:'중간보고서',   dtype:'doc', needVer:false},
+    {name:'중간보고서 본문',   dtype:'doc', needVer:false},
     {name:'중간보고 접수증',   dtype:'doc', needVer:false},
   ]},
   close: { emoji:'🔚', name:'종료보고', docs:[
     {name:'종료보고 신청서',   dtype:'app', needVer:false},
     {name:'종료보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'종료보고서',   dtype:'doc', needVer:false},
+    {name:'종료보고서 본문',   dtype:'doc', needVer:false},
     {name:'종료보고 접수증',   dtype:'doc', needVer:false},
   ]},
   result: { emoji:'📑', name:'결과보고', docs:[
     {name:'결과보고 신청서',   dtype:'app', needVer:false},
     {name:'결과보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'결과보고서',   dtype:'doc', needVer:false},
+    {name:'결과보고서 본문',   dtype:'doc', needVer:false},
     {name:'결과보고 접수증',   dtype:'doc', needVer:false},
   ]},
   violation: { emoji:'⚠️', name:'위반보고', docs:[
     {name:'위반보고 신청서',   dtype:'app', needVer:false},
     {name:'위반보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'위반보고서',   dtype:'doc', needVer:false},
+    {name:'위반보고서 본문',   dtype:'doc', needVer:false},
     {name:'위반보고 접수증',   dtype:'doc', needVer:false},
   ]},
   problem: { emoji:'🚨', name:'문제보고', docs:[
     {name:'문제보고 신청서',   dtype:'app', needVer:false},
     {name:'문제보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'문제보고서',   dtype:'doc', needVer:false},
+    {name:'문제보고서 본문',   dtype:'doc', needVer:false},
     {name:'문제보고 접수증',   dtype:'doc', needVer:false},
-  ]},
-  supplement: { emoji:'📝', name:'보완답변', docs:[
-    {name:'보완답변 신청서',   dtype:'app', needVer:false},
-    {name:'보완답변 의뢰서',   dtype:'req', needVer:false},
-    {name:'보완답변서',        dtype:'doc', needVer:false},
-    {name:'보완답변 통지서',   dtype:'notice', needVer:false},
-  ]},
-  misc: { emoji:'📌', name:'기타보고', docs:[
-    {name:'기타보고 신청서',   dtype:'app', needVer:false},
-    {name:'기타보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'기타보고서',   dtype:'doc', needVer:false},
-    {name:'기타보고 통지서',   dtype:'notice', needVer:false},
   ]},
   consent: { emoji:'✍️', name:'동의서 관리', docs:[
     {name:'재동의 면제 승인서',      dtype:'consent', needVer:false},
-    {name:'동의서 Clean File', dtype:'consent', needVer:true},
-    {name:'동의서 IRB Stamp', dtype:'consent', needVer:false},
+    {name:'버전별 동의서 원본 보관', dtype:'consent', needVer:true},
+    {name:'대상자별 동의 완료 확인', dtype:'consent', needVer:false},
   ]},
 };
 
@@ -270,28 +309,6 @@ const DTYPE_INFO = {
   minutes:{label:'회의록',   cls:'dt-minutes'},
   custom: {label:'추가',     cls:'dt-custom'},
 };
-
-function normalizeDocName(name){
-  return (name||'')
-    .replace(/\s*본문/g, '')
-    .replace('버전별 동의서 원본 보관', '동의서 Clean File')
-    .replace('대상자별 동의 완료 확인', '동의서 IRB Stamp');
-}
-
-function normalizeRowsInSections(sectionMap){
-  Object.values(sectionMap||{}).forEach(secList=>{
-    (secList||[]).forEach(sec=>{
-      (sec.rows||[]).forEach(row=>{
-        row.name = normalizeDocName(row.name);
-      });
-    });
-  });
-}
-
-function normalizeAllData(){
-  normalizeRowsInSections(sections);
-  Object.values(protocolData||{}).forEach(pdata=>normalizeRowsInSections(pdata.sections));
-}
 
 // ── state (v11: protocol → sites/sections) ─────────────────────────
 // protocols: [{id, name}]
@@ -317,6 +334,11 @@ function syncCurrentProtocolData(){
 function bindCurrentProtocol(){
   const p=getCurProtocol();
   if(!p){ sites=[]; sections={}; curSite=null; return; }
+  if(p.contractNo===undefined) p.contractNo='';
+  if(p.projectName===undefined) p.projectName='';
+  if(p.protocolNo===undefined) p.protocolNo=p.name||'';
+  if(p.sponsor===undefined) p.sponsor='';
+  if(p.studyType===undefined) p.studyType='PMS';
   if(!protocolData[p.id]) protocolData[p.id]={sites:[],sections:{}};
   sites=protocolData[p.id].sites||[];
   sections=protocolData[p.id].sections||{};
@@ -326,7 +348,7 @@ function bindCurrentProtocol(){
 }
 function ensureDefaultProtocol(name='Protocol 1'){
   const id=makeId('prt');
-  protocols=[{id,name}];
+  protocols=[{id,name,contractNo:'',projectName:'',protocolNo:name,sponsor:'',studyType:'PMS'}];
   curProtocolId=id;
   protocolData[id]={sites,sections};
 }
@@ -363,7 +385,6 @@ function load(){
       ensureDefaultProtocol('Protocol 1');
       bindCurrentProtocol();
     }
-    normalizeAllData();
     if(!sites.length){
       sites=[{code:'030',name:'건국대학교병원'},{code:'042',name:'한림대성심병원'}];
       sites.forEach(s=>initSite(s.code));
@@ -405,7 +426,6 @@ let cloudSaveTimer=null;
 const CLOUD_ID='main';
 
 function saveData(){
-  normalizeAllData();
   syncCurrentProtocolData();
   localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
   // 기존 버전과 호환되도록 현재 프로토콜 데이터도 v6 키에 백업
@@ -430,6 +450,31 @@ async function saveToCloud(){
   if(error) console.error('Supabase 저장 실패:',error);
 }
 
+function countProtocolRows(data){
+  if(!data) return 0;
+  let count=0;
+  if(data.protocolData){
+    Object.values(data.protocolData||{}).forEach(pdata=>{
+      (pdata.sites||[]).forEach(site=>{
+        count += 1;
+        ((pdata.sections||{})[site.code]||[]).forEach(sec=>{
+          count += 1;
+          count += (sec.rows||[]).length;
+        });
+      });
+    });
+  } else {
+    (data.sites||[]).forEach(site=>{
+      count += 1;
+      ((data.sections||{})[site.code]||[]).forEach(sec=>{
+        count += 1;
+        count += (sec.rows||[]).length;
+      });
+    });
+  }
+  return count;
+}
+
 async function syncFromCloudAfterInit(){
   if(!window.supabaseClient) return;
   const {data,error}=await window.supabaseClient
@@ -439,6 +484,16 @@ async function syncFromCloudAfterInit(){
     .single();
   if(error){ console.warn('Supabase 불러오기 실패 또는 데이터 없음:',error); return; }
   if(data && data.data){
+    const localSnapshot={protocols,protocolData,curProtocolId,sites,sections};
+    const localCount=countProtocolRows({protocolData,sites,sections});
+    const cloudCount=countProtocolRows(data.data);
+
+    // 빈 클라우드 데이터가 기존 로컬 데이터를 덮어쓰지 않도록 보호
+    if(cloudCount===0 && localCount>0){
+      console.warn('Supabase 데이터가 비어 있어 로컬 데이터를 유지합니다.');
+      return;
+    }
+
     if(data.data.protocols){
       protocols=data.data.protocols||protocols;
       protocolData=data.data.protocolData||protocolData;
@@ -451,7 +506,6 @@ async function syncFromCloudAfterInit(){
       ensureDefaultProtocol('Protocol 1');
       bindCurrentProtocol();
     }
-    normalizeAllData();
     localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
     localStorage.setItem('irb-v6',JSON.stringify({sites,sections}));
     render();
@@ -478,10 +532,11 @@ function addSectionToSite(code, type, customTitle=null){
     const ord=['1차','2차','3차','4차','5차','6차','7차','8차'][cnt-1]||(cnt+'차');
     const noOrd=['consent'];
     title = noOrd.includes(type)?`${t.emoji} ${t.name}`:`${t.emoji} ${ord} ${t.name}`;
-    rows = t.docs.map(makeRow);
+    const docs = type==='initial' ? getInitialDocsForCurrentProtocol() : t.docs;
+    rows = docs.map(makeRow);
   }
   const id='sec_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-  sections[code].push({id, type, title, meta:{mailSentDate:'',piSubmitDate:'',receiptDate:'',approvalDate:'',noticeDate:''}, rows});
+  sections[code].push({id, type, title, meta:{approvalDate:'',noticeDate:''}, rows});
 }
 
 function getSec(code,secId){ return (sections[code]||[]).find(s=>s.id===secId); }
@@ -497,12 +552,23 @@ function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats
 function renderProtocolTabs(){
   const wrap=document.getElementById('protocolTabsWrap');
   if(wrap){
-    wrap.innerHTML=protocols.map(p=>`<div class="protocol-tab${p.id===curProtocolId?' active':''}" onclick="switchProtocol('${p.id}')">${esc(p.name||'Protocol')}</div>`).join('')+
+    wrap.innerHTML=protocols.map(p=>`<div class="protocol-tab${p.id===curProtocolId?' active':''}" onclick="switchProtocol('${p.id}')">${esc((p.contractNo? '['+p.contractNo+'] ':'')+(p.protocolNo||p.projectName||p.name||'Protocol'))}</div>`).join('')+
       `<div class="protocol-add" onclick="openProtocolModal()">+</div>`;
   }
-  const input=document.getElementById('protocolNameInput');
   const cur=getCurProtocol();
-  if(input) input.value=cur?.name||'';
+  const contractSelect=document.getElementById('contractSelect');
+  if(contractSelect){
+    contractSelect.innerHTML='<option value="">직접 입력</option>'+PROJECT_MASTER.map(p=>`<option value="${p.contractNo}">${p.contractNo}</option>`).join('');
+    contractSelect.value=cur?.contractNo||'';
+  }
+  const input=document.getElementById('protocolNameInput');
+  if(input) input.value=cur?.protocolNo||cur?.name||'';
+  const projectInput=document.getElementById('projectNameInput');
+  if(projectInput) projectInput.value=cur?.projectName||'';
+  const sponsorInput=document.getElementById('sponsorInput');
+  if(sponsorInput) sponsorInput.value=cur?.sponsor||'';
+  const studyTypeSelect=document.getElementById('studyTypeSelect');
+  if(studyTypeSelect) studyTypeSelect.value=cur?.studyType||'PMS';
 }
 
 function switchProtocol(id){
@@ -518,9 +584,62 @@ function switchProtocol(id){
 function renameProtocol(name){
   const cur=getCurProtocol();
   if(!cur) return;
-  cur.name=(name||'').trim()||'Untitled Protocol';
+  cur.protocolNo=(name||'').trim();
+  cur.name=cur.protocolNo || cur.projectName || cur.contractNo || 'Untitled Protocol';
   saveData();
   renderProtocolTabs();
+}
+
+function setProjectField(field,value){
+  const cur=getCurProtocol();
+  if(!cur) return;
+  cur[field]=(value||'').trim();
+  cur.name=cur.protocolNo || cur.projectName || cur.contractNo || 'Untitled Protocol';
+  saveData();
+  renderProtocolTabs();
+}
+
+function applyProjectMaster(contractNo){
+  const cur=getCurProtocol();
+  if(!cur) return;
+  const master=PROJECT_MASTER.find(p=>p.contractNo===contractNo);
+  if(!master){
+    cur.contractNo='';
+    saveData();
+    renderProtocolTabs();
+    return;
+  }
+  cur.contractNo=master.contractNo;
+  cur.projectName=master.projectName;
+  cur.protocolNo=master.protocolNo;
+  cur.sponsor=master.sponsor;
+  cur.studyType=master.studyType;
+  cur.name=master.protocolNo;
+  refreshInitialSectionsForCurrentProtocol();
+  saveData();
+  render();
+}
+
+function normalizeDocNameForCompare(name){
+  return (name||'').replace(/\s+/g,'').replace(/본문/g,'').trim();
+}
+function refreshInitialSectionsForCurrentProtocol(){
+  // 기존 기관/섹션/문서 입력값은 절대 삭제하지 않고, 필요한 초기심의 문서만 뒤에 추가한다.
+  const desiredDocs=getInitialDocsForCurrentProtocol();
+  Object.values(sections||{}).forEach(secList=>{
+    (secList||[]).forEach(sec=>{
+      if(sec.type==='initial' && Array.isArray(sec.rows)){
+        const existingKeys=new Set(sec.rows.map(r=>normalizeDocNameForCompare(r.name)));
+        desiredDocs.forEach(doc=>{
+          const key=normalizeDocNameForCompare(doc.name);
+          if(!existingKeys.has(key)){
+            sec.rows.push(makeRow(doc));
+            existingKeys.add(key);
+          }
+        });
+      }
+    });
+  });
 }
 
 function openProtocolModal(){
@@ -536,7 +655,7 @@ function addProtocol(){
   if(!name){alert('Protocol Name을 입력해주세요');return;}
   syncCurrentProtocolData();
   const id=makeId('prt');
-  protocols.push({id,name});
+  protocols.push({id,name,contractNo:'',projectName:'',protocolNo:name,sponsor:'',studyType:'PMS'});
   protocolData[id]={sites:[],sections:{}};
   curProtocolId=id;
   bindCurrentProtocol();
@@ -612,19 +731,22 @@ function renderSection(code, sec){
     ${isOpen?`<div class="table-wrap"><table>
       <thead><tr>
         <th style="width:78px">구분</th>
-        <th style="min-width:160px">문서명</th>
-        <th style="min-width:430px">TMF 파일명</th>
+        <th style="min-width:140px">문서명</th>
+        <th style="min-width:330px">TMF 파일명</th>
         <th style="width:62px">버전</th>
         <th style="width:116px">Effective Date</th>
         <th style="width:76px">상태</th>
-        <th style="min-width:260px">진행일자</th>
-        <th style="min-width:100px">비고</th>
+        <th style="min-width:210px">승인서 날짜</th>
+        <th style="width:116px">제출일</th>
+        <th style="width:116px">접수일</th>
+        <th style="width:116px">승인일</th>
+        <th style="min-width:80px">비고</th>
         <th style="width:22px"></th>
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
         ${isAddingHere?addDocRowHtml():''}
-        ${searchTerm&&!anyMatch?`<tr><td colspan="9" class="no-match">검색 결과 없음</td></tr>`:''}
+        ${searchTerm&&!anyMatch?`<tr><td colspan="12" class="no-match">검색 결과 없음</td></tr>`:''}
       </tbody>
     </table></div>`:''}
   </div>`;
@@ -649,15 +771,10 @@ function matchSearch(name){
 }
 
 function ensureSecMeta(sec){
-  if(!sec.meta) sec.meta={};
-  const meta=sec.meta;
-  // 기존 데이터 호환
-  if(sec.approvalDate&&!meta.approvalDate) meta.approvalDate=sec.approvalDate;
-  if(sec.noticeDate&&!meta.noticeDate) meta.noticeDate=sec.noticeDate;
-  ['mailSentDate','piSubmitDate','receiptDate','approvalDate','noticeDate'].forEach(k=>{
-    if(typeof meta[k] === 'undefined') meta[k]='';
-  });
-  return meta;
+  if(!sec.meta) sec.meta={approvalDate:'',noticeDate:''};
+  if(sec.approvalDate&&!sec.meta.approvalDate) sec.meta.approvalDate=sec.approvalDate;
+  if(sec.noticeDate&&!sec.meta.noticeDate) sec.meta.noticeDate=sec.noticeDate;
+  return sec.meta;
 }
 function setSecMeta(code,secId,field,val){
   const sec=getSec(code,secId);
@@ -670,27 +787,17 @@ function setSecMeta(code,secId,field,val){
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
   return `<div class="sec-meta">
-    <div class="meta-field"><span>메일 송부일</span><input type="date" value="${meta.mailSentDate||''}" onchange="setSecMeta('${code}','${sec.id}','mailSentDate',this.value)"></div>
-    <div class="meta-field"><span>PI 제출일</span><input type="date" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)"></div>
-    <div class="meta-field"><span>접수일</span><input type="date" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
     <div class="meta-field"><span>IRB 승인일</span><input type="date" value="${meta.approvalDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalDate',this.value)"></div>
     <div class="meta-field"><span>통지일</span><input type="date" value="${meta.noticeDate||''}" onchange="setSecMeta('${code}','${sec.id}','noticeDate',this.value)"></div>
-    <div style="font-size:11px;color:#999">※ 신청서 행에는 메일 송부일/PI 제출일/접수일, 통지서 행에는 IRB 승인일/통지일이 자동 표시됩니다.</div>
+    <div style="font-size:11px;color:#999">※ 승인서 행에는 위 날짜가 자동 표시됩니다.</div>
   </div>`;
 }
-function rowWorkflowHtml(sec,row){
+function rowDateLinkHtml(sec,row){
   const name=(row.name||'');
-  const dtype=(row.dtype||'');
+  const shouldShow=name.includes('승인서') || name.toLowerCase().includes('approval');
+  if(!shouldShow) return na();
   const meta=ensureSecMeta(sec);
-  const isApplication=dtype==='app' || name.includes('신청서');
-  const isNotice=dtype==='notice' || name.includes('통지서') || name.toLowerCase().includes('notice');
-  if(isApplication){
-    return `<div class="linked-dates"><span class="linked-date">메일 <b>${meta.mailSentDate||'-'}</b></span><span class="linked-date">PI <b>${meta.piSubmitDate||'-'}</b></span><span class="linked-date">접수 <b>${meta.receiptDate||'-'}</b></span></div>`;
-  }
-  if(isNotice){
-    return `<div class="linked-dates"><span class="linked-date">승인 <b>${meta.approvalDate||'-'}</b></span><span class="linked-date">통지 <b>${meta.noticeDate||'-'}</b></span></div>`;
-  }
-  return na();
+  return `<div class="linked-dates"><span class="linked-date">승인일 <b>${meta.approvalDate||'-'}</b></span><span class="linked-date">통지일 <b>${meta.noticeDate||'-'}</b></span></div>`;
 }
 
 function rowHtml(code,secId,idx,row,total){
@@ -717,7 +824,10 @@ function rowHtml(code,secId,idx,row,total){
     <td><select class="sel ${stCls(row.status)}" onchange="onSelChange(this,'${code}','${secId}',${idx})">
       ${stOpts(row.status)}
     </select></td>
-    <td>${rowWorkflowHtml(sec,row)}</td>
+    <td>${rowDateLinkHtml(sec,row)}</td>
+    <td><input type="date" class="date-input" value="${row.submitDate||''}"  onchange="${setter},'submitDate',this.value)"></td>
+    <td><input type="date" class="date-input" value="${row.receiptDate||''}" onchange="${setter},'receiptDate',this.value)"></td>
+    <td><input type="date" class="date-input" value="${row.approveDate||''}" onchange="${setter},'approveDate',this.value)"></td>
     <td><input class="text-input" placeholder="메모" value="${esc(row.note)}" onchange="${setter},'note',this.value)"></td>
     <td><button class="del-btn" onclick="delRow('${code}','${secId}',${idx})" title="삭제">✕</button></td>
   </tr>`;
@@ -739,7 +849,7 @@ function addDocRowHtml(){
     <td colspan="2"><label style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;cursor:pointer">
       <input type="checkbox" id="addNeedVer"> 버전/Effective Date 필요
     </label></td>
-    <td colspan="3" style="text-align:right">
+    <td colspan="6" style="text-align:right">
       <button class="add-confirm-btn" onclick="confirmAddDoc()">추가</button>
       <button class="add-cancel-btn" style="margin-left:6px" onclick="cancelAddDoc()">취소</button>
     </td><td></td>
@@ -757,8 +867,6 @@ function renderSecForm(){
       <button class="sec-type-btn" onclick="doAddSection('result')">📑 결과보고</button>
       <button class="sec-type-btn" onclick="doAddSection('violation')">⚠️ 위반보고</button>
       <button class="sec-type-btn" onclick="doAddSection('problem')">🚨 문제보고</button>
-      <button class="sec-type-btn" onclick="doAddSection('supplement')">📝 보완답변</button>
-      <button class="sec-type-btn" onclick="doAddSection('misc')">📌 기타보고</button>
       <button class="sec-type-btn" onclick="doAddSection('consent')">✍️ 동의서 관리</button>
     </div>
     <div class="sec-custom-row">
@@ -893,7 +1001,7 @@ function deleteSite(code){
 
 // ── CSV ──────────────────────────────────────────────────────────
 function exportCSV(){
-  let csv='﻿Protocol Name,기관코드,기관명,섹션,문서명,구분,TMF파일명,버전,Effective Date,상태,섹션 메일 송부일,섹션 PI 제출일,섹션 접수일,섹션 IRB 승인일,섹션 통지일,비고\n';
+  let csv='\uFEFFContract No.,Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,섹션,문서명,구분,TMF파일명,버전,Effective Date,상태,승인서 승인일,승인서 통지일,제출일,접수일,승인일,비고\n';
   protocols.forEach(protocol=>{
     const pdata=protocolData[protocol.id]||{sites:[],sections:{}};
     (pdata.sites||[]).forEach(site=>{
@@ -901,7 +1009,8 @@ function exportCSV(){
         const meta=ensureSecMeta(sec);
         sec.rows.forEach(r=>{
           const st=STATUSES.find(s=>s.val===r.status)?.label||'';
-          csv+=`"${(protocol.name||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.ver||''}","${r.effectiveDate||''}","${st}","${meta.mailSentDate||''}","${meta.piSubmitDate||''}","${meta.receiptDate||''}","${meta.approvalDate||''}","${meta.noticeDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
+          const isApproval=(r.name||'').includes('승인서') || (r.name||'').toLowerCase().includes('approval');
+          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.ver||''}","${r.effectiveDate||''}","${st}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${r.submitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
         });
       });
     });
