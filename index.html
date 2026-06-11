@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRB 제출문서 Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:#f7f7f5;color:#37352f;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e9e9e7;padding:1.25rem 2rem;position:sticky;top:0;z-index:100}
+.header-top{display:flex;align-items:center;gap:12px;margin-bottom:.75rem;flex-wrap:wrap}
+.title{font-size:20px;font-weight:700}
+.sub{font-size:12px;color:#787774}
+.stats-row{display:flex;gap:8px;flex-wrap:wrap}
+.stat-chip{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:500}
+.chip-total{background:#f0f0ef;color:#37352f}
+.chip-ok{background:#e6f4ea;color:#1e6e3e}
+.chip-issue{background:#fce8e8;color:#8b1a1a}
+.progress-bar{height:3px;background:#e9e9e7;margin-top:8px}
+.progress-fill{height:3px;background:#0f7b6c;transition:width .3s}
+.tabs-wrap{background:#fff;border-bottom:1px solid #e9e9e7;padding:0 2rem;display:flex;overflow-x:auto}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;color:#787774;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:#37352f}
+.tab.active{color:#0f7b6c;border-bottom-color:#0f7b6c}
+.tab-add{padding:10px 14px;font-size:18px;color:#bbb;cursor:pointer;border-bottom:2px solid transparent}
+.tab-add:hover{color:#0f7b6c}
+.body{padding:1.5rem 2rem;max-width:1300px;margin:0 auto}
+.section{background:#fff;border:1px solid #e9e9e7;border-radius:8px;margin-bottom:1rem;overflow:hidden}
+.sec-header{padding:10px 16px;background:#fafafa;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.sec-title{font-size:13px;font-weight:600;flex:1}
+.sec-badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.sec-add-btn{font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid #0f7b6c;background:#fff;cursor:pointer;color:#0f7b6c;font-family:inherit;white-space:nowrap}
+.sec-add-btn:hover{background:#f0faf8}
+.sec-del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:13px;padding:2px 5px;line-height:1}
+.sec-del-btn:hover{color:#a33}
+.chevron{color:#999;font-size:11px;transition:transform .2s;display:inline-block}
+.chevron.open{transform:rotate(90deg)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:1100px}
+th{padding:7px 10px;text-align:left;font-weight:500;color:#787774;border-bottom:1px solid #e9e9e7;white-space:nowrap;font-size:11px;background:#fafafa}
+td{padding:7px 10px;border-bottom:1px solid #f0f0ef;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f7f7f5}
+.sel{font-size:12px;padding:3px 8px;border-radius:20px;border:none;cursor:pointer;font-weight:500;outline:none;appearance:none;-webkit-appearance:none;min-width:68px;text-align:center}
+.s-ok{background:#e6f4ea;color:#1e6e3e}
+.s-issue{background:#fce8e8;color:#8b1a1a}
+.s-wip{background:#fef3e2;color:#7a4b00}
+.s-na{background:#f0f0ef;color:#787774}
+.s-pend{background:#ede9fe;color:#4a3896}
+.date-input{font-size:12px;border:1px solid #e9e9e7;border-radius:4px;padding:3px 5px;color:#37352f;background:#fff;outline:none;cursor:pointer;width:116px}
+.date-input:focus{border-color:#0f7b6c}
+.ver-input{font-size:12px;border:1px solid #e9e9e7;border-radius:4px;padding:3px 5px;color:#37352f;background:#fff;outline:none;width:60px}
+.ver-input:focus{border-color:#0f7b6c}
+.text-input{font-size:12px;border:none;background:transparent;color:#37352f;width:100%;font-family:inherit;outline:none;padding:0;min-width:70px}
+.text-input::placeholder{color:#c7c7c5}
+.tmf-input{font-size:11px;border:1px solid #e9e9e7;border-radius:4px;padding:3px 6px;color:#444;background:#f7f7f5;width:100%;font-family:'Courier New',monospace;outline:none;min-width:120px}
+.tmf-input:focus{border-color:#0f7b6c;background:#fff}
+.tmf-input::placeholder{color:#bbb}
+.dtype{font-size:11px;padding:1px 6px;border-radius:4px;font-weight:500;white-space:nowrap}
+.dt-app{background:#e6f0fc;color:#1a4b8b}
+.dt-req{background:#fef3e2;color:#7a4b00}
+.dt-doc{background:#f0f0ef;color:#555}
+.dt-consent{background:#fce8f8;color:#7a1a6e}
+.dt-custom{background:#e8fce8;color:#1a6b1a}
+.dt-notice{background:#fde8f0;color:#9b1c4d}
+.dt-eval{background:#e0f5f0;color:#0a5c4a}
+.dt-minutes{background:#f0ecfc;color:#4a2c8b}
+.del-btn{background:none;border:none;cursor:pointer;color:#ddd;font-size:13px;padding:2px 4px;line-height:1}
+.del-btn:hover{color:#a33}
+.btn-row{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap}
+.btn{padding:7px 14px;font-size:12px;border-radius:6px;border:1px solid #e9e9e7;background:#fff;cursor:pointer;color:#37352f;font-family:inherit}
+.btn:hover{background:#f7f7f5}
+.btn-primary{background:#0f7b6c;color:#fff;border-color:#0f7b6c}
+.btn-primary:hover{background:#0a6358}
+.btn-danger{color:#a33;border-color:#fce8e8}
+.btn-danger:hover{background:#fce8e8}
+.add-row td{background:#f0faf8;padding:6px 10px}
+.add-doc-input{font-size:12px;border:1px solid #0f7b6c;border-radius:4px;padding:4px 8px;outline:none;font-family:inherit;width:100%}
+.add-doc-sel{font-size:12px;border:1px solid #e9e9e7;border-radius:4px;padding:4px 6px;outline:none;font-family:inherit;cursor:pointer;background:#fff}
+.add-confirm-btn{font-size:12px;padding:4px 12px;border-radius:4px;border:none;background:#0f7b6c;color:#fff;cursor:pointer;font-family:inherit}
+.add-cancel-btn{font-size:12px;padding:4px 10px;border-radius:4px;border:1px solid #e9e9e7;background:#fff;color:#555;cursor:pointer;font-family:inherit}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:10px;padding:1.5rem;width:360px;max-width:92vw}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:1rem}
+.modal input{width:100%;border:1px solid #e9e9e7;border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;margin-bottom:.75rem}
+.modal input:focus{border-color:#0f7b6c}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.sec-form{background:#fff;border:1.5px solid #0f7b6c;border-radius:8px;padding:1rem;margin-top:.5rem}
+.sec-form-title{font-size:13px;font-weight:600;color:#0f7b6c;margin-bottom:.75rem}
+.sec-type-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.75rem}
+.sec-type-btn{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #e9e9e7;background:#fff;cursor:pointer;font-family:inherit}
+.sec-type-btn:hover{background:#f7f7f5}
+.sec-custom-row{display:flex;gap:8px;align-items:center}
+.sec-custom-input{font-size:13px;border:1px solid #e9e9e7;border-radius:6px;padding:6px 10px;outline:none;flex:1;font-family:inherit}
+.sec-custom-input:focus{border-color:#0f7b6c}
+.empty{text-align:center;padding:2rem;color:#bbb;font-size:13px}
+.na-cell{color:#bbb;font-size:12px}
+.search-box{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #e9e9e7;border-radius:8px;padding:6px 12px;margin-bottom:1rem;max-width:340px}
+.search-box input{border:none;outline:none;font-size:13px;font-family:inherit;flex:1;background:transparent;color:#37352f}
+.search-box input::placeholder{color:#bbb}
+.search-clear{background:none;border:none;cursor:pointer;color:#bbb;font-size:14px;padding:0 2px}
+.search-clear:hover{color:#37352f}
+.hl{background:#fff3a8;border-radius:2px;padding:0 1px}
+.move-btns{display:flex;flex-direction:column;gap:1px}
+.move-btn{background:none;border:none;cursor:pointer;color:#bbb;font-size:9px;line-height:1;padding:1px 3px;border-radius:3px}
+.move-btn:hover{color:#0f7b6c;background:#f0faf8}
+.move-btn:disabled{color:#eee;cursor:default;background:none}
+.row-hidden{display:none}
+.no-match{text-align:center;padding:1rem;color:#bbb;font-size:12px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="title">📋 IRB 제출문서 Tracker</div>
+      <div class="sub">기관별 IRB 제출 현황 관리 · 마지막 저장: <span id="lastSaved">-</span></div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn" onclick="exportCSV()">📥 CSV</button>
+      <button class="btn btn-primary" onclick="openSiteModal()">+ 기관 추가</button>
+    </div>
+  </div>
+  <div class="stats-row" id="globalStats"></div>
+  <div class="progress-bar"><div class="progress-fill" id="globalProg"></div></div>
+</div>
+<div class="tabs-wrap" id="tabsWrap"></div>
+<div class="body" id="bodyWrap"></div>
+
+<!-- 기관 추가 모달 -->
+<div class="modal-bg" id="siteModal">
+  <div class="modal">
+    <h3>기관 추가</h3>
+    <input id="siteCodeInput" placeholder="기관 코드 (예: 030)" maxlength="10">
+    <input id="siteNameInput" placeholder="기관명 (예: 건국대학교병원)">
+    <div class="modal-btns">
+      <button class="btn" onclick="closeSiteModal()">취소</button>
+      <button class="btn btn-primary" onclick="addSite()">추가</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 섹션 템플릿 ─────────────────────────────────────────────────
+const TMPL = {
+  initial: { emoji:'🗂️', name:'초기심의', docs:[
+    {name:'초기심의 신청서',   dtype:'app',     needVer:false},
+    {name:'연구계획서',        dtype:'doc',     needVer:true},
+    {name:'동의서',            dtype:'consent', needVer:true},
+    {name:'연구자 CV',         dtype:'doc',     needVer:false},
+    {name:'GCP 이수증',        dtype:'doc',     needVer:false},
+    {name:'제품설명서',        dtype:'doc',     needVer:true},
+    {name:'첨부문서',          dtype:'doc',     needVer:true},
+    {name:'초기심의 승인서',   dtype:'doc',     needVer:false},
+  ]},
+  change: { emoji:'🔄', name:'변경보고', docs:[
+    {name:'변경보고 신청서',   dtype:'app',     needVer:false},
+    {name:'변경보고 의뢰서',   dtype:'req',     needVer:false},
+    {name:'연구계획서 (변경)', dtype:'doc',     needVer:true},
+    {name:'동의서 (변경)',     dtype:'consent', needVer:true},
+    {name:'제품설명서 (변경)', dtype:'doc',     needVer:true},
+    {name:'첨부문서 (변경)',   dtype:'doc',     needVer:true},
+    {name:'변경보고 승인서',   dtype:'doc',     needVer:false},
+  ]},
+  interim: { emoji:'📊', name:'중간보고', docs:[
+    {name:'중간보고서 신청서', dtype:'app', needVer:false},
+    {name:'중간보고서 의뢰서', dtype:'req', needVer:false},
+    {name:'중간보고서 본문',   dtype:'doc', needVer:false},
+    {name:'중간보고 접수증',   dtype:'doc', needVer:false},
+  ]},
+  close: { emoji:'🔚', name:'종료보고', docs:[
+    {name:'종료보고 신청서',   dtype:'app', needVer:false},
+    {name:'종료보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'종료보고서 본문',   dtype:'doc', needVer:false},
+    {name:'종료보고 접수증',   dtype:'doc', needVer:false},
+  ]},
+  result: { emoji:'📑', name:'결과보고', docs:[
+    {name:'결과보고 신청서',   dtype:'app', needVer:false},
+    {name:'결과보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'결과보고서 본문',   dtype:'doc', needVer:false},
+    {name:'결과보고 접수증',   dtype:'doc', needVer:false},
+  ]},
+  violation: { emoji:'⚠️', name:'위반보고', docs:[
+    {name:'위반보고 신청서',   dtype:'app', needVer:false},
+    {name:'위반보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'위반보고서 본문',   dtype:'doc', needVer:false},
+    {name:'위반보고 접수증',   dtype:'doc', needVer:false},
+  ]},
+  problem: { emoji:'🚨', name:'문제보고', docs:[
+    {name:'문제보고 신청서',   dtype:'app', needVer:false},
+    {name:'문제보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'문제보고서 본문',   dtype:'doc', needVer:false},
+    {name:'문제보고 접수증',   dtype:'doc', needVer:false},
+  ]},
+  consent: { emoji:'✍️', name:'동의서 관리', docs:[
+    {name:'재동의 면제 승인서',      dtype:'consent', needVer:false},
+    {name:'버전별 동의서 원본 보관', dtype:'consent', needVer:true},
+    {name:'대상자별 동의 완료 확인', dtype:'consent', needVer:false},
+  ]},
+};
+
+const STATUSES = [
+  {val:'pend',  label:'미제출', cls:'s-pend'},
+  {val:'ok',    label:'✓ 완료', cls:'s-ok'},
+  {val:'wip',   label:'진행중', cls:'s-wip'},
+  {val:'issue', label:'❌이슈', cls:'s-issue'},
+  {val:'na',    label:'N/A',    cls:'s-na'},
+];
+
+const DTYPE_INFO = {
+  app:    {label:'신청서',   cls:'dt-app'},
+  req:    {label:'의뢰서',   cls:'dt-req'},
+  doc:    {label:'제출 문서', cls:'dt-doc'},
+  consent:{label:'동의서',   cls:'dt-consent'},
+  notice: {label:'통지서',   cls:'dt-notice'},
+  eval:   {label:'평가록',   cls:'dt-eval'},
+  minutes:{label:'회의록',   cls:'dt-minutes'},
+  custom: {label:'추가',     cls:'dt-custom'},
+};
+
+// ── state (통합 구조 v6) ──────────────────────────────────────────
+// sites: [{code, name}]
+// sections[code]: [{id, type, title, rows:[{name,dtype,needVer, status,ver,effectiveDate,tmfName,submitDate,receiptDate,approveDate,note}]}]
+let sites=[], sections={};
+let curSite=null, addingDoc=null, showSecForm=false, searchTerm='';
+const collapsed={};
+
+function emptyFields(){
+  return {status:'pend',ver:'',effectiveDate:'',tmfName:'',submitDate:'',receiptDate:'',approveDate:'',note:''};
+}
+function makeRow(doc){
+  return Object.assign({name:doc.name,dtype:doc.dtype,needVer:doc.needVer}, emptyFields());
+}
+
+function load(){
+  try{
+    // v6 우선
+    let s=JSON.parse(localStorage.getItem('irb-v6')||'null');
+    if(s){
+      sites=s.sites||[]; sections=s.sections||{};
+    } else {
+      // v5 → v6 마이그레이션 시도
+      const old=JSON.parse(localStorage.getItem('irb-v5')||'null');
+      if(old){
+        migrateV5(old);
+      }
+    }
+    if(!sites.length){
+      sites=[{code:'030',name:'건국대학교병원'},{code:'042',name:'한림대성심병원'}];
+      sites.forEach(s=>initSite(s.code));
+      saveData();
+    }
+    curSite=sites[0]?.code||null;
+  }catch(e){
+    console.error('load error',e);
+    sites=[];sections={};
+  }
+}
+
+function migrateV5(old){
+  // old: {sites, sections, cellData, customDocs}
+  sites=old.sites||[];
+  sections={};
+  (old.sites||[]).forEach(site=>{
+    const code=site.code;
+    sections[code]=[];
+    (old.sections?.[code]||[]).forEach(sec=>{
+      const rows=[];
+      // 기본 문서
+      (sec.docs||[]).forEach((doc,di)=>{
+        const cell=old.cellData?.[code]?.[sec.id]?.[di]||{};
+        rows.push(Object.assign(makeRow(doc), cell));
+      });
+      // 추가 문서
+      (old.customDocs?.[code]?.[sec.id]||[]).forEach((doc,ci)=>{
+        const cell=old.cellData?.[code]?.['c_'+sec.id]?.[ci]||{};
+        rows.push(Object.assign(makeRow(doc), cell));
+      });
+      sections[code].push({id:sec.id, type:sec.type, title:sec.title, rows});
+    });
+  });
+}
+
+function saveData(){
+  localStorage.setItem('irb-v6',JSON.stringify({sites,sections}));
+  const el=document.getElementById('lastSaved');
+  if(el) el.textContent=new Date().toLocaleString('ko-KR');
+}
+
+function initSite(code){
+  if(!sections[code]) sections[code]=[];
+  if(!sections[code].length){
+    ['initial','interim','close','consent'].forEach(type=>addSectionToSite(code,type));
+  }
+}
+
+function addSectionToSite(code, type, customTitle=null){
+  if(!sections[code]) sections[code]=[];
+  const t=TMPL[type];
+  let title, rows;
+  if(type==='custom'){
+    title=customTitle; rows=[];
+  } else {
+    if(!t) return;
+    const cnt=sections[code].filter(s=>s.type===type).length+1;
+    const ord=['1차','2차','3차','4차','5차','6차','7차','8차'][cnt-1]||(cnt+'차');
+    const noOrd=['consent'];
+    title = noOrd.includes(type)?`${t.emoji} ${t.name}`:`${t.emoji} ${ord} ${t.name}`;
+    rows = t.docs.map(makeRow);
+  }
+  const id='sec_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  sections[code].push({id, type, title, rows});
+}
+
+function getSec(code,secId){ return (sections[code]||[]).find(s=>s.id===secId); }
+
+function setField(code,secId,idx,field,val){
+  const sec=getSec(code,secId);
+  if(sec&&sec.rows[idx]){ sec.rows[idx][field]=val; saveData(); }
+}
+
+// ── render ───────────────────────────────────────────────────────
+function render(){ renderTabs(); renderBody(); renderStats(); }
+
+function renderTabs(){
+  document.getElementById('tabsWrap').innerHTML=
+    sites.map(s=>`<div class="tab${s.code===curSite?' active':''}" onclick="switchSite('${s.code}')">${s.code} ${s.name}</div>`).join('')+
+    `<div class="tab-add" onclick="openSiteModal()">+</div>`;
+}
+
+function renderBody(){
+  const wrap=document.getElementById('bodyWrap');
+  if(!curSite){wrap.innerHTML='<div class="empty">기관을 추가해주세요</div>';return;}
+  const site=sites.find(s=>s.code===curSite);
+  const secs=sections[curSite]||[];
+  let tot=0,ok=0,iss=0;
+  secs.forEach(sec=>sec.rows.forEach(r=>{tot++;if(r.status==='ok')ok++;if(r.status==='issue')iss++;}));
+  wrap.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:16px;font-weight:700">${site.code} · ${site.name}</div>
+        <div style="font-size:12px;color:#787774;margin-top:2px">완료 ${ok}/${tot} · 이슈 ${iss}</div>
+      </div>
+      <button class="btn btn-danger" onclick="deleteSite('${curSite}')">기관 삭제</button>
+    </div>
+    <div class="search-box">
+      <span style="color:#bbb">🔍</span>
+      <input id="searchInput" placeholder="문서명 검색..." value="${esc(searchTerm)}" oninput="onSearch(this.value)">
+      ${searchTerm?`<button class="search-clear" onclick="clearSearch()">✕</button>`:''}
+    </div>
+    ${secs.map(sec=>renderSection(curSite,sec)).join('')}
+    <div class="btn-row">
+      <button class="btn" style="border-color:#0f7b6c;color:#0f7b6c" onclick="toggleSecForm()">+ 섹션 추가</button>
+      <button class="btn" onclick="exportCSV()">📥 CSV</button>
+    </div>
+    ${showSecForm?renderSecForm():''}
+  `;
+}
+
+function renderSection(code, sec){
+  const isOpen=!collapsed[code+sec.id];
+  const tot=sec.rows.length;
+  const done=sec.rows.filter(r=>r.status==='ok').length;
+  const bc=done===tot&&tot>0?'s-ok':done>0?'s-wip':'s-pend';
+  const isAddingHere=addingDoc&&addingDoc.code===code&&addingDoc.secId===sec.id;
+  const anyMatch=sec.rows.some(r=>matchSearch(r.name));
+  return `
+  <div class="section">
+    <div class="sec-header" onclick="toggleSec('${code}','${sec.id}')">
+      <span class="chevron${isOpen?' open':''}">▶</span>
+      <span class="sec-title">${sec.title}</span>
+      <span class="sec-badge ${bc}">${done}/${tot}</span>
+      <button class="sec-add-btn" onclick="event.stopPropagation();startAddDoc('${code}','${sec.id}')">+ 문서 추가</button>
+      <button class="sec-del-btn" onclick="event.stopPropagation();delSection('${code}','${sec.id}')" title="섹션 삭제">✕</button>
+    </div>
+    ${isOpen?`<div class="table-wrap"><table>
+      <thead><tr>
+        <th style="width:78px">구분</th>
+        <th style="min-width:140px">문서명</th>
+        <th style="min-width:155px">TMF 파일명</th>
+        <th style="width:62px">버전</th>
+        <th style="width:116px">Effective Date</th>
+        <th style="width:76px">상태</th>
+        <th style="width:116px">제출일</th>
+        <th style="width:116px">접수일</th>
+        <th style="width:116px">승인일</th>
+        <th style="min-width:80px">비고</th>
+        <th style="width:22px"></th>
+      </tr></thead>
+      <tbody>
+        ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
+        ${isAddingHere?addDocRowHtml():''}
+        ${searchTerm&&!anyMatch?`<tr><td colspan="11" class="no-match">검색 결과 없음</td></tr>`:''}
+      </tbody>
+    </table></div>`:''}
+  </div>`;
+}
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+function na(){return '<span class="na-cell">-</span>';}
+function stCls(v){return STATUSES.find(s=>s.val===v)?.cls||'s-pend';}
+function stOpts(cur){return STATUSES.map(s=>`<option value="${s.val}"${cur===s.val?' selected':''}>${s.label}</option>`).join('');}
+
+function highlight(name){
+  const term=searchTerm.trim();
+  if(!term) return esc(name);
+  const lower=name.toLowerCase(), lt=term.toLowerCase();
+  const i=lower.indexOf(lt);
+  if(i<0) return esc(name);
+  return esc(name.slice(0,i))+'<span class="hl">'+esc(name.slice(i,i+term.length))+'</span>'+esc(name.slice(i+term.length));
+}
+function matchSearch(name){
+  if(!searchTerm.trim()) return true;
+  return name.toLowerCase().includes(searchTerm.trim().toLowerCase());
+}
+
+function rowHtml(code,secId,idx,row,total){
+  const dt=DTYPE_INFO[row.dtype]||DTYPE_INFO.custom;
+  const setter=`setField('${code}','${secId}',${idx}`;
+  const hidden=!matchSearch(row.name);
+  const upDisabled=idx===0?'disabled':'';
+  const downDisabled=idx===total-1?'disabled':'';
+  return `<tr class="${hidden?'row-hidden':''}">
+    <td>
+      <div style="display:flex;align-items:center;gap:4px">
+        <div class="move-btns">
+          <button class="move-btn" ${upDisabled} onclick="moveRow('${code}','${secId}',${idx},-1)" title="위로">▲</button>
+          <button class="move-btn" ${downDisabled} onclick="moveRow('${code}','${secId}',${idx},1)" title="아래로">▼</button>
+        </div>
+        <span class="dtype ${dt.cls}">${dt.label}</span>
+      </div>
+    </td>
+    <td>${highlight(row.name)}</td>
+    <td><input class="tmf-input" placeholder="파일명" value="${esc(row.tmfName)}" onchange="${setter},'tmfName',this.value)"></td>
+    <td>${row.needVer?`<input class="ver-input" placeholder="v1.0" value="${esc(row.ver)}" onchange="${setter},'ver',this.value)">`:na()}</td>
+    <td>${row.needVer?`<input type="date" class="date-input" value="${row.effectiveDate||''}" onchange="${setter},'effectiveDate',this.value)">`:na()}</td>
+    <td><select class="sel ${stCls(row.status)}" onchange="onSelChange(this,'${code}','${secId}',${idx})">
+      ${stOpts(row.status)}
+    </select></td>
+    <td><input type="date" class="date-input" value="${row.submitDate||''}"  onchange="${setter},'submitDate',this.value)"></td>
+    <td><input type="date" class="date-input" value="${row.receiptDate||''}" onchange="${setter},'receiptDate',this.value)"></td>
+    <td><input type="date" class="date-input" value="${row.approveDate||''}" onchange="${setter},'approveDate',this.value)"></td>
+    <td><input class="text-input" placeholder="메모" value="${esc(row.note)}" onchange="${setter},'note',this.value)"></td>
+    <td><button class="del-btn" onclick="delRow('${code}','${secId}',${idx})" title="삭제">✕</button></td>
+  </tr>`;
+}
+
+function addDocRowHtml(){
+  return `<tr class="add-row">
+    <td><select class="add-doc-sel" id="addDtype">
+      <option value="doc">제출 문서</option>
+      <option value="app">신청서</option>
+      <option value="req">의뢰서</option>
+      <option value="consent">동의서</option>
+      <option value="notice">통지서</option>
+      <option value="eval">평가록</option>
+      <option value="minutes">회의록</option>
+      <option value="custom">기타</option>
+    </select></td>
+    <td colspan="2"><input class="add-doc-input" id="addDocName" placeholder="문서명 입력 후 Enter" onkeydown="if(event.key==='Enter')confirmAddDoc()"></td>
+    <td colspan="2"><label style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;cursor:pointer">
+      <input type="checkbox" id="addNeedVer"> 버전/Effective Date 필요
+    </label></td>
+    <td colspan="5" style="text-align:right">
+      <button class="add-confirm-btn" onclick="confirmAddDoc()">추가</button>
+      <button class="add-cancel-btn" style="margin-left:6px" onclick="cancelAddDoc()">취소</button>
+    </td><td></td>
+  </tr>`;
+}
+
+function renderSecForm(){
+  return `<div class="sec-form" style="margin-top:.75rem">
+    <div class="sec-form-title">섹션 추가</div>
+    <div class="sec-type-btns">
+      <button class="sec-type-btn" onclick="doAddSection('initial')">🗂️ 초기심의</button>
+      <button class="sec-type-btn" onclick="doAddSection('change')">🔄 변경보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('interim')">📊 중간보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('close')">🔚 종료보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('result')">📑 결과보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('violation')">⚠️ 위반보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('problem')">🚨 문제보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('consent')">✍️ 동의서 관리</button>
+    </div>
+    <div class="sec-custom-row">
+      <input class="sec-custom-input" id="customSecInput" placeholder="직접 입력 (예: 3차 변경보고)" onkeydown="if(event.key==='Enter')doAddSection('custom')">
+      <button class="add-confirm-btn" onclick="doAddSection('custom')">추가</button>
+      <button class="add-cancel-btn" onclick="toggleSecForm()">취소</button>
+    </div>
+  </div>`;
+}
+
+function renderStats(){
+  let tot=0,ok=0,iss=0,wip=0;
+  sites.forEach(s=>{
+    (sections[s.code]||[]).forEach(sec=>sec.rows.forEach(r=>{
+      tot++;if(r.status==='ok')ok++;if(r.status==='issue')iss++;if(r.status==='wip')wip++;
+    }));
+  });
+  const pct=tot?Math.round(ok/tot*100):0;
+  document.getElementById('globalStats').innerHTML=`
+    <span class="stat-chip chip-total">전체 ${tot}</span>
+    <span class="stat-chip chip-ok">완료 ${ok}</span>
+    <span class="stat-chip" style="background:#fef3e2;color:#7a4b00">진행중 ${wip}</span>
+    <span class="stat-chip chip-issue">이슈 ${iss}</span>
+    <span class="stat-chip chip-total">${pct}%</span>
+  `;
+  document.getElementById('globalProg').style.width=pct+'%';
+}
+
+// ── interactions ─────────────────────────────────────────────────
+function onSelChange(sel,code,secId,idx){
+  setField(code,secId,idx,'status',sel.value);
+  sel.className='sel '+stCls(sel.value);
+  renderStats(); renderBody();
+}
+
+function toggleSec(code,secId){
+  collapsed[code+secId]=!collapsed[code+secId];
+  renderBody();
+}
+
+// ── 행 이동 (통합) ───────────────────────────────────────────────
+function moveRow(code,secId,idx,dir){
+  const sec=getSec(code,secId);
+  if(!sec) return;
+  const ni=idx+dir;
+  if(ni<0||ni>=sec.rows.length) return;
+  [sec.rows[idx],sec.rows[ni]]=[sec.rows[ni],sec.rows[idx]];
+  saveData(); renderBody();
+}
+
+// ── 검색 ─────────────────────────────────────────────────────────
+function onSearch(val){
+  searchTerm=val;
+  const sel=document.getElementById('searchInput');
+  const pos=sel?sel.selectionStart:null;
+  renderBody();
+  const ns=document.getElementById('searchInput');
+  if(ns){ns.focus();if(pos!=null)ns.setSelectionRange(pos,pos);}
+}
+function clearSearch(){
+  searchTerm='';
+  renderBody();
+  setTimeout(()=>document.getElementById('searchInput')?.focus(),30);
+}
+
+// ── 섹션 추가/삭제 ───────────────────────────────────────────────
+function toggleSecForm(){
+  showSecForm=!showSecForm;
+  renderBody();
+  if(showSecForm) setTimeout(()=>document.getElementById('customSecInput')?.focus(),50);
+}
+function doAddSection(type){
+  if(type==='custom'){
+    const title=document.getElementById('customSecInput')?.value.trim();
+    if(!title){alert('섹션 제목을 입력해주세요');return;}
+    addSectionToSite(curSite,'custom',title);
+  } else {
+    addSectionToSite(curSite,type);
+  }
+  showSecForm=false; saveData(); renderBody(); renderStats();
+}
+function delSection(code,secId){
+  const sec=getSec(code,secId);
+  if(!confirm('"'+sec?.title+'" 섹션을 삭제할까요?')) return;
+  sections[code]=sections[code].filter(s=>s.id!==secId);
+  saveData(); renderBody(); renderStats();
+}
+
+// ── 문서 추가/삭제 ───────────────────────────────────────────────
+function startAddDoc(code,secId){
+  addingDoc={code,secId}; renderBody();
+  setTimeout(()=>document.getElementById('addDocName')?.focus(),50);
+}
+function confirmAddDoc(){
+  if(!addingDoc) return;
+  const name=document.getElementById('addDocName')?.value.trim();
+  const dtype=document.getElementById('addDtype')?.value||'custom';
+  const needVer=!!document.getElementById('addNeedVer')?.checked;
+  if(!name){alert('문서명을 입력해주세요');return;}
+  const sec=getSec(addingDoc.code,addingDoc.secId);
+  if(sec){ sec.rows.push(makeRow({name,dtype,needVer})); }
+  saveData(); addingDoc=null; renderBody(); renderStats();
+}
+function cancelAddDoc(){addingDoc=null;renderBody();}
+function delRow(code,secId,idx){
+  const sec=getSec(code,secId);
+  if(!sec) return;
+  if(!confirm('"'+sec.rows[idx]?.name+'" 문서를 삭제할까요?')) return;
+  sec.rows.splice(idx,1);
+  saveData(); renderBody(); renderStats();
+}
+
+// ── 기관 ─────────────────────────────────────────────────────────
+function switchSite(code){curSite=code;addingDoc=null;showSecForm=false;searchTerm='';renderTabs();renderBody();}
+function openSiteModal(){document.getElementById('siteModal').classList.add('show');document.getElementById('siteCodeInput').focus();}
+function closeSiteModal(){document.getElementById('siteModal').classList.remove('show');document.getElementById('siteCodeInput').value='';document.getElementById('siteNameInput').value='';}
+function addSite(){
+  const code=document.getElementById('siteCodeInput').value.trim();
+  const name=document.getElementById('siteNameInput').value.trim();
+  if(!code||!name){alert('기관 코드와 기관명을 모두 입력해주세요');return;}
+  if(sites.find(s=>s.code===code)){alert('이미 존재하는 기관 코드입니다');return;}
+  sites.push({code,name}); initSite(code); curSite=code;
+  saveData(); closeSiteModal(); render();
+}
+function deleteSite(code){
+  if(!confirm('"'+code+'" 기관을 삭제할까요? 모든 데이터가 삭제됩니다.')) return;
+  sites=sites.filter(s=>s.code!==code);
+  delete sections[code];
+  curSite=sites[0]?.code||null;
+  saveData(); render();
+}
+
+// ── CSV ──────────────────────────────────────────────────────────
+function exportCSV(){
+  let csv='\uFEFF기관코드,기관명,섹션,문서명,구분,TMF파일명,버전,Effective Date,상태,제출일,접수일,승인일,비고\n';
+  sites.forEach(site=>{
+    (sections[site.code]||[]).forEach(sec=>{
+      sec.rows.forEach(r=>{
+        const st=STATUSES.find(s=>s.val===r.status)?.label||'';
+        csv+=`"${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.ver||''}","${r.effectiveDate||''}","${st}","${r.submitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
+      });
+    });
+  });
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='IRB_Tracker_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+document.getElementById('siteNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSite();});
+document.getElementById('siteModal').addEventListener('click',e=>{if(e.target===document.getElementById('siteModal'))closeSiteModal();});
+
+load(); render();
+</script>
+</body>
+</html>
