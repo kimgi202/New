@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IRB Tracker</title>
+<meta property="og:title" content="IRB Tracker">
+<meta name="twitter:title" content="IRB Tracker">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:#f7f7f5;color:#37352f;min-height:100vh}
@@ -204,31 +206,31 @@ const TMPL = {
   interim: { emoji:'📊', name:'중간보고', docs:[
     {name:'중간보고서 신청서', dtype:'app', needVer:false},
     {name:'중간보고서 의뢰서', dtype:'req', needVer:false},
-    {name:'중간보고서 본문',   dtype:'doc', needVer:false},
+    {name:'중간보고서',   dtype:'doc', needVer:false},
     {name:'중간보고 접수증',   dtype:'doc', needVer:false},
   ]},
   close: { emoji:'🔚', name:'종료보고', docs:[
     {name:'종료보고 신청서',   dtype:'app', needVer:false},
     {name:'종료보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'종료보고서 본문',   dtype:'doc', needVer:false},
+    {name:'종료보고서',   dtype:'doc', needVer:false},
     {name:'종료보고 접수증',   dtype:'doc', needVer:false},
   ]},
   result: { emoji:'📑', name:'결과보고', docs:[
     {name:'결과보고 신청서',   dtype:'app', needVer:false},
     {name:'결과보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'결과보고서 본문',   dtype:'doc', needVer:false},
+    {name:'결과보고서',   dtype:'doc', needVer:false},
     {name:'결과보고 접수증',   dtype:'doc', needVer:false},
   ]},
   violation: { emoji:'⚠️', name:'위반보고', docs:[
     {name:'위반보고 신청서',   dtype:'app', needVer:false},
     {name:'위반보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'위반보고서 본문',   dtype:'doc', needVer:false},
+    {name:'위반보고서',   dtype:'doc', needVer:false},
     {name:'위반보고 접수증',   dtype:'doc', needVer:false},
   ]},
   problem: { emoji:'🚨', name:'문제보고', docs:[
     {name:'문제보고 신청서',   dtype:'app', needVer:false},
     {name:'문제보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'문제보고서 본문',   dtype:'doc', needVer:false},
+    {name:'문제보고서',   dtype:'doc', needVer:false},
     {name:'문제보고 접수증',   dtype:'doc', needVer:false},
   ]},
   supplement: { emoji:'📝', name:'보완답변', docs:[
@@ -240,13 +242,13 @@ const TMPL = {
   misc: { emoji:'📌', name:'기타보고', docs:[
     {name:'기타보고 신청서',   dtype:'app', needVer:false},
     {name:'기타보고 의뢰서',   dtype:'req', needVer:false},
-    {name:'기타보고서 본문',   dtype:'doc', needVer:false},
+    {name:'기타보고서',   dtype:'doc', needVer:false},
     {name:'기타보고 통지서',   dtype:'notice', needVer:false},
   ]},
   consent: { emoji:'✍️', name:'동의서 관리', docs:[
     {name:'재동의 면제 승인서',      dtype:'consent', needVer:false},
-    {name:'버전별 동의서 원본 보관', dtype:'consent', needVer:true},
-    {name:'대상자별 동의 완료 확인', dtype:'consent', needVer:false},
+    {name:'동의서 Clean File', dtype:'consent', needVer:true},
+    {name:'동의서 IRB Stamp', dtype:'consent', needVer:false},
   ]},
 };
 
@@ -268,6 +270,28 @@ const DTYPE_INFO = {
   minutes:{label:'회의록',   cls:'dt-minutes'},
   custom: {label:'추가',     cls:'dt-custom'},
 };
+
+function normalizeDocName(name){
+  return (name||'')
+    .replace(/\s*본문/g, '')
+    .replace('버전별 동의서 원본 보관', '동의서 Clean File')
+    .replace('대상자별 동의 완료 확인', '동의서 IRB Stamp');
+}
+
+function normalizeRowsInSections(sectionMap){
+  Object.values(sectionMap||{}).forEach(secList=>{
+    (secList||[]).forEach(sec=>{
+      (sec.rows||[]).forEach(row=>{
+        row.name = normalizeDocName(row.name);
+      });
+    });
+  });
+}
+
+function normalizeAllData(){
+  normalizeRowsInSections(sections);
+  Object.values(protocolData||{}).forEach(pdata=>normalizeRowsInSections(pdata.sections));
+}
 
 // ── state (v11: protocol → sites/sections) ─────────────────────────
 // protocols: [{id, name}]
@@ -339,6 +363,7 @@ function load(){
       ensureDefaultProtocol('Protocol 1');
       bindCurrentProtocol();
     }
+    normalizeAllData();
     if(!sites.length){
       sites=[{code:'030',name:'건국대학교병원'},{code:'042',name:'한림대성심병원'}];
       sites.forEach(s=>initSite(s.code));
@@ -380,6 +405,7 @@ let cloudSaveTimer=null;
 const CLOUD_ID='main';
 
 function saveData(){
+  normalizeAllData();
   syncCurrentProtocolData();
   localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
   // 기존 버전과 호환되도록 현재 프로토콜 데이터도 v6 키에 백업
@@ -425,6 +451,7 @@ async function syncFromCloudAfterInit(){
       ensureDefaultProtocol('Protocol 1');
       bindCurrentProtocol();
     }
+    normalizeAllData();
     localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
     localStorage.setItem('irb-v6',JSON.stringify({sites,sections}));
     render();
