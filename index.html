@@ -866,8 +866,7 @@ function deleteSite(code){
 
 // ── CSV ──────────────────────────────────────────────────────────
 function exportCSV(){
-  let csv='﻿Protocol Name,기관코드,기관명,섹션,문서명,구분,TMF파일명,버전,Effective Date,상태,섹션 메일 송부일,섹션 PI 제출일,섹션 접수일,섹션 IRB 승인일,섹션 통지일,비고
-';
+  let csv='﻿Protocol Name,기관코드,기관명,섹션,문서명,구분,TMF파일명,버전,Effective Date,상태,섹션 메일 송부일,섹션 PI 제출일,섹션 접수일,섹션 IRB 승인일,섹션 통지일,비고\n';
   protocols.forEach(protocol=>{
     const pdata=protocolData[protocol.id]||{sites:[],sections:{}};
     (pdata.sites||[]).forEach(site=>{
@@ -875,8 +874,7 @@ function exportCSV(){
         const meta=ensureSecMeta(sec);
         sec.rows.forEach(r=>{
           const st=STATUSES.find(s=>s.val===r.status)?.label||'';
-          csv+=`"${(protocol.name||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.ver||''}","${r.effectiveDate||''}","${st}","${meta.mailSentDate||''}","${meta.piSubmitDate||''}","${meta.receiptDate||''}","${meta.approvalDate||''}","${meta.noticeDate||''}","${(r.note||'').replace(/"/g,'""')}"
-`;
+          csv+=`"${(protocol.name||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.ver||''}","${r.effectiveDate||''}","${st}","${meta.mailSentDate||''}","${meta.piSubmitDate||''}","${meta.receiptDate||''}","${meta.approvalDate||''}","${meta.noticeDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
         });
       });
     });
