@@ -1151,15 +1151,16 @@ function autoCheckNeedVer(){
 // ── 문서명 패턴 분석: 버전/Effective Date 필요 여부 자동 인식 ───────────────────────────
 function analyzeDocName(name){
   if(!name) return false;
-  // 버전 필요한 문서 키워드
-  const needVerKeywords=['Protocol','eCRF','CRF','Blank','ICF','설명서','케이스','기록','다이어리','카티라이프','양식','동의서','Subject Diary','Screening','eCRF','평가척도','척도'];
+  
+  // 🔴 변경대비표는 무조건 버전 필요! (제일 먼저 확인)
+  if(name.includes('변경대비표')) return true;
+  
   // 버전 불필요한 문서 (명시적 제외)
   const noVerKeywords=['서약서','계약','회의록','통지','결과보고','중간보고','종료보고','IRB'];
-  
-  // 제외 키워드 확인
   if(noVerKeywords.some(k=>name.includes(k))) return false;
   
-  // 버전 필요 키워드 확인
+  // 버전 필요한 문서 키워드
+  const needVerKeywords=['Protocol','eCRF','CRF','Blank','ICF','제품설명서','케이스','기록','다이어리','카티라이프','양식','동의서','Subject Diary','Screening','평가척도','척도'];
   if(needVerKeywords.some(k=>name.includes(k))) return true;
   
   // 버전 형식 패턴 확인 (v1.0, V3.0, _V4.0, V3.2 등)
