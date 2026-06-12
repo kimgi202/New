@@ -150,7 +150,10 @@ tr:hover td{background:#f7f7f5}
 </div>
 <div class="protocol-bar">
   <span class="protocol-label">Contract No.</span>
-  <select class="protocol-select" id="contractSelect" onchange="applyProjectMaster(this.value)">
+  <div id="contractInputWrapper" style="display:none">
+    <input class="protocol-select" id="contractInput" placeholder="Contract No. 입력" onchange="setContractNo(this.value)" onkeydown="if(event.key==='Enter')setContractNo(this.value)">
+  </div>
+  <select class="protocol-select" id="contractSelect" onchange="onContractSelectChange(this.value)">
     <option value="">직접 입력</option>
   </select>
   <span class="protocol-label">Protocol No.</span>
@@ -354,7 +357,7 @@ function ensureDefaultProtocol(name='Protocol 1'){
 }
 
 function emptyFields(){
-  return {status:'pend',ver:'',effectiveDate:'',tmfName:'',submitDate:'',receiptDate:'',approveDate:'',note:''};
+  return {status:'pend',ver:'',masterVer:'',siteVer:'',effectiveDate:'',tmfName:'',serverFileName:'',submitDate:'',receiptDate:'',approveDate:'',note:''};
 }
 function makeRow(doc){
   return Object.assign({name:doc.name,dtype:doc.dtype,needVer:doc.needVer}, emptyFields());
@@ -557,9 +560,21 @@ function renderProtocolTabs(){
   }
   const cur=getCurProtocol();
   const contractSelect=document.getElementById('contractSelect');
-  if(contractSelect){
+  const contractInputWrapper=document.getElementById('contractInputWrapper');
+  const contractInput=document.getElementById('contractInput');
+  if(contractSelect && contractInputWrapper){
     contractSelect.innerHTML='<option value="">직접 입력</option>'+PROJECT_MASTER.map(p=>`<option value="${p.contractNo}">${p.contractNo}</option>`).join('');
-    contractSelect.value=cur?.contractNo||'';
+    // 현재 contractNo가 PROJECT_MASTER에 있으면 드롭다운, 없으면 입력칸
+    const isInMaster=PROJECT_MASTER.find(p=>p.contractNo===cur?.contractNo);
+    if(isInMaster||!cur?.contractNo){
+      contractSelect.style.display='block';
+      contractInputWrapper.style.display='none';
+      contractSelect.value=cur?.contractNo||'';
+    } else {
+      contractSelect.style.display='none';
+      contractInputWrapper.style.display='block';
+      contractInput.value=cur?.contractNo||'';
+    }
   }
   const input=document.getElementById('protocolNameInput');
   if(input) input.value=cur?.protocolNo||cur?.name||'';
@@ -618,6 +633,36 @@ function applyProjectMaster(contractNo){
   refreshInitialSectionsForCurrentProtocol();
   saveData();
   render();
+}
+
+function onContractSelectChange(val){
+  const cur=getCurProtocol();
+  if(!cur) return;
+  if(val===''){
+    // "직접 입력" 선택 → 입력칸 표시
+    document.getElementById('contractSelect').style.display='none';
+    document.getElementById('contractInputWrapper').style.display='block';
+    setTimeout(()=>document.getElementById('contractInput').focus(),50);
+  } else {
+    // 기존 프로젝트 선택 → applyProjectMaster 실행
+    applyProjectMaster(val);
+  }
+}
+
+function setContractNo(val){
+  const cur=getCurProtocol();
+  if(!cur) return;
+  cur.contractNo=val.trim();
+  cur.name=cur.protocolNo || cur.projectName || cur.contractNo || 'Untitled Protocol';
+  saveData();
+  renderProtocolTabs();
+}
+
+function switchBackToContractDropdown(){
+  // 입력칸에서 드롭다운으로 돌아가기
+  document.getElementById('contractInputWrapper').style.display='none';
+  document.getElementById('contractSelect').style.display='block';
+  document.getElementById('contractSelect').value='';
 }
 
 function normalizeDocNameForCompare(name){
@@ -733,20 +778,17 @@ function renderSection(code, sec){
         <th style="width:78px">구분</th>
         <th style="min-width:140px">문서명</th>
         <th style="min-width:330px">TMF 파일명</th>
+        <th style="min-width:260px">서버 내 파일명</th>
         <th style="width:62px">버전</th>
         <th style="width:116px">Effective Date</th>
         <th style="width:76px">상태</th>
-        <th style="min-width:210px">승인서 날짜</th>
-        <th style="width:116px">제출일</th>
-        <th style="width:116px">접수일</th>
-        <th style="width:116px">승인일</th>
         <th style="min-width:80px">비고</th>
         <th style="width:22px"></th>
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
         ${isAddingHere?addDocRowHtml():''}
-        ${searchTerm&&!anyMatch?`<tr><td colspan="12" class="no-match">검색 결과 없음</td></tr>`:''}
+        ${searchTerm&&!anyMatch?`<tr><td colspan="8" class="no-match">검색 결과 없음</td></tr>`:''}
       </tbody>
     </table></div>`:''}
   </div>`;
@@ -787,9 +829,15 @@ function setSecMeta(code,secId,field,val){
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
   return `<div class="sec-meta">
+    <div class="meta-field"><span>제출일</span><input type="date" value="${meta.submitDate||''}" onchange="setSecMeta('${code}','${sec.id}','submitDate',this.value)"></div>
+    <div class="meta-field"><span>접수일</span><input type="date" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
     <div class="meta-field"><span>IRB 승인일</span><input type="date" value="${meta.approvalDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalDate',this.value)"></div>
     <div class="meta-field"><span>통지일</span><input type="date" value="${meta.noticeDate||''}" onchange="setSecMeta('${code}','${sec.id}','noticeDate',this.value)"></div>
-    <div style="font-size:11px;color:#999">※ 승인서 행에는 위 날짜가 자동 표시됩니다.</div>
+    <div class="meta-field"><span>IRB 승인 기간</span><div style="display:flex;gap:6px;align-items:center">
+      <input type="date" value="${meta.approvalStartDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalStartDate',this.value)" style="width:120px">
+      <span style="color:#999">~</span>
+      <input type="date" value="${meta.approvalEndDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalEndDate',this.value)" style="width:120px">
+    </div></div>
   </div>`;
 }
 function rowDateLinkHtml(sec,row){
@@ -819,15 +867,17 @@ function rowHtml(code,secId,idx,row,total){
     </td>
     <td>${highlight(row.name)}</td>
     <td><input class="tmf-input" placeholder="파일명" value="${esc(row.tmfName)}" onchange="${setter},'tmfName',this.value)"></td>
-    <td>${row.needVer?`<input class="ver-input" placeholder="v1.0" value="${esc(row.ver)}" onchange="${setter},'ver',this.value)">`:na()}</td>
+    <td><input class="tmf-input" placeholder="서버 경로/파일명" value="${esc(row.serverFileName||'')}" onchange="${setter},'serverFileName',this.value)"></td>
+    <td>${row.needVer?
+      (row.name.includes('동의서')?
+        `<div style="display:flex;gap:4px;align-items:center"><input class="ver-input" style="width:70px" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#999;font-size:12px">_</span><input class="ver-input" style="width:70px" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
+        :`<input class="ver-input" placeholder="v1.0" value="${esc(row.ver)}" onchange="${setter},'ver',this.value)">`)
+      :na()
+    }</td>
     <td>${row.needVer?`<input type="date" class="date-input" value="${row.effectiveDate||''}" onchange="${setter},'effectiveDate',this.value)">`:na()}</td>
     <td><select class="sel ${stCls(row.status)}" onchange="onSelChange(this,'${code}','${secId}',${idx})">
       ${stOpts(row.status)}
     </select></td>
-    <td>${rowDateLinkHtml(sec,row)}</td>
-    <td><input type="date" class="date-input" value="${row.submitDate||''}"  onchange="${setter},'submitDate',this.value)"></td>
-    <td><input type="date" class="date-input" value="${row.receiptDate||''}" onchange="${setter},'receiptDate',this.value)"></td>
-    <td><input type="date" class="date-input" value="${row.approveDate||''}" onchange="${setter},'approveDate',this.value)"></td>
     <td><input class="text-input" placeholder="메모" value="${esc(row.note)}" onchange="${setter},'note',this.value)"></td>
     <td><button class="del-btn" onclick="delRow('${code}','${secId}',${idx})" title="삭제">✕</button></td>
   </tr>`;
@@ -1001,7 +1051,7 @@ function deleteSite(code){
 
 // ── CSV ──────────────────────────────────────────────────────────
 function exportCSV(){
-  let csv='\uFEFFContract No.,Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,섹션,문서명,구분,TMF파일명,버전,Effective Date,상태,승인서 승인일,승인서 통지일,제출일,접수일,승인일,비고\n';
+  let csv='\uFEFFContract No.,Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,섹션,문서명,구분,TMF파일명,서버 내 파일명,버전,Master Ver.,Site Ver.,Effective Date,상태,승인서 승인일,승인서 통지일,제출일,접수일,승인일,비고\n';
   protocols.forEach(protocol=>{
     const pdata=protocolData[protocol.id]||{sites:[],sections:{}};
     (pdata.sites||[]).forEach(site=>{
@@ -1010,7 +1060,7 @@ function exportCSV(){
         sec.rows.forEach(r=>{
           const st=STATUSES.find(s=>s.val===r.status)?.label||'';
           const isApproval=(r.name||'').includes('승인서') || (r.name||'').toLowerCase().includes('approval');
-          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.ver||''}","${r.effectiveDate||''}","${st}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${r.submitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
+          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.serverFileName||''}","${r.ver||''}","${r.masterVer||''}","${r.siteVer||''}","${r.effectiveDate||''}","${st}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${r.submitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
         });
       });
     });
