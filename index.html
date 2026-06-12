@@ -1004,8 +1004,11 @@ function rowHtml(code,secId,idx,row,total){
     <td><input class="tmf-input" placeholder="서버 경로/파일명" value="${esc(row.serverFileName||'')}" onchange="${setter},'serverFileName',this.value)"></td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
-        `<div style="display:flex;gap:4px;align-items:center"><input class="ver-input" style="width:70px" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#999;font-size:12px">_</span><input class="ver-input" style="width:70px" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
-        :`<div style="display:flex;gap:4px;align-items:center"><input class="ver-input" style="width:60px" placeholder="v1.0" value="${esc(row.fromVer||row.ver||'')}" onchange="${setter},'fromVer',this.value)"><span style="color:#999;font-size:11px">to</span><input class="ver-input" style="width:60px" placeholder="v2.0" value="${esc(row.toVer||'')}" onchange="${setter},'toVer',this.value)"></div>`)
+        `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap"><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#999;font-size:12px;flex-shrink:0">_</span><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
+        :(row.name.includes('변경대비표')?
+          `<div style="display:flex;gap:3px;align-items:center;flex-wrap:nowrap"><input class="ver-input" style="width:55px;flex-shrink:0" placeholder="v1.0" value="${esc(row.fromVer||row.ver||'')}" onchange="${setter},'fromVer',this.value)"><span style="color:#999;font-size:11px;white-space:nowrap;flex-shrink:0">to</span><input class="ver-input" style="width:55px;flex-shrink:0" placeholder="v2.0" value="${esc(row.toVer||'')}" onchange="${setter},'toVer',this.value)"></div>`
+          :`<input class="ver-input" style="width:90px" placeholder="v1.0" value="${esc(row.ver||'')}" onchange="${setter},'ver',this.value)">`)
+      )
       :na()
     }</td>
     <td>${row.needVer&&!row.name.includes('변경대비표')?`<input type="date" class="date-input" value="${row.effectiveDate||''}" onchange="${setter},'effectiveDate',this.value)">`:na()}</td>
