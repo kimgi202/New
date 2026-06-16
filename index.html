@@ -145,6 +145,21 @@ tr:hover td{background:#f7f7f5}
 .history-content{background:#fff;border-radius:8px;padding:20px;max-width:400px;max-height:70vh;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
 .history-item{border-left:3px solid #0f7b6c;padding:8px;margin:8px 0;background:#f9f9f9;border-radius:4px;font-size:12px;color:#555}
 .history-item .time{color:#999;font-size:11px;display:block;margin-bottom:4px}
+/* ━━━ 기관별 계약 정보 패널 ━━━ */
+.contract-panel{background:#fff;border:1.5px solid #d4e8e4;border-radius:8px;margin-bottom:1rem;overflow:hidden}
+.contract-panel-header{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#f0faf8;cursor:pointer;user-select:none;border-bottom:1px solid #d4e8e4}
+.contract-panel-header:hover{background:#e6f6f2}
+.contract-panel-title{font-size:12px;font-weight:600;color:#0f7b6c;flex:1}
+.contract-panel-chevron{color:#0f7b6c;font-size:11px;transition:transform .2s;display:inline-block}
+.contract-panel-chevron.open{transform:rotate(90deg)}
+.contract-panel-body{display:flex;flex-wrap:wrap;gap:10px;padding:12px 14px;align-items:flex-end}
+.contract-field{display:flex;flex-direction:column;gap:4px}
+.contract-field label{font-size:10px;font-weight:600;color:#787774;letter-spacing:.4px;text-transform:uppercase}
+.contract-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:110px}
+.contract-field input:focus{border-color:#0f7b6c}
+.contract-field.wide input{min-width:200px}
+.contract-field.memo textarea{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:220px;resize:vertical;min-height:32px;line-height:1.4}
+.contract-field.memo textarea:focus{border-color:#0f7b6c}
 </style>
 </head>
 <body>
@@ -558,6 +573,21 @@ function addSectionToSite(code, type, customTitle=null){
 
 function getSec(code,secId){ return (sections[code]||[]).find(s=>s.id===secId); }
 
+// ── 기관별 계약 정보 ─────────────────────────────────────────────
+function getSiteContract(code){
+  const site=sites.find(s=>s.code===code);
+  if(!site) return {};
+  if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:''};
+  return site.contract;
+}
+function setSiteContract(code,field,val){
+  const site=sites.find(s=>s.code===code);
+  if(!site) return;
+  if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:''};
+  site.contract[field]=val;
+  saveData();
+}
+
 function setField(code,secId,idx,field,val){
   const sec=getSec(code,secId);
   if(sec&&sec.rows[idx]){ 
@@ -870,6 +900,7 @@ function renderBody(){
       </div>
       <button class="btn btn-danger" onclick="deleteSite('${curSite}')">기관 삭제</button>
     </div>
+    ${renderContractPanel(curSite)}
     <div class="search-box">
       <span style="color:#bbb">🔍</span>
       <input id="searchInput" placeholder="문서명 검색..." value="${esc(searchTerm)}" oninput="onSearch(this.value)">
@@ -926,6 +957,51 @@ function renderSection(code, sec){
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
 function na(){return '<span class="na-cell">-</span>';}
+
+// ── 기관별 계약 정보 패널 렌더링 ───────────────────────────────────
+const contractPanelCollapsed={};
+function toggleContractPanel(code){
+  contractPanelCollapsed[code]=!contractPanelCollapsed[code];
+  renderBody();
+}
+function renderContractPanel(code){
+  const c=getSiteContract(code);
+  const isOpen=!contractPanelCollapsed[code];
+  return `<div class="contract-panel">
+    <div class="contract-panel-header" onclick="toggleContractPanel('${code}')">
+      <span class="contract-panel-chevron${isOpen?' open':''}">▶</span>
+      <span class="contract-panel-title">📄 초기 계약 정보</span>
+      ${c.contractDate?`<span style="font-size:11px;color:#787774">계약일: <b style="color:#0f7b6c">${c.contractDate}</b></span>`:''}
+      ${c.contractNo?`<span style="font-size:11px;color:#787774;margin-left:8px">Contract No.: <b>${esc(c.contractNo)}</b></span>`:''}
+    </div>
+    ${isOpen?`<div class="contract-panel-body">
+      <div class="contract-field">
+        <label>Contract No.</label>
+        <input placeholder="예: 2402CBR03-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
+      </div>
+      <div class="contract-field">
+        <label>계약일 (시작일)</label>
+        <input type="date" value="${esc(c.contractDate||'')}" onchange="setSiteContract('${code}','contractDate',this.value)" style="min-width:130px">
+      </div>
+      <div class="contract-field">
+        <label>계약 금액</label>
+        <input placeholder="예: 3,500,000원" value="${esc(c.amount||'')}" onchange="setSiteContract('${code}','amount',this.value)" style="min-width:130px">
+      </div>
+      <div class="contract-field">
+        <label>의뢰사</label>
+        <input placeholder="예: CSL Korea" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:130px">
+      </div>
+      <div class="contract-field">
+        <label>PI 이름</label>
+        <input placeholder="예: 홍길동" value="${esc(c.pi||'')}" onchange="setSiteContract('${code}','pi',this.value)" style="min-width:100px">
+      </div>
+      <div class="contract-field memo">
+        <label>비고 / 메모</label>
+        <textarea placeholder="계약 관련 메모..." onchange="setSiteContract('${code}','memo',this.value)">${esc(c.memo||'')}</textarea>
+      </div>
+    </div>`:''}
+  </div>`;
+}
 function stCls(v){return STATUSES.find(s=>s.val===v)?.cls||'s-pend';}
 function stOpts(cur){return STATUSES.map(s=>`<option value="${s.val}"${cur===s.val?' selected':''}>${s.label}</option>`).join('');}
 
@@ -1063,6 +1139,9 @@ function renderSecForm(){
     </div>
   </div>`;
 }
+
+
+
 
 function renderStats(){
   let tot=0,ok=0,iss=0,wip=0;
@@ -1212,7 +1291,7 @@ function addSite(){
   const name=document.getElementById('siteNameInput').value.trim();
   if(!code||!name){alert('기관 코드와 기관명을 모두 입력해주세요');return;}
   if(sites.find(s=>s.code===code)){alert('이미 존재하는 기관 코드입니다');return;}
-  sites.push({code,name}); initSite(code); curSite=code;
+  sites.push({code,name,contractNo:'',contractDate:'',contractAmount:'',sponsor:'',piName:'',contractNote:''}); initSite(code); curSite=code;
   saveData(); closeSiteModal(); render();
 }
 function deleteSite(code){
@@ -1223,9 +1302,8 @@ function deleteSite(code){
   saveData(); render();
 }
 
-// ── CSV ──────────────────────────────────────────────────────────
 function exportCSV(){
-  let csv='\uFEFFContract No.,Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,섹션,문서명,구분,TMF파일명,서버 내 파일명,버전,Master Ver.,Site Ver.,Effective Date,상태,CRA 제출기한,승인서 승인일,승인서 통지일,CRA 제출일,PI 제출일,접수일,승인일,비고\n';
+  let csv='\uFEFFContract No.(프로토콜),Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,기관Contract No.,계약일,계약금액,의뢰사(기관),PI,계약비고,섹션,문서명,구분,TMF파일명,서버 내 파일명,버전,Master Ver.,Site Ver.,Effective Date,상태,CRA 제출기한,승인서 승인일,승인서 통지일,CRA 제출일,PI 제출일,접수일,승인일,비고\n';
   protocols.forEach(protocol=>{
     const pdata=protocolData[protocol.id]||{sites:[],sections:{}};
     (pdata.sites||[]).forEach(site=>{
@@ -1234,7 +1312,7 @@ function exportCSV(){
         sec.rows.forEach(r=>{
           const st=STATUSES.find(s=>s.val===r.status)?.label||'';
           const isApproval=(r.name||'').includes('승인서') || (r.name||'').toLowerCase().includes('approval');
-          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.serverFileName||''}","${r.ver||''}","${r.masterVer||''}","${r.siteVer||''}","${r.effectiveDate||''}","${st}","${r.deadline||''}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${meta.craSubmitDate||''}","${meta.piSubmitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
+          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${(site.contractNo||'').replace(/"/g,'""')}","${site.contractDate||''}","${(site.contractAmount||'').replace(/"/g,'""')}","${(site.sponsor||'').replace(/"/g,'""')}","${(site.piName||'').replace(/"/g,'""')}","${(site.contractNote||'').replace(/\n/g,' ').replace(/"/g,'""')}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.serverFileName||''}","${r.ver||''}","${r.masterVer||''}","${r.siteVer||''}","${r.effectiveDate||''}","${st}","${r.deadline||''}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${meta.craSubmitDate||''}","${meta.piSubmitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
         });
       });
     });
