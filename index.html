@@ -160,6 +160,34 @@ tr:hover td{background:#f7f7f5}
 .contract-field.wide input{min-width:200px}
 .contract-field.memo textarea{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:220px;resize:vertical;min-height:32px;line-height:1.4}
 .contract-field.memo textarea:focus{border-color:#0f7b6c}
+/* ━━━ IRB 바로가기 링크 ━━━ */
+.irb-link-btn{display:inline-flex;align-items:center;gap:6px;background:#0f7b6c;color:#fff;border:none;border-radius:6px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap;transition:background .15s}
+.irb-link-btn:hover{background:#0a6358}
+.irb-link-btn.empty{background:#fff;color:#0f7b6c;border:1px dashed #0f7b6c}
+.irb-link-btn.empty:hover{background:#f0faf8}
+.contract-field input.irb-url{min-width:240px;font-family:'Courier New',monospace;font-size:11px}
+/* ━━━ Index 뷰 ━━━ */
+.idx-tab{color:#0f7b6c}
+.index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto}
+.index-table{width:100%;border-collapse:collapse;font-size:12px}
+.index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap}
+.index-table td{padding:5px 8px;border-bottom:1px solid #f0f0ef;vertical-align:middle}
+.idx-sec-row{background:#eef5f3;cursor:pointer;user-select:none}
+.idx-sec-row:hover{background:#e6f1ee}
+.idx-sec-row td{padding:7px 10px;color:#0f7b6c;font-size:12.5px;border-bottom:1px solid #dcebe7}
+.idx-row:hover td{background:#f7faf9}
+.idx-row.idx-na{opacity:.5}
+.idx-row.idx-done{background:#f3faf6}
+.idx-chk{text-align:center}.idx-chk input{width:16px;height:16px;cursor:pointer;accent-color:#0f7b6c}
+.idx-num{font-family:'Courier New',monospace;color:#999;font-size:11px;white-space:nowrap;vertical-align:top;padding-top:7px}
+.idx-name{font-weight:500;color:#37352f;line-height:1.4}
+.idx-ref{display:inline-block;margin-left:6px;font-size:10px;color:#b8860b;background:#fef7e8;border-radius:4px;padding:1px 6px;font-weight:500}
+.idx-sub{font-size:10.5px;color:#999;margin-top:2px;line-height:1.45}
+.na-lbl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#787774;cursor:pointer}
+.na-lbl input{width:14px;height:14px;cursor:pointer}
+.idx-loc,.idx-note{width:100%;border:1px solid #e9e9e7;border-radius:4px;padding:4px 6px;font-size:11px;font-family:inherit;outline:none;color:#37352f}
+.idx-loc:focus,.idx-note:focus{border-color:#0f7b6c}
+.idx-loc{font-family:'Courier New',monospace}
 </style>
 </head>
 <body>
@@ -349,7 +377,9 @@ let protocols=[], protocolData={};
 let curProtocolId=null;
 let sites=[], sections={};
 let curSite=null, addingDoc=null, showSecForm=false, searchTerm='';
+let curView='site', curIndexType=null; // 'site' | 'index'
 const collapsed={};
+const indexSecCollapsed={};
 
 function makeId(prefix){
   return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
@@ -577,15 +607,39 @@ function getSec(code,secId){ return (sections[code]||[]).find(s=>s.id===secId); 
 function getSiteContract(code){
   const site=sites.find(s=>s.code===code);
   if(!site) return {};
-  if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:''};
+  if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:'',irbUrl:''};
   return site.contract;
 }
 function setSiteContract(code,field,val){
   const site=sites.find(s=>s.code===code);
   if(!site) return;
-  if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:''};
+  if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:'',irbUrl:''};
   site.contract[field]=val;
   saveData();
+  if(field==='irbUrl') renderBody();
+}
+
+// ── IRB 링크 헬퍼 ──────────────────────────────────────────────
+function irbHref(url){
+  let u=(url||'').trim();
+  if(!u) return '#';
+  if(!/^https?:\/\//i.test(u)) u='https://'+u;
+  return u.replace(/"/g,'%22');
+}
+function irbLinkButton(code){
+  const c=getSiteContract(code);
+  if(c.irbUrl && c.irbUrl.trim()){
+    return `<a class="irb-link-btn" href="${irbHref(c.irbUrl)}" target="_blank" rel="noopener" title="${esc(c.irbUrl)}">🔗 IRB 바로가기</a>`;
+  }
+  return `<button class="irb-link-btn empty" onclick="focusIrbField('${code}')" title="아래 패널에서 IRB 링크를 입력하세요">🔗 IRB 링크 추가</button>`;
+}
+function focusIrbField(code){
+  contractPanelCollapsed[code]=false;
+  renderBody();
+  setTimeout(()=>{
+    const el=document.querySelector('.irb-url');
+    if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}
+  },60);
 }
 
 function setField(code,secId,idx,field,val){
@@ -708,6 +762,329 @@ function showHistory(code,secId,idx){
 
 
 // ── render ───────────────────────────────────────────────────────
+// ━━━━━━━━━━━━━━ Index 기능 ━━━━━━━━━━━━━━
+// ══════════════════════════════════════════════════════════════
+// ISF/PSF/TMF Index 템플릿 (BeccoCRO COF 양식 기준)
+// h:true = 섹션 헤더(입력칸 없음), sub = 하위 불릿(설명)
+// ══════════════════════════════════════════════════════════════
+const INDEX_TEMPLATES = {
+  // ── PMS ISF Index (COF010) ──────────────────────────────────
+  ISF_PMS: [
+    {n:'1', t:'Contact Details', h:true},
+    {n:'1.1', t:'Contact List of study personnel'},
+    {n:'2', t:'Essential Documents', h:true},
+    {n:'2.1', t:'Essential Documents Version Tracking log'},
+    {n:'2.2', t:'Product Label'},
+    {n:'2.3', t:'Protocol and amendments', sub:["with 'Receipt' and 'Signature page' signed by PI if required"]},
+    {n:'2.4', t:'Information given to trial subject', sub:['Informed Consent Forms (ICFs), site version (with tracking log)']},
+    {n:'2.5', t:'Blank Case Report Form with CRF completion guideline'},
+    {n:'2.6', t:'Others'},
+    {n:'3', t:'Ethic Committee', h:true},
+    {n:'3.1', t:'IRB notification and approval letters', sub:['with submitted documents']},
+    {n:'3.2', t:'Annual Progress Reports', sub:['with notification and approval letter']},
+    {n:'3.3', t:'Trial Completion Report', sub:['with notification and approval letter']},
+    {n:'3.4', t:'Trial Result Report', sub:['with notification and approval letter']},
+    {n:'3.5', t:'IRB Membership Lists'},
+    {n:'3.6', t:'Others'},
+    {n:'4', t:'Study Site Staff', h:true},
+    {n:'4.1', t:'CVs of site staffs'},
+    {n:'4.2', t:'Training Document/Log with Training Material', sub:['Protocol-related / Pharmacovigilance Training']},
+    {n:'4.3', t:'GCP training certificate'},
+    {n:'4.4', t:'Others'},
+    {n:'5', t:'Safety Reports', h:true},
+    {n:'5.1', t:'Serious Adverse Event (SAE) Tracking Log'},
+    {n:'5.2', t:'SAE Reports Submission to Sponsor'},
+    {n:'5.3', t:'SAE Submission and Approval Letter to IRB'},
+    {n:'5.4', t:'Blank SAE Form and Guidelines'},
+    {n:'5.5', t:'Others (e.g. correspondence)'},
+    {n:'6', t:'Financial / Legal', h:true},
+    {n:'6.1', t:'Signed Clinical Trial Agreement with sponsor'},
+    {n:'6.2', t:'Signed Confidentiality Agreement (if applicable)'},
+    {n:'6.3', t:'Financial Correspondence (if applicable)'},
+    {n:'7', t:'Subject Data', h:true},
+    {n:'7.1', t:'Subject Enrollment Log'},
+    {n:'7.2', t:'Subject Identification Code List'},
+    {n:'7.3', t:'ICF Tracking Log'},
+    {n:'7.4', t:'Signed Informed Consent Forms'},
+    {n:'7.5', t:'Correspondence with subjects'},
+    {n:'7.6', t:'Others (e.g. completed subject diary)'},
+    {n:'8', t:'Monitoring & Audit', h:true},
+    {n:'8.1', t:'Site Visit Log'},
+    {n:'8.2', t:'Visit Correspondence (e.g. visit confirmation/ follow up letters)'},
+    {n:'8.3', t:'Site Initiation Visit Report'},
+    {n:'8.4', t:'Correspondence with study team/sponsor including Newsletters'},
+    {n:'8.5', t:'Protocol Deviation Form and Log'},
+    {n:'8.6', t:'Note to Files'},
+    {n:'8.7', t:'Contact Reports (e.g. telephone contact log, etc.)'},
+    {n:'8.8', t:'Others'},
+    {n:'9', t:'Clinical Study Report', h:true},
+    {n:'9.1', t:'Clinical Study Report'},
+    {n:'9.2', t:'Other'},
+    {n:'10', t:'Miscellaneous', h:true},
+  ],
+  // ── 임상시험 ISF Index (COF010, 14 sections) ────────────────
+  ISF_CLINICAL: [
+    {n:'1', t:'Contact Details', h:true},
+    {n:'1.1', t:'Contact List of study personnel'},
+    {n:'2', t:'Essential Documents', h:true},
+    {n:'2.1', t:'Essential Documents Version Tracking log'},
+    {n:'2.2', t:"Investigator's Brochure (IB)"},
+    {n:'2.3', t:'Protocol and amendments', sub:['with Signature page signed by PI if required']},
+    {n:'2.4', t:'Information given to trial subject', sub:['Informed Consent Forms (ICFs), site version (with tracking log)','Any other written information provided to subject']},
+    {n:'2.5', t:'Blank Case Report Form with CRF completion guideline'},
+    {n:'2.6', t:'Advertisement for subject recruitment (if used)'},
+    {n:'2.7', t:'Others'},
+    {n:'3', t:'Ethic Committee', h:true},
+    {n:'3.1', t:'IRB notification and approval letters', sub:['with submitted documents']},
+    {n:'3.2', t:'Annual Progress Reports', sub:['with notification and approval letter']},
+    {n:'3.3', t:'Trial Completion Report', sub:['with notification and approval letter']},
+    {n:'3.4', t:'Trial Result Report', sub:['with notification and approval letter']},
+    {n:'3.5', t:'Safety Report notification and approval letters', sub:['e.g. SUSAR, annual safety line list, etc.']},
+    {n:'3.6', t:'IRB Membership Lists'},
+    {n:'3.7', t:'MFDS notification and approval letters'},
+    {n:'3.8', t:'Others'},
+    {n:'4', t:'Study Site Staff', h:true},
+    {n:'4.1', t:'Study Personnel Signature/Delegation Form'},
+    {n:'4.2', t:'CVs of site staffs'},
+    {n:'4.3', t:'Training Document/Log with Training Material', sub:['Protocol-related / Pharmacovigilance Training']},
+    {n:'4.4', t:'GCP training certificate'},
+    {n:'4.5', t:'Others'},
+    {n:'5', t:'Laboratory Related Document', h:true},
+    {n:'5.1', t:'Laboratory Certificate'},
+    {n:'5.2', t:'Laboratory Normal Reference Ranges (including revisions)'},
+    {n:'5.3', t:'Central Lab Manual, if applicable'},
+    {n:'5.4', t:'Central Lab Kit Shipping/Return Receipts'},
+    {n:'5.5', t:'Others (e.g. correspondence)'},
+    {n:'6', t:'Investigational Product (IP)', h:true},
+    {n:'6.1', t:'Instructions for Handling of IP (if not included in protocol or IB)'},
+    {n:'6.2', t:'IP Shipping and Receipt Records', sub:['including Certificate(s) of Analysis of IP shipped']},
+    {n:'6.3', t:'IP Dispensing and Accountability Logs'},
+    {n:'6.4', t:'IP Destruction Documentation'},
+    {n:'6.5', t:'IP Storage Temperature Logs'},
+    {n:'6.6', t:'Calibration Certificates for IP storage thermometer'},
+    {n:'6.7', t:'Others (e.g. correspondence)'},
+    {n:'7', t:'Safety Reports', h:true},
+    {n:'7.1', t:'Serious Adverse Event (SAE) Tracking Log'},
+    {n:'7.2', t:'SAE Reports Submission to Sponsor'},
+    {n:'7.3', t:'SAE Submission and Approval Letter to IRB'},
+    {n:'7.4', t:'Expedited Safety Reports (e.g. CIOMS Reports)'},
+    {n:'7.5', t:'Blank SAE Form and Guidelines'},
+    {n:'7.6', t:'Others (e.g. correspondence)'},
+    {n:'8', t:'Randomization', h:true},
+    {n:'8.1', t:'Decoding Procedure for blinder'},
+    {n:'8.2', t:'Others'},
+    {n:'9', t:'Financial / Legal', h:true},
+    {n:'9.1', t:'Signed Clinical Trial Agreement with sponsor'},
+    {n:'9.2', t:'Signed Confidentiality Agreement'},
+    {n:'9.3', t:'Site Specific Agreement'},
+    {n:'9.4', t:'Insurance and Indemnity Statement'},
+    {n:'9.5', t:'Financial Correspondence (if applicable)'},
+    {n:'9.6', t:'Others (e.g. receipt for subject visit cost)'},
+    {n:'10', t:'Subject Data', h:true},
+    {n:'10.1', t:'Subject Screening / Enrollment Log'},
+    {n:'10.2', t:'Subject Identification Code List'},
+    {n:'10.3', t:'ICF Tracking Log'},
+    {n:'10.4', t:'Signed Informed Consent Forms'},
+    {n:'10.5', t:'Subject Visit Log (if applicable)'},
+    {n:'10.6', t:'Correspondence with subjects'},
+    {n:'10.7', t:'Others (e.g. completed subject diary)'},
+    {n:'11', t:'Monitoring & Audit', h:true},
+    {n:'11.1', t:'Site Visit Log'},
+    {n:'11.2', t:'Visit Correspondence (e.g. visit confirmation/ follow up letters)'},
+    {n:'11.3', t:'Site Initiation Visit Report'},
+    {n:'11.4', t:'Correspondence with study team/sponsor including Newsletters'},
+    {n:'11.5', t:'Protocol Deviation Log and Form'},
+    {n:'11.6', t:'Note to Files'},
+    {n:'11.7', t:'Contact Reports (e.g. telephone contact log, etc.)'},
+    {n:'11.8', t:'Audit Certificates'},
+    {n:'11.9', t:'Others'},
+    {n:'12', t:'Committees and Meeting', h:true},
+    {n:'12.1', t:'Investigator Meeting Agendas and Minutes'},
+    {n:'12.2', t:'Others'},
+    {n:'13', t:'Clinical Study Report', h:true},
+    {n:'13.1', t:'Clinical Study Report'},
+    {n:'13.2', t:'Publication'},
+    {n:'14', t:'Miscellaneous', h:true},
+  ],
+  // ── 임상시험 PSF Index (COF013, 8 sections) ─────────────────
+  PSF_CLINICAL: [
+    {n:'1', t:'Contact Details', h:true},
+    {n:'1.1', t:'Contact List of study personnel'},
+    {n:'1.2', t:'Site Visit Log'},
+    {n:'2', t:'Essential Documents', h:true},
+    {n:'2.1', t:"Investigator's Brochure (IB)"},
+    {n:'2.2', t:'Final Protocol'},
+    {n:'2.3', t:'Others'},
+    {n:'3', t:'Study Site Staff', h:true, ref:'Ref. to ISF 4'},
+    {n:'3.1', t:'Study Personnel Signature/Delegation Form', ref:'Ref. to ISF 4.1'},
+    {n:'3.2', t:'CVs of site staffs', ref:'Ref. to ISF 4.2'},
+    {n:'3.3', t:'Training Document/Log with Training Material', ref:'Ref. to ISF 4.3'},
+    {n:'3.4', t:'GCP training certificate', ref:'Ref. to ISF 4.4'},
+    {n:'3.5', t:'Others', ref:'Ref. to ISF 4.5'},
+    {n:'4', t:'Guidelines', h:true},
+    {n:'4.1', t:'Instructions for Handling of IP (if not included in protocol or IB)'},
+    {n:'4.2', t:'Sample of labels'},
+    {n:'4.3', t:'Any other relevant guidelines/SOPs/trial specific instruction'},
+    {n:'5', t:'Investigational Product (IP)', h:true},
+    {n:'5.1', t:'IP Shipping and Receipt Records', sub:['including Certificate(s) of Analysis of IP shipped']},
+    {n:'5.2', t:'IP Dispensing and Accountability Logs'},
+    {n:'5.3', t:'IP Destruction Documentation'},
+    {n:'5.4', t:'IP Storage Temperature Logs'},
+    {n:'5.5', t:'Calibration Certificates for IP storage thermometer'},
+    {n:'5.6', t:'Others'},
+    {n:'6', t:'Randomization', h:true},
+    {n:'6.1', t:'Randomization confirmations'},
+    {n:'6.2', t:'Decoding Procedure for blinder'},
+    {n:'7', t:'Monitoring', h:true},
+    {n:'7.1', t:'Correspondence with study team/sponsor including Newsletters'},
+    {n:'7.2', t:'Site Initiation Visit Report', ref:'Ref. to ISF 11.3'},
+    {n:'7.3', t:'Protocol Deviation Log and Form', ref:'Ref. to ISF 11.5'},
+    {n:'7.4', t:'Note to Files, etc.', ref:'Ref. to ISF 11.6'},
+    {n:'8', t:'Miscellaneous', h:true},
+  ],
+  // ── 임상시험 TMF Index (COF011, 15 sections) ────────────────
+  TMF_CLINICAL: [
+    {n:'1', t:'Central Trial Coordination Team', h:true},
+    {n:'1.1', t:'Contact List'},
+    {n:'1.2', t:'Project Member Tracker'},
+    {n:'1.3', t:'CVs'},
+    {n:'1.4', t:'GCP Training Certificates'},
+    {n:'1.5', t:'Training Documents with materials', sub:['Protocol-related / Pharmacovigilance Training','Sponsor SOP Training, if applicable']},
+    {n:'1.6', t:'Other Training Certificates'},
+    {n:'2', t:'Trial Management', h:true},
+    {n:'2.1', t:'Project Management Plan'},
+    {n:'2.2', t:'Monitoring Plan'},
+    {n:'2.3', t:'Vender Assessment Documents with study vender log, if applicable'},
+    {n:'2.4', t:'Site Selection Documentation', sub:['Feasibility Questionnaire approved by sponsor – blank','Any significant correspondence relating to site feasibility and site selection','Related Correspondence']},
+    {n:'2.5', t:"None-Selected Sites' Documents", sub:['Feasibility Questionnaire – completed','Site Visit Log','Site Selection Visit Reports with visit correspondence','CVs of site staffs','Training Document/Log with Training Material']},
+    {n:'2.6', t:'Kick-off Meeting; Agenda, Minutes, and Attending list, etc.'},
+    {n:'2.7', t:'Other Trial Meetings; Agenda, Minutes, and Attending list, etc., if applicable'},
+    {n:'2.8', t:'Risk Assessment, CAPA plan, Issue Management Tracker, etc.'},
+    {n:'2.9', t:'Non-Compliance Reports (project level)'},
+    {n:'2.10', t:'Note to File (NTF) and NTF tracking log'},
+    {n:'2.11', t:'Significant Team Correspondence & Communication including Emails, etc.'},
+    {n:'3', t:'Essential Documents', h:true},
+    {n:'3.1', t:'Essential Documents Version Tracking log'},
+    {n:'3.2', t:"Investigator's Brochure (IB)", sub:['IB / SmPC','Safety alert updates']},
+    {n:'3.3', t:'Protocol and amendments', sub:['Approved Protocols including change tables','Protocol review documents','Draft protocols','Translation certificate, if applicable']},
+    {n:'3.4', t:'Information given to trial subject', sub:['All Master version Informed Consent Forms (ICF) including change tables','Any other written information provided to subject','Translation certificate, if applicable']},
+    {n:'3.5', t:'Blank Case Report Form with CRF completion guideline'},
+    {n:'3.6', t:'Advertisement for subject recruitment, Master Version', sub:['Translation certificate, if applicable']},
+    {n:'3.7', t:'Others'},
+    {n:'3.8', t:'Related Correspondence'},
+    {n:'4', t:'Regulatory Documents', h:true},
+    {n:'4.1', t:'Approval letters of Final Protocol'},
+    {n:'4.2', t:'Annual Reports'},
+    {n:'4.3', t:'Notifications to MFDS'},
+    {n:'4.4', t:'Related Correspondence'},
+    {n:'5', t:'Central Ethic Committee', h:true},
+    {n:'5.1', t:'IRB notification and approval letters'},
+    {n:'5.2', t:'Annual Progress Reports'},
+    {n:'5.3', t:'Trial Completion Report'},
+    {n:'5.4', t:'Trial Result Report'},
+    {n:'5.5', t:'Safety Report notification and approval letters'},
+    {n:'5.6', t:'IRB Membership Lists'},
+    {n:'5.7', t:'Related Correspondence'},
+    {n:'6', t:'Central Laboratory Related Document', h:true},
+    {n:'6.1', t:'Central Laboratory Certificate of accreditation'},
+    {n:'6.2', t:'Central Laboratory Reference Ranges (including revisions)'},
+    {n:'6.3', t:'Lab Manuals'},
+    {n:'6.4', t:'Lab Kit Shipping/Destruction/Return Records'},
+    {n:'6.5', t:'Related Correspondence'},
+    {n:'7', t:'Investigational Product (IP)', h:true},
+    {n:'7.1', t:'Investigational Product packaging (label specification, copies of labels), if applicable'},
+    {n:'7.2', t:'Instructions for handling trial medication and trial related materials', sub:['Randomization, Re-supply, Return / Destruction, Code breaking, IVRS if applicable']},
+    {n:'7.3', t:'Template of Accountability Logs/ Inventory Logs / Dispensing Logs / Temperature Logs'},
+    {n:'7.4', t:'Study Investigational Product Accountability'},
+    {n:'7.5', t:'Documentation of Investigational Product Destruction'},
+    {n:'7.6', t:'Certificate of Analysis'},
+    {n:'7.7', t:'Related Correspondence'},
+    {n:'8', t:'Pharmacovigilance', h:true},
+    {n:'8.1', t:'Safety Management Plan, if applicable'},
+    {n:'8.2', t:'Blank SAE Form and Guidelines'},
+    {n:'8.3', t:'Pharmacovigilance Training handout'},
+    {n:'8.4', t:'Pharmacovigilance Agreement, if applicable'},
+    {n:'8.5', t:'SAE / SUSAR reports and associated correspondence'},
+    {n:'8.6', t:'Notification of Safety information from Sponsor'},
+    {n:'8.7', t:'Development Safety Update Report (DSUR) and acknowledgements'},
+    {n:'8.8', t:'SAE/IRAE/UADE report tracking log'},
+    {n:'8.9', t:'Related Correspondence'},
+    {n:'9', t:'Data Management and Statistics', h:true},
+    {n:'9.1', t:'Refer to Data Management File and Statistics Analysis File'},
+    {n:'10', t:'Financial / Legal', h:true},
+    {n:'10.1', t:'Contracts / Contract Addendums'},
+    {n:'10.2', t:'Financial Agreement'},
+    {n:'10.3', t:'Confidentiality Agreement'},
+    {n:'10.4', t:'Insurance and Indemnity Statement'},
+    {n:'10.5', t:'Related Correspondence'},
+    {n:'11', t:'Audit & Inspection', h:true},
+    {n:'11.1', t:'Correspondence of Intent to Audit'},
+    {n:'11.2', t:'Audit Follow up'},
+    {n:'11.3', t:'Audit Certificates'},
+    {n:'11.4', t:'Regulatory Inspections'},
+    {n:'11.5', t:'Related Correspondence'},
+    {n:'12', t:'Committees and Meeting', h:true},
+    {n:'12.1', t:'Investigator Meeting Agendas and Minutes'},
+    {n:'12.2', t:'Investigator Meeting Attending List'},
+    {n:'12.3', t:'Correspondence with Meeting Agency including agreements'},
+    {n:'12.4', t:'Others'},
+    {n:'13', t:'Clinical Study Report', h:true},
+    {n:'13.1', t:'Clinical Study Report'},
+    {n:'13.2', t:'Publications'},
+    {n:'14', t:'Miscellaneous', h:true},
+    {n:'14.1', t:'Study specific templates'},
+    {n:'14.2', t:'Miscellaneous'},
+    {n:'15', t:'Site Management', h:true},
+    {n:'15.1', t:'Site Selection'},
+    {n:'15.2', t:'Site Set-up'},
+    {n:'15.3', t:'Site Initiation'},
+    {n:'15.4', t:'Study Conduct'},
+  ],
+};
+
+// Study Type → 사용할 Index 목록
+function getIndexTypesForProtocol(){
+  const cur=getCurProtocol?.();
+  const type=cur?.studyType||'PMS';
+  if(type==='임상시험') return ['ISF','PSF','TMF'];
+  if(type==='PMS') return ['ISF'];
+  return []; // 기타
+}
+function indexTemplateKey(indexType){
+  const cur=getCurProtocol?.();
+  const type=cur?.studyType||'PMS';
+  if(indexType==='ISF') return type==='임상시험'?'ISF_CLINICAL':'ISF_PMS';
+  if(indexType==='PSF') return 'PSF_CLINICAL';
+  if(indexType==='TMF') return 'TMF_CLINICAL';
+  return 'ISF_PMS';
+}
+// 인덱스 행 데이터 (없으면 템플릿에서 생성, 기존 입력값은 보존)
+function getIndexRows(indexType){
+  if(!curProtocolId) return [];
+  const pd=protocolData[curProtocolId];
+  if(!pd) return [];
+  if(!pd.indexes) pd.indexes={};
+  const tmplKey=indexTemplateKey(indexType);
+  const tmpl=INDEX_TEMPLATES[tmplKey]||[];
+  const storeKey=indexType+'__'+tmplKey; // study type 바뀌면 다른 템플릿으로 분리 저장
+  if(!pd.indexes[storeKey]){
+    pd.indexes[storeKey]=tmpl.map(it=>({
+      n:it.n, t:it.t, h:!!it.h, sub:it.sub||null, ref:it.ref||'',
+      na:false, status:'pend', location:'', note:''
+    }));
+  }
+  return pd.indexes[storeKey];
+}
+function setIndexField(indexType, rowNum, field, val){
+  const rows=getIndexRows(indexType);
+  const row=rows.find(r=>r.n===rowNum);
+  if(!row) return;
+  row[field]=val;
+  saveData();
+  if(field==='na'||field==='status') renderBody();
+}
+
+
 function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
 
 function renderProtocolTabs(){
@@ -749,6 +1126,7 @@ function switchProtocol(id){
   syncCurrentProtocolData();
   curProtocolId=id;
   bindCurrentProtocol();
+  curView='site'; curIndexType=null;
   addingDoc=null; showSecForm=false; searchTerm='';
   saveData();
   render();
@@ -843,6 +1221,13 @@ function refreshInitialSectionsForCurrentProtocol(){
       }
     });
   });
+  saveData();
+  renderTabs();
+  if(curView==='index'){
+    // study type 변경 시, 현재 인덱스 탭이 더 이상 없으면 site 뷰로 복귀
+    if(!getIndexTypesForProtocol().includes(curIndexType)){ curView='site'; curIndexType=null; }
+    renderBody();
+  }
 }
 
 function openProtocolModal(){
@@ -880,12 +1265,26 @@ function deleteProtocol(){
 }
 
 function renderTabs(){
+  const idxTypes=getIndexTypesForProtocol();
+  const idxTabs = idxTypes.length
+    ? `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
+      idxTypes.map(t=>`<div class="tab idx-tab${(curView==='index'&&curIndexType===t)?' active':''}" onclick="switchIndex('${t}')">📑 ${t} Index</div>`).join('')
+    : '';
   document.getElementById('tabsWrap').innerHTML=
-    sites.map(s=>`<div class="tab${s.code===curSite?' active':''}" onclick="switchSite('${s.code}')">${s.code} ${s.name}</div>`).join('')+
-    `<div class="tab-add" onclick="openSiteModal()">+</div>`;
+    sites.map(s=>`<div class="tab${(curView==='site'&&s.code===curSite)?' active':''}" onclick="switchSite('${s.code}')">${s.code} ${s.name}</div>`).join('')+
+    `<div class="tab-add" onclick="openSiteModal()">+</div>`+
+    idxTabs;
+}
+
+function switchIndex(type){
+  curView='index'; curIndexType=type;
+  addingDoc=null; showSecForm=false; searchTerm='';
+  renderTabs(); renderBody();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function renderBody(){
+  if(curView==='index'){ renderIndexBody(); return; }
   const wrap=document.getElementById('bodyWrap');
   if(!curSite){wrap.innerHTML='<div class="empty">현재 Protocol에 기관을 추가해주세요</div>';return;}
   const site=sites.find(s=>s.code===curSite);
@@ -898,7 +1297,10 @@ function renderBody(){
         <div style="font-size:16px;font-weight:700">${site.code} · ${site.name}</div>
         <div style="font-size:12px;color:#787774;margin-top:2px">완료 ${ok}/${tot} · 이슈 ${iss}</div>
       </div>
-      <button class="btn btn-danger" onclick="deleteSite('${curSite}')">기관 삭제</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${irbLinkButton(curSite)}
+        <button class="btn btn-danger" onclick="deleteSite('${curSite}')">기관 삭제</button>
+      </div>
     </div>
     ${renderContractPanel(curSite)}
     <div class="search-box">
@@ -915,6 +1317,92 @@ function renderBody(){
   `;
 }
 
+// ── Index 뷰 렌더링 ───────────────────────────────────────────
+function renderIndexBody(){
+  const wrap=document.getElementById('bodyWrap');
+  const cur=getCurProtocol();
+  const type=curIndexType||'ISF';
+  const rows=getIndexRows(type);
+  // 진행 현황 (헤더/참조행 제외, N/A 제외 대상 중 완료)
+  const target=rows.filter(r=>!r.h && !r.na);
+  const done=target.filter(r=>r.status==='ok').length;
+  const naCount=rows.filter(r=>!r.h && r.na).length;
+  const issue=rows.filter(r=>!r.h && r.status==='issue').length;
+  const fullName={ISF:'ISF Index',PSF:'PSF Index',TMF:'TMF Index'}[type]||(type+' Index');
+
+  let bodyRows='';
+  rows.forEach(r=>{
+    if(r.h){
+      const open=!indexSecCollapsed[type+r.n];
+      bodyRows+=`<tr class="idx-sec-row" onclick="toggleIndexSec('${type}','${r.n}')">
+        <td colspan="6"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}</td></tr>`;
+      return;
+    }
+    // 상위 섹션이 접혀 있으면 숨김
+    const secNum=r.n.split('.')[0];
+    if(indexSecCollapsed[type+secNum]) return;
+    const subHtml=r.sub?`<div class="idx-sub">${r.sub.map(s=>'– '+esc(s)).join('<br>')}</div>`:'';
+    const naChecked=r.na?'checked':'';
+    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}">
+      <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}','${r.n}','status',this.checked?'ok':'pend')"></td>
+      <td class="idx-num">${esc(r.n)}</td>
+      <td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>
+      <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}','${r.n}','na',this.checked)">N/A</label></td>
+      <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}','${r.n}','status',this.value)">${idxStOpts(r.status)}</select></td>
+      <td><input class="idx-loc" placeholder="위치 / 파일명" value="${esc(r.location||'')}" onchange="setIndexField('${type}','${r.n}','location',this.value)"></td>
+      <td><input class="idx-note" placeholder="비고" value="${esc(r.note||'')}" onchange="setIndexField('${type}','${r.n}','note',this.value)"></td>
+    </tr>`;
+  });
+
+  wrap.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:16px;font-weight:700">📑 ${fullName}</div>
+        <div style="font-size:12px;color:#787774;margin-top:2px">
+          ${esc(cur?.protocolNo||cur?.name||'')} · ${esc(cur?.sponsor||'Sponsor 미입력')}
+          &nbsp;·&nbsp; 완료 ${done}/${target.length} · 이슈 ${issue} · N/A ${naCount}
+        </div>
+      </div>
+      <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
+    </div>
+    <div class="index-table-wrap"><table class="index-table">
+      <thead><tr>
+        <th style="width:34px">✓</th>
+        <th style="width:48px">No.</th>
+        <th>Title of the documents</th>
+        <th style="width:56px">N/A</th>
+        <th style="width:84px">상태</th>
+        <th style="width:200px">위치 / 파일명</th>
+        <th style="width:150px">비고</th>
+      </tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table></div>
+  `;
+}
+function idxStOpts(cur){
+  const opts=[['pend','미확인'],['wip','진행중'],['ok','✓완료'],['issue','❌이슈']];
+  return opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
+}
+function toggleIndexSec(type,num){ indexSecCollapsed[type+num]=!indexSecCollapsed[type+num]; renderBody(); }
+function exportIndexCSV(type){
+  const rows=getIndexRows(type);
+  const cur=getCurProtocol();
+  let csv='\uFEFF';
+  csv+=`Protocol,${(cur?.protocolNo||cur?.name||'').replace(/,/g,' ')}\n`;
+  csv+=`Index,${type}\n\n`;
+  csv+='No,Title,NA,Status,Location/FileName,Note\n';
+  const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
+  rows.forEach(r=>{
+    if(r.h){ csv+=`${r.n},"${r.t}",,,,\n`; return; }
+    const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
+    csv+=`${r.n},${q(r.t)},${r.na?'NA':''},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.note)}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${(cur?.protocolNo||'protocol')}_${type}_Index.csv`;
+  a.click();
+}
 function renderSection(code, sec){
   const isOpen=!collapsed[code+sec.id];
   const tot=sec.rows.length;
@@ -971,10 +1459,15 @@ function renderContractPanel(code){
     <div class="contract-panel-header" onclick="toggleContractPanel('${code}')">
       <span class="contract-panel-chevron${isOpen?' open':''}">▶</span>
       <span class="contract-panel-title">📄 초기 계약 정보</span>
+      ${c.irbUrl?`<a href="${irbHref(c.irbUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:11px;color:#0f7b6c;font-weight:600;text-decoration:underline">🔗 IRB 바로가기</a>`:''}
       ${c.contractDate?`<span style="font-size:11px;color:#787774">계약일: <b style="color:#0f7b6c">${c.contractDate}</b></span>`:''}
       ${c.contractNo?`<span style="font-size:11px;color:#787774;margin-left:8px">Contract No.: <b>${esc(c.contractNo)}</b></span>`:''}
     </div>
     ${isOpen?`<div class="contract-panel-body">
+      <div class="contract-field wide">
+        <label>🔗 IRB 포털 링크</label>
+        <input class="irb-url" placeholder="예: https://irb.hospital.or.kr" value="${esc(c.irbUrl||'')}" onchange="setSiteContract('${code}','irbUrl',this.value)">
+      </div>
       <div class="contract-field">
         <label>Contract No.</label>
         <input placeholder="예: 2402CBR03-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
@@ -1283,7 +1776,7 @@ function delRow(code,secId,idx){
 }
 
 // ── 기관 ─────────────────────────────────────────────────────────
-function switchSite(code){curSite=code;addingDoc=null;showSecForm=false;searchTerm='';renderTabs();renderBody();}
+function switchSite(code){curView='site';curSite=code;addingDoc=null;showSecForm=false;searchTerm='';renderTabs();renderBody();}
 function openSiteModal(){document.getElementById('siteModal').classList.add('show');document.getElementById('siteCodeInput').focus();}
 function closeSiteModal(){document.getElementById('siteModal').classList.remove('show');document.getElementById('siteCodeInput').value='';document.getElementById('siteNameInput').value='';}
 function addSite(){
