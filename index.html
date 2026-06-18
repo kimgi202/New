@@ -155,6 +155,31 @@ tr:hover td{background:#f7f7f5}
 .contract-panel-chevron{color:#0f7b6c;font-size:11px;transition:transform .2s;display:inline-block}
 .contract-panel-chevron.open{transform:rotate(90deg)}
 .contract-panel-body{display:flex;flex-wrap:wrap;gap:10px;padding:12px 14px;align-items:flex-end}
+/* ━━━ 계약 관리 (초기/변경 계약 이력) ━━━ */
+.contract-list{background:#fff;border:1.5px solid #d4e8e4;border-radius:8px;margin:1rem 0;overflow:hidden}
+.contract-list-head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#f0faf8;cursor:pointer;user-select:none}
+.contract-list-head:hover{background:#e6f6f2}
+.contract-list-head .clh-title{font-size:13px;font-weight:700;color:#0f7b6c;flex:1}
+.contract-list-head .clh-sub{font-weight:400;color:#999;font-size:11px}
+.contract-list-head .clh-chev{color:#0f7b6c;font-size:11px;transition:transform .2s;display:inline-block}
+.contract-list-head .clh-chev.open{transform:rotate(90deg)}
+.contract-list-body{padding:12px 16px}
+.ct-card{border:1px solid #e4e7ec;border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fcfcfb}
+.ct-card.init{border-color:#d4e8e4;background:#f7fdfb}
+.ct-card-head{display:flex;gap:10px;align-items:center;margin-bottom:11px;flex-wrap:wrap}
+.ct-card-head .ct-name{flex:1;min-width:150px;font-weight:700;font-size:13px;border:1px solid #e9e9e7;border-radius:6px;padding:7px 9px;background:#f0faf8;color:#37352f;outline:none}
+.ct-card-head .ct-name:focus{border-color:#0f7b6c;background:#fff}
+.ct-card-head .ct-cdate{border:1px solid #e9e9e7;border-radius:6px;padding:7px 9px;font-size:12px;font-family:inherit;color:#37352f;outline:none}
+.ct-card-head .ct-cdate:focus{border-color:#0f7b6c}
+.ct-card-body{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.ct-amount-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ct-pct{width:60px!important;min-width:60px!important;text-align:right}
+.ct-calc{font-size:11px;color:#0f7b6c;font-weight:700;min-height:14px;margin-top:2px}
+.ct-chk{white-space:nowrap;font-size:11px;color:#787774;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+.ct-chk input{width:15px;height:15px;cursor:pointer;accent-color:#0f7b6c}
+.ct-del{border:none;background:#fbe9e7;color:#c0392b;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:12px}
+.ct-del:hover{background:#f5c6c0}
+.ci-add{margin-top:4px;border-color:#0f7b6c;color:#0f7b6c}
 .contract-field{display:flex;flex-direction:column;gap:4px}
 .contract-field label{font-size:10px;font-weight:600;color:#787774;letter-spacing:.4px;text-transform:uppercase}
 .contract-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:110px}
@@ -629,6 +654,133 @@ function setSiteContract(code,field,val){
   if(field==='irbUrl') renderBody();
 }
 
+// ── 계약 관리 (초기/변경 계약 이력 + 연구비 자동계산) ──────────
+function getSiteContracts(code){
+  const site=sites.find(s=>s.code===code);
+  if(!site) return [];
+  if(!Array.isArray(site.contracts)) site.contracts=[];
+  return site.contracts;
+}
+function contractAutoLabel(i){ return i===0 ? '초기 계약' : (i+'차 변경계약'); }
+function addContract(code){
+  const arr=getSiteContracts(code);
+  arr.push({id:makeId('ct'), label:contractAutoLabel(arr.length), date:'',
+            amount:'', vat:false, indirect:'', subjects:'', reason:''});
+  saveData(); renderBody();
+}
+function setContractField(code,id,field,val){
+  const it=getSiteContracts(code).find(x=>x.id===id);
+  if(!it) return;
+  it[field]=val; saveData();
+}
+function deleteContract(code,id){
+  const arr=getSiteContracts(code);
+  const it=arr.find(x=>x.id===id);
+  if(!it) return;
+  if(!confirm("'"+(it.label||'계약')+"' 항목을 삭제할까요?")) return;
+  arr.splice(arr.indexOf(it),1);
+  saveData(); renderBody();
+}
+function ctNum(s){ const n=parseFloat(String(s==null?'':s).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
+function ctWon(n){ return Math.round(n).toLocaleString('ko-KR'); }
+// 연구비 = 계약금액 + (VAT 10%) + (간접비 N%)  → 자동 계산 문구 생성
+function ctCalcText(base, vat, indirectPct){
+  if(!(base>0)) return '';
+  const vatAmt = vat ? base*0.1 : 0;
+  const indAmt = base*(ctNum(indirectPct)/100);
+  const total = base + vatAmt + indAmt;
+  let parts=[];
+  if(vat) parts.push('VAT '+ctWon(vatAmt));
+  if(ctNum(indirectPct)>0) parts.push('간접비 '+ctWon(indAmt));
+  const detail = parts.length? ' ('+parts.join(' + ')+')' : '';
+  return '연구비 ₩'+ctWon(total)+detail;
+}
+function updateCalc(id){
+  const amt=document.getElementById('amt_'+id);
+  const vat=document.getElementById('vat_'+id);
+  const ind=document.getElementById('ind_'+id);
+  const out=document.getElementById('calc_'+id);
+  if(!out) return;
+  out.textContent=ctCalcText(ctNum(amt&&amt.value), vat&&vat.checked, ind&&ind.value);
+}
+const contractListCollapsed={};
+function toggleContractList(code){ contractListCollapsed[code]=!contractListCollapsed[code]; renderBody(); }
+function renderContractList(code){
+  const arr=getSiteContracts(code);
+  const c=getSiteContract(code); // 초기 계약에 표시할 공통 계약정보(IRB/Contract No./의뢰사/PI/비고)
+  const open=!contractListCollapsed[code];
+  const cards=arr.map((it,idx)=>{
+    const isInit=idx===0;
+    const calc=ctCalcText(ctNum(it.amount), it.vat, it.indirect);
+    const amountBlock=`
+      <div class="contract-field" style="flex:1;min-width:200px">
+        <label>계약 금액</label>
+        <div class="ct-amount-row">
+          <input type="text" id="amt_${it.id}" value="${esc(it.amount||'')}" placeholder="예: 3,000,000" oninput="updateCalc('${it.id}')" onchange="setContractField('${code}','${it.id}','amount',this.value)" style="min-width:130px">
+          <label class="ct-chk"><input type="checkbox" id="vat_${it.id}" ${it.vat?'checked':''} onchange="setContractField('${code}','${it.id}','vat',this.checked);updateCalc('${it.id}')">VAT 10%</label>
+          <label class="ct-chk">간접비 <input type="text" class="ct-pct" id="ind_${it.id}" value="${esc(it.indirect||'')}" placeholder="0" oninput="updateCalc('${it.id}')" onchange="setContractField('${code}','${it.id}','indirect',this.value)">%</label>
+        </div>
+        <div class="ct-calc" id="calc_${it.id}">${calc}</div>
+      </div>`;
+    const subjBlock=`
+      <div class="contract-field">
+        <label>대상자 모집 수</label>
+        <input type="text" value="${esc(it.subjects||'')}" placeholder="예: 30" onchange="setContractField('${code}','${it.id}','subjects',this.value)" style="min-width:90px">
+      </div>`;
+    // 초기 계약: 계약정보 필드 포함 / 변경계약: 변경 사유
+    const extra = isInit ? `
+      <div class="contract-field wide">
+        <label>🔗 IRB 포털 링크</label>
+        <input class="irb-url" placeholder="예: irb.hospital.or.kr" value="${esc(c.irbUrl||'')}" onchange="setSiteContract('${code}','irbUrl',this.value)">
+      </div>
+      <div class="contract-field">
+        <label>Contract No.</label>
+        <input placeholder="예: 2402CBR03-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
+      </div>
+      <div class="contract-field">
+        <label>의뢰사</label>
+        <input placeholder="예: CSL Korea" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:120px">
+      </div>
+      <div class="contract-field">
+        <label>PI 이름</label>
+        <input placeholder="예: 홍길동" value="${esc(c.pi||'')}" onchange="setSiteContract('${code}','pi',this.value)" style="min-width:100px">
+      </div>
+      <div class="contract-field memo" style="flex:1;min-width:240px">
+        <label>비고 / 메모</label>
+        <textarea placeholder="계약 관련 메모..." onchange="setSiteContract('${code}','memo',this.value)">${esc(c.memo||'')}</textarea>
+      </div>` : `
+      <div class="contract-field" style="flex:1;min-width:220px">
+        <label>변경 사유</label>
+        <input type="text" value="${esc(it.reason||'')}" placeholder="변경 사유를 입력하세요" onchange="setContractField('${code}','${it.id}','reason',this.value)">
+      </div>`;
+    return `<div class="ct-card${isInit?' init':''}">
+      <div class="ct-card-head">
+        <input type="text" class="ct-name" value="${esc(it.label||'')}" placeholder="계약 명칭" onchange="setContractField('${code}','${it.id}','label',this.value)">
+        <input type="date" class="ct-cdate" value="${esc(it.date||'')}" onchange="setContractField('${code}','${it.id}','date',this.value)" title="계약일">
+        <button class="ct-del" onclick="deleteContract('${code}','${it.id}')">🗑 삭제</button>
+      </div>
+      <div class="ct-card-body">
+        ${amountBlock}
+        ${subjBlock}
+        ${extra}
+      </div>
+    </div>`;
+  }).join('');
+  const body = arr.length ? cards
+    : '<div style="font-size:12px;color:#999;padding:2px 0 8px">아직 등록된 계약이 없어요. 아래 버튼을 누르면 초기 계약부터 차례로 추가돼요.</div>';
+  return `<div class="contract-list">
+    <div class="contract-list-head" onclick="toggleContractList('${code}')">
+      <span class="clh-chev${open?' open':''}">▶</span>
+      <span class="clh-title">📑 계약 관리 <span class="clh-sub">· VAT·간접비 입력 시 연구비 자동 계산</span></span>
+      ${arr.length?`<span style="font-size:11px;color:#787774">${arr.length}건</span>`:''}
+    </div>
+    ${open?`<div class="contract-list-body">
+      ${body}
+      <button class="btn ci-add" onclick="addContract('${code}')">+ 계약 추가</button>
+    </div>`:''}
+  </div>`;
+}
+
 // ── IRB 링크 헬퍼 ──────────────────────────────────────────────
 function irbHref(url){
   let u=(url||'').trim();
@@ -644,12 +796,22 @@ function irbLinkButton(code){
   return `<button class="irb-link-btn empty" onclick="focusIrbField('${code}')" title="아래 패널에서 IRB 링크를 입력하세요">🔗 IRB 링크 추가</button>`;
 }
 function focusIrbField(code){
-  contractPanelCollapsed[code]=false;
+  contractListCollapsed[code]=false;
   renderBody();
   setTimeout(()=>{
     const el=document.querySelector('.irb-url');
     if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}
   },60);
+}
+function renameSite(code){
+  const site=sites.find(s=>s.code===code);
+  if(!site) return;
+  const v=prompt('기관 이름을 입력하세요', site.name);
+  if(v===null) return;            // 취소
+  const name=v.trim();
+  if(!name){ alert('기관 이름은 비울 수 없어요.'); return; }
+  site.name=name;
+  saveData(); renderTabs(); renderBody();
 }
 
 function setField(code,secId,idx,field,val){
@@ -1432,15 +1594,16 @@ function renderBody(){
   wrap.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-size:16px;font-weight:700">${site.code} · ${site.name}</div>
+        <div style="font-size:16px;font-weight:700">${site.code} · ${esc(site.name)}</div>
         <div style="font-size:12px;color:#787774;margin-top:2px">완료 ${ok}/${tot} · 이슈 ${iss}</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         ${irbLinkButton(curSite)}
+        <button class="btn" onclick="renameSite('${curSite}')">✏️ 이름 수정</button>
         <button class="btn btn-danger" onclick="deleteSite('${curSite}')">기관 삭제</button>
       </div>
     </div>
-    ${renderContractPanel(curSite)}
+    ${renderContractList(curSite)}
     <div class="search-box">
       <span style="color:#bbb">🔍</span>
       <input id="searchInput" placeholder="문서명 검색..." value="${esc(searchTerm)}" oninput="onSearch(this.value)">
@@ -1635,7 +1798,7 @@ function renderContractPanel(code){
   return `<div class="contract-panel">
     <div class="contract-panel-header" onclick="toggleContractPanel('${code}')">
       <span class="contract-panel-chevron${isOpen?' open':''}">▶</span>
-      <span class="contract-panel-title">📄 초기 계약 정보</span>
+      <span class="contract-panel-title">📄 계약 정보</span>
       ${c.irbUrl?`<a href="${irbHref(c.irbUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:11px;color:#0f7b6c;font-weight:600;text-decoration:underline">🔗 IRB 바로가기</a>`:''}
       ${c.contractDate?`<span style="font-size:11px;color:#787774">계약일: <b style="color:#0f7b6c">${c.contractDate}</b></span>`:''}
       ${c.contractNo?`<span style="font-size:11px;color:#787774;margin-left:8px">Contract No.: <b>${esc(c.contractNo)}</b></span>`:''}
