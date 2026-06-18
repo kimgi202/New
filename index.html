@@ -171,8 +171,11 @@ tr:hover td{background:#f7f7f5}
 /* ━━━ Index 뷰 ━━━ */
 .idx-tab{color:#0f7b6c}
 .index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto}
-.index-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;min-width:820px}
-.index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap}
+.index-table{border-collapse:collapse;font-size:12px;table-layout:fixed}
+.index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap;position:relative}
+.col-rsz{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:8;touch-action:none;user-select:none}
+.col-rsz::after{content:"";position:absolute;top:20%;right:4px;width:2px;height:60%;background:#d5d8dc;border-radius:1px}
+.col-rsz:hover::after,.col-rsz.dragging::after{background:#0f7b6c;width:2px;height:100%;top:0}
 .index-table td{padding:5px 8px;border-bottom:1px solid #f0f0ef;vertical-align:middle}
 .idx-sec-row{background:#eef5f3;cursor:pointer;user-select:none}
 .idx-sec-row:hover{background:#e6f1ee}
@@ -188,8 +191,8 @@ tr:hover td{background:#f7f7f5}
 .na-lbl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#787774;cursor:pointer}
 .na-lbl input{width:14px;height:14px;cursor:pointer}
 .idx-loc,.idx-note{width:100%;border:1px solid #e9e9e7;border-radius:4px;padding:4px 6px;font-size:11px;font-family:inherit;outline:none;color:#37352f;resize:vertical;overflow:hidden;line-height:1.45;min-height:24px;white-space:pre-wrap;word-break:break-word;display:block;box-sizing:border-box}
-.idx-loc{min-width:170px}
-.idx-note{min-width:120px}
+.idx-loc{min-width:0}
+.idx-note{min-width:0}
 .idx-loc:focus,.idx-note:focus{border-color:#0f7b6c}
 .idx-loc{font-family:'Courier New',monospace}
 .index-table td{vertical-align:top}
@@ -1453,6 +1456,37 @@ function renderBody(){
 }
 
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
+// ── Index 컬럼 폭 (커서 드래그로 조절, localStorage 저장) ──
+const IDX_COL_DEFAULT=[34,50,300,52,80,380,200];
+let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v1')); if(Array.isArray(v)&&v.length===7) return v.map(Number);}catch(e){} return IDX_COL_DEFAULT.slice(); })();
+function saveIdxColW(){ try{ localStorage.setItem('idxColW_v1', JSON.stringify(idxColW)); }catch(e){} }
+function setupIdxResizers(){
+  const table=document.querySelector('.index-table'); if(!table) return;
+  const cols=table.querySelectorAll('colgroup col');
+  table.querySelectorAll('.col-rsz').forEach(h=>{
+    h.addEventListener('pointerdown',e=>{
+      e.preventDefault(); e.stopPropagation();
+      const ci=+h.dataset.ci, startX=e.clientX, startW=idxColW[ci];
+      h.classList.add('dragging');
+      try{h.setPointerCapture(e.pointerId);}catch(_){}
+      const move=ev=>{
+        const w=Math.max(40, startW+(ev.clientX-startX));
+        idxColW[ci]=w;
+        if(cols[ci]) cols[ci].style.width=w+'px';
+        table.style.width=idxColW.reduce((a,b)=>a+b,0)+'px';
+      };
+      const up=()=>{
+        h.classList.remove('dragging');
+        document.removeEventListener('pointermove',move);
+        document.removeEventListener('pointerup',up);
+        saveIdxColW();
+      };
+      document.addEventListener('pointermove',move);
+      document.addEventListener('pointerup',up);
+    });
+  });
+}
+
 function renderIndexBody(){
   const wrap=document.getElementById('bodyWrap');
   const cur=getCurProtocol();
@@ -1500,21 +1534,23 @@ function renderIndexBody(){
       </div>
       <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
     </div>
-    <div class="index-table-wrap"><table class="index-table">
+    <div class="index-table-wrap"><table class="index-table" style="width:${idxColW.reduce((a,b)=>a+b,0)}px">
+      <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
       <thead><tr>
-        <th style="width:3%">✓</th>
-        <th style="width:5%">No.</th>
-        <th style="width:27%">Title of the documents</th>
-        <th style="width:6%">N/A</th>
-        <th style="width:8%">상태</th>
-        <th style="width:34%">위치 / 파일명</th>
-        <th style="width:17%">비고</th>
+        <th>✓</th>
+        <th>No.<span class="col-rsz" data-ci="1"></span></th>
+        <th>Title of the documents<span class="col-rsz" data-ci="2"></span></th>
+        <th>N/A<span class="col-rsz" data-ci="3"></span></th>
+        <th>상태<span class="col-rsz" data-ci="4"></span></th>
+        <th>위치 / 파일명<span class="col-rsz" data-ci="5"></span></th>
+        <th>비고</th>
       </tr></thead>
       <tbody>${bodyRows}</tbody>
     </table></div>
   `;
   // 렌더 직후 위치/비고 textarea 높이를 내용에 맞게 조정
   wrap.querySelectorAll('.idx-loc,.idx-note').forEach(autoGrow);
+  setupIdxResizers();
 }
 function autoGrow(el){
   el.style.height='auto';
