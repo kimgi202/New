@@ -180,6 +180,10 @@ tr:hover td{background:#f7f7f5}
 .ct-del{border:none;background:#fbe9e7;color:#c0392b;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:12px}
 .ct-del:hover{background:#f5c6c0}
 .ci-add{margin-top:4px;border-color:#0f7b6c;color:#0f7b6c}
+.sec-grip{cursor:grab;color:#c0c0bd;font-size:14px;padding:2px 8px 2px 2px;user-select:none;touch-action:none;line-height:1}
+.sec-grip:hover{color:#0f7b6c}
+.sec-grip:active{cursor:grabbing}
+.sec-dragging{opacity:.95;box-shadow:0 10px 26px rgba(15,123,108,.2);border-radius:8px;position:relative;z-index:20;background:#fff}
 .contract-field{display:flex;flex-direction:column;gap:4px}
 .contract-field label{font-size:10px;font-weight:600;color:#787774;letter-spacing:.4px;text-transform:uppercase}
 .contract-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:110px}
@@ -1609,7 +1613,7 @@ function renderBody(){
       <input id="searchInput" placeholder="문서명 검색..." value="${esc(searchTerm)}" oninput="onSearch(this.value)">
       ${searchTerm?`<button class="search-clear" onclick="clearSearch()">✕</button>`:''}
     </div>
-    ${secs.map(sec=>renderSection(curSite,sec)).join('')}
+    <div id="secList">${secs.map(sec=>renderSection(curSite,sec)).join('')}</div>
     <div class="btn-row">
       <button class="btn" style="border-color:#0f7b6c;color:#0f7b6c" onclick="toggleSecForm()">+ 섹션 추가</button>
       <button class="btn" onclick="exportCSV()">📥 CSV</button>
@@ -1751,8 +1755,9 @@ function renderSection(code, sec){
   const isAddingHere=addingDoc&&addingDoc.code===code&&addingDoc.secId===sec.id;
   const anyMatch=sec.rows.some(r=>matchSearch(r.name));
   return `
-  <div class="section">
+  <div class="section" data-key="${sec.id}">
     <div class="sec-header" onclick="toggleSec('${code}','${sec.id}')">
+      <span class="sec-grip" title="드래그하여 순서 변경" onclick="event.stopPropagation()">⠿</span>
       <span class="chevron${isOpen?' open':''}">▶</span>
       <span class="sec-title">${sec.title}</span>
       <span class="sec-badge ${bc}">${done}/${tot}</span>
@@ -2001,9 +2006,55 @@ function onSelChange(sel,code,secId,idx){
   renderStats(); renderBody();
 }
 
+let suppressSecClick=false;
 function toggleSec(code,secId){
+  if(suppressSecClick) return;
   collapsed[code+secId]=!collapsed[code+secId];
   renderBody();
+}
+// ── 섹션 위아래 드래그 정렬 ───────────────────────────────────
+function commitSectionOrder(code, order){
+  const arr=sections[code]; if(!arr) return;
+  const map={}; arr.forEach(s=>map[s.id]=s);
+  const next=order.map(k=>map[k]).filter(Boolean);
+  arr.forEach(s=>{ if(!order.includes(s.id)) next.push(s); });
+  sections[code]=next;
+  saveData(); renderBody();
+}
+function initSectionReorder(){
+  const body=document.getElementById('bodyWrap');
+  if(!body || body._secReorderInit) return;
+  body._secReorderInit=true;
+  body.addEventListener('pointerdown', e=>{
+    const grip=e.target.closest('.sec-grip');
+    if(!grip) return;
+    const list=document.getElementById('secList'); if(!list) return;
+    const el=grip.closest('.section'); if(!el) return;
+    e.preventDefault(); e.stopPropagation();
+    const sy=e.clientY; let dragging=false;
+    try{grip.setPointerCapture(e.pointerId);}catch(_){}
+    const move=ev=>{
+      if(!dragging){ if(Math.abs(ev.clientY-sy)<6) return; dragging=true; el.classList.add('sec-dragging'); }
+      ev.preventDefault();
+      const sibs=[...list.querySelectorAll(':scope > .section')];
+      let target=null;
+      for(const s of sibs){ if(s===el) continue; const r=s.getBoundingClientRect(); if(ev.clientY < r.top + r.height/2){ target=s; break; } }
+      if(target){ if(el.nextElementSibling!==target) list.insertBefore(el,target); }
+      else list.appendChild(el);
+    };
+    const up=()=>{
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      if(dragging){
+        el.classList.remove('sec-dragging');
+        suppressSecClick=true; setTimeout(()=>{suppressSecClick=false;},80);
+        const order=[...list.querySelectorAll(':scope > .section')].map(s=>s.dataset.key);
+        commitSectionOrder(curSite, order);
+      }
+    };
+    document.addEventListener('pointermove',move);
+    document.addEventListener('pointerup',up);
+  });
 }
 
 // ── 행 이동 (통합) ───────────────────────────────────────────────
@@ -2335,7 +2386,7 @@ function initTabReorder(){
     order=>{ commitOrder(sites, order, s=>s.code); saveData(); renderTabs(); });
 }
 
-load(); render(); initTabReorder();
+load(); render(); initTabReorder(); initSectionReorder();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
