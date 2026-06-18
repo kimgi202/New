@@ -22,7 +22,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans
 .tab{padding:10px 18px;font-size:13px;font-weight:500;color:#787774;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
 .protocol-tab,.tab{user-select:none;-webkit-user-select:none}
 .tab-dragging{opacity:.92;background:#eef5f3;border-radius:7px 7px 0 0;box-shadow:0 6px 16px rgba(15,123,108,.22);transform:scale(1.03);position:relative;z-index:30;cursor:grabbing}
-.reorder-hint{font-size:11px;color:#9b9b97;padding:3px 2rem 0;background:#fff}
 .tab:hover{color:#37352f}
 .tab.active{color:#0f7b6c;border-bottom-color:#0f7b6c}
 .tab-add{padding:10px 14px;font-size:18px;color:#bbb;cursor:pointer;border-bottom:2px solid transparent}
@@ -202,6 +201,8 @@ tr:hover td{background:#f7f7f5}
     </div>
     <div style="margin-left:auto;display:flex;gap:8px">
       <button class="btn" onclick="exportCSV()">📥 CSV</button>
+      <button class="btn" onclick="document.getElementById('siteImportInput').click()" title="파일에서 기관 불러오기">📂 기관 가져오기</button>
+      <input type="file" id="siteImportInput" accept=".json,application/json" style="display:none" onchange="importSiteFromFile(this)">
       <button class="btn btn-primary" onclick="openSiteModal()">+ 기관 추가</button>
     </div>
   </div>
@@ -946,6 +947,134 @@ const INDEX_TEMPLATES = {
     {n:'8', t:'Miscellaneous', h:true},
   ],
   // ── 임상시험 TMF Index (COF011, 15 sections) ────────────────
+  TMF_PMS: [
+    {n:"1", t:"Central Trial Coordination Team", h:true},
+    {n:"1.1", t:"Contact List"},
+    {n:"1.2", t:"Study Team Tracking Log"},
+    {n:"1.3", t:"CVs"},
+    {n:"1.4", t:"GCP Training Certificates"},
+    {n:"1.5", t:"Project Specific Training Documents"},
+    {n:"1.6", t:"Other Training Certificate"},
+    {n:"2", t:"Trial Management", h:true},
+    {n:"2.1", t:"Project Management Plan"},
+    {n:"2.2", t:"Monitoring Plan"},
+    {n:"2.3", t:"Site Selection Documentation Template"},
+    {n:"2.4", t:"None-Selected Sites’ Documents"},
+    {n:"2.5", t:"Kick-off Meeting; Meeting Minutes"},
+    {n:"2.5", t:"Kick-off Meeting; Materials"},
+    {n:"2.6", t:"Other Project Meeting"},
+    {n:"2.7", t:"Risk Assessment, CAPA Plan, Issue Management Tracker"},
+    {n:"2.8", t:"Non-Compliance Reports (project level)"},
+    {n:"2.9", t:"Note to File (NTF) and NTF tracking log_project level"},
+    {n:"2.10", t:"Significant Team Correspondence & Communication including Emails"},
+    {n:"2.10", t:"Significant Team Correspondence & Communication including Emails"},
+    {n:"2.10", t:"Significant Team Correspondence & Communication including Emails : PSR"},
+    {n:"2.10", t:"Significant Team Correspondence & Communication including Emails : PSR"},
+    {n:"3", t:"Essential Documents", h:true},
+    {n:"3.1", t:"Essential Documents Version Tracking log"},
+    {n:"3.2", t:"Investigator’s Brochure (IB)"},
+    {n:"3.3", t:"Final Protocol"},
+    {n:"3.3", t:"Protocol Addendums"},
+    {n:"3.4", t:"Final Informed Consent Form(ICF)_Master Version"},
+    {n:"3.4", t:"Final Informed Consent Form(ICF)_Site Version"},
+    {n:"3.5", t:"Blank Case Report Form"},
+    {n:"3.5", t:"CRF completion guideline"},
+    {n:"3.6", t:"Others"},
+    {n:"3.7", t:"Related Correspondence for Essential Documents"},
+    {n:"4", t:"Regulatory Documents", h:true},
+    {n:"4.1", t:"Approval letters of Final Protocol"},
+    {n:"4.1", t:"Approval letters of Amendment"},
+    {n:"4.2", t:"Annual Reports"},
+    {n:"4.3", t:"Notifications to MFDS"},
+    {n:"4.4", t:"Related Correspondence for Regulatory"},
+    {n:"5", t:"Ethic Committee", h:true},
+    {n:"5.1", t:"IRB notification & Approval_002 & 007"},
+    {n:"5.1", t:"IRB notification & Approval_008"},
+    {n:"5.1", t:"IRB notification & Approval_017"},
+    {n:"5.1", t:"IRB notification & Approval_018, 022 & 023"},
+    {n:"5.1", t:"IRB notification & Approval_025 & 027"},
+    {n:"5.1", t:"IRB notification & Approval_030"},
+    {n:"5.1", t:"IRB notification & Approval_031 & 032"},
+    {n:"5.1", t:"IRB notification & Approval_034"},
+    {n:"5.1", t:"IRB notification & Approval_035 & 036"},
+    {n:"5.1", t:"IRB notification & Approval_037 & 038"},
+    {n:"5.1", t:"IRB notification & Approval_039 & 042"},
+    {n:"5.1", t:"IRB notification & Approval_043 & 044"},
+    {n:"5.1", t:"IRB notification & Approval_045 & 046"},
+    {n:"5.1", t:"IRB notification & Approval_047 & 048"},
+    {n:"5.2", t:"Annual Progress Reports_002, 007, 017 & 022"},
+    {n:"5.2", t:"Annual Progress Reports_023, 025, 027 & 030"},
+    {n:"5.2", t:"Annual Progress Reports_031, 032, 034 & 035"},
+    {n:"5.2", t:"Annual Progress Reports_036, 037, 038, 039 & 042"},
+    {n:"5.2", t:"Annual Progress Reports_043, 044, 045, 046, 047 & 048"},
+    {n:"5.3", t:"Trial Completion Report_002, 007, 008, 017, 018, 022 & 023"},
+    {n:"5.3", t:"Trial Completion Report_025, 027, 030, 031, 032, 034 & 035"},
+    {n:"5.3", t:"Trial Completion Report_036, 037, 038, 042, 043, 044 & 045"},
+    {n:"5.3", t:"Trial Completion Report_046, 047, & 048"},
+    {n:"5.4", t:"Trial Result Report"},
+    {n:"5.4", t:"Trial Result Report"},
+    {n:"5.5", t:"IRB Membership Lists_002 & 007"},
+    {n:"5.5", t:"IRB Membership Lists_008, 017(=039, 048) & 018"},
+    {n:"5.5", t:"IRB Membership Lists_022 & 023"},
+    {n:"5.5", t:"IRB Membership Lists_025(=036) & 027"},
+    {n:"5.5", t:"IRB Membership Lists_030, 031 & 032"},
+    {n:"5.5", t:"IRB Membership Lists_034, 035 & 037"},
+    {n:"5.5", t:"IRB Membership Lists_038, 042 & 043"},
+    {n:"5.5", t:"IRB Membership Lists_034, 045 & 046(=047)"},
+    {n:"5.6", t:"Related Correspondence for IRB"},
+    {n:"6", t:"Central Laboratory Related Document", h:true},
+    {n:"7", t:"Investigational Product (IP)", h:true},
+    {n:"8", t:"Pharmacovigilance", h:true},
+    {n:"8.1", t:"Blank SAE Form and Guidelines"},
+    {n:"8.2", t:"Pharmacovigilance Training handout"},
+    {n:"8.3", t:"Pharmacovigilance Agreement"},
+    {n:"8.4", t:"SAE/SUSAR reports and associated correspondence"},
+    {n:"8.5", t:"Notification of Safety information from Sponsor"},
+    {n:"8.6", t:"SAE/IRAE/UADE report tracking log"},
+    {n:"8.7", t:"Related Correspondence for safety reporting"},
+    {n:"9", t:"Data Management and Statistics", h:true},
+    {n:"", t:"Refer to Data Management File and Statistics Analysis File"},
+    {n:"10", t:"Financial / Legal", h:true},
+    {n:"10.1", t:"Contracts"},
+    {n:"10.1", t:"Contract Addendums_Master"},
+    {n:"10.2", t:"Financial Agreement"},
+    {n:"10.3", t:"Confidentiality Agreement"},
+    {n:"10.4", t:"Related Correspondence for Financial"},
+    {n:"11", t:"Audit & Inspection", h:true},
+    {n:"11.1", t:"Correspondence of Intent to Audit"},
+    {n:"11.2", t:"Audit Follow up documents"},
+    {n:"11.3", t:"Regulatory Inspections"},
+    {n:"11.4", t:"Related Correspondence for Inspections"},
+    {n:"12", t:"Committees and Meeting", h:true},
+    {n:"13", t:"Clinical Study Report", h:true},
+    {n:"13.1", t:"Clinical Study Report"},
+    {n:"13.2", t:"Others"},
+    {n:"14", t:"Miscellaneous", h:true},
+    {n:"14.1", t:"Study specific templates"},
+    {n:"14.2", t:"Miscellaneous"},
+    {n:"15", t:"Site Management", h:true},
+    {n:"15.1", t:"Site Selection", sub:["Fesibility questionnaire", "SSVR", "SSV Confirmation / FU letter"]},
+    {n:"15.2", t:"Site Set-Up_", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_008 & 018", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_018", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_022 & 023", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_028 & 029", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_030", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_034", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.2", t:"Site Set-Up_", sub:["Curriculum Vitae of Delegated Site Staff Investigators, Coordinators, Pharmacists, etc", "GCP trainnig Certificates", "Informed Consent for Disclosure of Personel Information"]},
+    {n:"15.3", t:"Site Initiation", sub:["SIVR", "SIV Confirmation / FU letter", "SIV Training Record"]},
+    {n:"15.4", t:"Study Conduct_008", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log, ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_018", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log, ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_022", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_023", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_028 & 029", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_030", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_034", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+    {n:"15.4", t:"Study Conduct_", sub:["SMVR, SMV Confirmation / FU letter", "SCVR, SCV Confirmation / FU letter", "Site Visit Log", "Subject Enrollment Log, Subject Informed Consent Log,  ICF tracking Log", "Protocol Deviation Tracking log/ Report Form, SAE Tracking Log", "Note to file, Training record, Correspondence, etc"]},
+  ],
   TMF_CLINICAL: [
     {n:'1', t:'Central Trial Coordination Team', h:true},
     {n:'1.1', t:'Contact List'},
@@ -1050,7 +1179,7 @@ function getIndexTypesForProtocol(){
   const cur=getCurProtocol?.();
   const type=cur?.studyType||'PMS';
   if(type==='임상시험') return ['ISF','PSF','TMF'];
-  if(type==='PMS') return ['ISF'];
+  if(type==='PMS') return ['ISF','TMF'];
   return []; // 기타
 }
 function indexTemplateKey(indexType){
@@ -1058,7 +1187,7 @@ function indexTemplateKey(indexType){
   const type=cur?.studyType||'PMS';
   if(indexType==='ISF') return type==='임상시험'?'ISF_CLINICAL':'ISF_PMS';
   if(indexType==='PSF') return 'PSF_CLINICAL';
-  if(indexType==='TMF') return 'TMF_CLINICAL';
+  if(indexType==='TMF') return type==='임상시험'?'TMF_CLINICAL':'TMF_PMS';
   return 'ISF_PMS';
 }
 // 인덱스 행 데이터 (없으면 템플릿에서 생성, 기존 입력값은 보존)
@@ -1078,9 +1207,9 @@ function getIndexRows(indexType){
   }
   return pd.indexes[storeKey];
 }
-function setIndexField(indexType, rowNum, field, val){
+function setIndexField(indexType, idx, field, val){
   const rows=getIndexRows(indexType);
-  const row=rows.find(r=>r.n===rowNum);
+  const row=rows[idx];
   if(!row) return;
   row[field]=val;
   saveData();
@@ -1334,7 +1463,7 @@ function renderIndexBody(){
   const fullName={ISF:'ISF Index',PSF:'PSF Index',TMF:'TMF Index'}[type]||(type+' Index');
 
   let bodyRows='';
-  rows.forEach(r=>{
+  rows.forEach((r,idx)=>{
     if(r.h){
       const open=!indexSecCollapsed[type+r.n];
       bodyRows+=`<tr class="idx-sec-row" onclick="toggleIndexSec('${type}','${r.n}')">
@@ -1342,18 +1471,18 @@ function renderIndexBody(){
       return;
     }
     // 상위 섹션이 접혀 있으면 숨김
-    const secNum=r.n.split('.')[0];
-    if(indexSecCollapsed[type+secNum]) return;
+    const secNum=(r.n||'').split('.')[0];
+    if(secNum && indexSecCollapsed[type+secNum]) return;
     const subHtml=r.sub?`<div class="idx-sub">${r.sub.map(s=>'– '+esc(s)).join('<br>')}</div>`:'';
     const naChecked=r.na?'checked':'';
     bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}">
-      <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}','${r.n}','status',this.checked?'ok':'pend')"></td>
+      <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
       <td class="idx-num">${esc(r.n)}</td>
       <td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>
-      <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}','${r.n}','na',this.checked)">N/A</label></td>
-      <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}','${r.n}','status',this.value)">${idxStOpts(r.status)}</select></td>
-      <td><input class="idx-loc" placeholder="위치 / 파일명" value="${esc(r.location||'')}" onchange="setIndexField('${type}','${r.n}','location',this.value)"></td>
-      <td><input class="idx-note" placeholder="비고" value="${esc(r.note||'')}" onchange="setIndexField('${type}','${r.n}','note',this.value)"></td>
+      <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}',${idx},'na',this.checked)">N/A</label></td>
+      <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
+      <td><input class="idx-loc" placeholder="위치 / 파일명" value="${esc(r.location||'')}" onchange="setIndexField('${type}',${idx},'location',this.value)"></td>
+      <td><input class="idx-note" placeholder="비고" value="${esc(r.note||'')}" onchange="setIndexField('${type}',${idx},'note',this.value)"></td>
     </tr>`;
   });
 
@@ -1824,6 +1953,121 @@ document.getElementById('siteModal').addEventListener('click',e=>{if(e.target===
 document.getElementById('protocolNameAddInput').addEventListener('keydown',e=>{if(e.key==='Enter')addProtocol();});
 document.getElementById('protocolModal').addEventListener('click',e=>{if(e.target===document.getElementById('protocolModal'))closeProtocolModal();});
 
+// ━━━━━━━━━━━━ 파일에서 기관 가져오기 (Import) ━━━━━━━━━━━━
+function importSiteFromFile(inputEl){
+  const file=inputEl.files&&inputEl.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      applySiteImport(data);
+    }catch(err){
+      alert('파일을 읽을 수 없어요. JSON 형식이 맞는지 확인해주세요.\n('+err.message+')');
+    }
+    inputEl.value=''; // 같은 파일 다시 선택 가능하게 초기화
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+function applySiteImport(data){
+  if(!data || data.type!=='irb-tracker-site-import'){
+    alert('이 트래커용 가져오기 파일이 아니에요.'); return;
+  }
+  const site=data.site||null;
+  const hasIndexes=Array.isArray(data.indexes)&&data.indexes.length>0;
+  if(!site && !hasIndexes){ alert('가져올 기관 또는 Index 데이터가 없어요.'); return; }
+  if(site && (!site.code||!site.name)){ alert('가져오기 파일에 기관 코드/이름이 없어요.'); return; }
+
+  // 1) 대상 Protocol 찾기 (protocolNo 기준), 없으면 생성
+  syncCurrentProtocolData();
+  let target=protocols.find(p=>(p.protocolNo||p.name)===data.protocolNo);
+  let created=false;
+  if(!target){
+    const id=makeId('prt');
+    target={id, name:data.protocolName||data.protocolNo, contractNo:data.contractNo||'',
+            projectName:data.projectName||'', protocolNo:data.protocolNo||'',
+            sponsor:data.sponsor||'', studyType:data.studyType||'PMS'};
+    protocols.push(target);
+    protocolData[id]={sites:[],sections:{},indexes:{}};
+    created=true;
+  }
+
+  // 2) 해당 Protocol로 전환
+  curProtocolId=target.id;
+  bindCurrentProtocol();
+  if(!protocolData[target.id].indexes) protocolData[target.id].indexes={};
+
+  let rowCount=0, summary='';
+
+  // 3) 기관(site) 가져오기
+  if(site){
+    const exists=sites.find(s=>s.code===site.code);
+    if(exists){
+      if(!confirm(`이미 '${site.code} ${exists.name}' 기관이 있어요.\n가져온 내용으로 덮어쓸까요? (기존 입력 내용은 사라집니다)`)){
+        render(); return;
+      }
+      sections[site.code]=[];
+    } else {
+      sites.push({code:site.code, name:site.name, contractNo:'', contractDate:'',
+                  contractAmount:'', sponsor:data.sponsor||'', piName:site.piName||'', contractNote:''});
+      sections[site.code]=[];
+    }
+    const sObj=sites.find(s=>s.code===site.code);
+    if(sObj){
+      sObj.name=site.name; sObj.piName=site.piName||sObj.piName||'';
+      sObj.contract=Object.assign({contractNo:'',contractDate:'',amount:'',sponsor:data.sponsor||'',pi:site.piName||'',memo:'',irbUrl:''},
+        sObj.contract||{}, {pi:site.piName||'', sponsor:data.sponsor||sObj.sponsor||''});
+      if(site.siv||site.irbNote){
+        sObj.contract.memo=[site.siv?('SIV '+site.siv):'',site.irbNote||''].filter(Boolean).join(' · ');
+      }
+    }
+    (data.sections||[]).forEach(sec=>{
+      const rows=(sec.rows||[]).map(r=>{
+        rowCount++;
+        return Object.assign(emptyFields(), {
+          name:r.name||'', dtype:r.dtype||'doc', needVer:false,
+          status:r.status||'pend', effectiveDate:r.effectiveDate||'', note:r.note||''
+        });
+      });
+      sections[site.code].push({
+        id:makeId('sec'), type:'custom', title:sec.title||'섹션',
+        meta:{approvalDate:'',noticeDate:''}, rows
+      });
+    });
+    curSite=site.code; curView='site';
+    summary+=`\n기관: ${site.code} ${site.name} (섹션 ${(data.sections||[]).length}개 · 문서 ${rowCount}건)`;
+  }
+
+  // 4) Index 가져오기 (ISF/PSF/TMF)
+  if(hasIndexes){
+    data.indexes.forEach(ix=>{
+      const it=ix.indexType||'TMF';
+      const tk=ix.templateKey||(it+'_PMS');
+      const storeKey=it+'__'+tk;
+      const rows=(ix.rows||[]).map(r=>({
+        n:r.n||'', t:r.t||'', h:!!r.h, sub:r.sub||null, ref:r.ref||'',
+        na:!!r.na, status:r.status||'pend', location:r.location||'', note:r.note||''
+      }));
+      let overwrite=true;
+      const existing=protocolData[target.id].indexes[storeKey];
+      if(existing && existing.some(x=>!x.h && (x.status!=='pend'||x.na||x.location||x.note))){
+        overwrite=confirm(`${it} Index에 이미 입력된 내용이 있어요.\n가져온 내용으로 덮어쓸까요?`);
+      }
+      if(overwrite){
+        protocolData[target.id].indexes[storeKey]=rows;
+        const cnt=rows.filter(r=>!r.h).length;
+        summary+=`\n${it} Index: ${cnt}개 항목`;
+        if(!site){ curView='index'; curIndexType=it; }
+      }
+    });
+  }
+
+  // 5) 저장 및 화면 전환
+  saveData(); render();
+  alert(`✅ 가져오기 완료!\n\nProtocol: ${target.protocolNo||target.name}${created?' (새로 생성됨)':''}${summary}`);
+}
+
 // ━━━━━━━━━━━━ 탭 드래그 정렬 (길게 눌러서 앞뒤로 이동) ━━━━━━━━━━━━
 let justDragged=false;
 function commitOrder(arr, order, keyFn){
@@ -1836,19 +2080,16 @@ function setupReorder(container, isDraggable, onCommit){
   if(!container || container._reorderInit) return;
   container._reorderInit=true;
   let el=null, lp=null, dragging=false, sx=0, sy=0, pid=null, prevTouch='';
-
   container.addEventListener('pointerdown', e=>{
     const t=e.target.closest('.tab,.protocol-tab');
     if(!t || !isDraggable(t)) return;
     el=t; sx=e.clientX; sy=e.clientY; pid=e.pointerId; dragging=false;
     lp=setTimeout(()=>{
-      dragging=true;
-      el.classList.add('tab-dragging');
+      dragging=true; el.classList.add('tab-dragging');
       prevTouch=el.style.touchAction; el.style.touchAction='none';
       try{el.setPointerCapture(pid);}catch(_){}
-    }, 200); // 0.2초 길게 누르면 드래그 시작
+    }, 200);
   });
-
   container.addEventListener('pointermove', e=>{
     if(!el) return;
     if(!dragging){
@@ -1858,25 +2099,15 @@ function setupReorder(container, isDraggable, onCommit){
     e.preventDefault();
     const sibs=[...container.children].filter(isDraggable);
     let target=null;
-    for(const s of sibs){
-      if(s===el) continue;
-      const r=s.getBoundingClientRect();
-      if(e.clientX < r.left + r.width/2){ target=s; break; }
-    }
-    if(target){
-      if(el.nextElementSibling!==target) container.insertBefore(el, target);
-    } else {
-      const firstNon=[...container.children].find(c=>!isDraggable(c) && c!==el);
-      if(firstNon){ if(el.nextElementSibling!==firstNon) container.insertBefore(el, firstNon); }
-      else container.appendChild(el);
-    }
+    for(const s of sibs){ if(s===el) continue; const r=s.getBoundingClientRect(); if(e.clientX < r.left + r.width/2){ target=s; break; } }
+    if(target){ if(el.nextElementSibling!==target) container.insertBefore(el, target); }
+    else { const firstNon=[...container.children].find(c=>!isDraggable(c) && c!==el);
+      if(firstNon){ if(el.nextElementSibling!==firstNon) container.insertBefore(el, firstNon); } else container.appendChild(el); }
   });
-
   function finish(){
     clearTimeout(lp);
     if(el && dragging){
-      el.classList.remove('tab-dragging');
-      el.style.touchAction=prevTouch;
+      el.classList.remove('tab-dragging'); el.style.touchAction=prevTouch;
       const order=[...container.children].filter(isDraggable).map(c=>c.dataset.key);
       justDragged=true; setTimeout(()=>{justDragged=false;}, 60);
       onCommit(order);
@@ -1885,20 +2116,15 @@ function setupReorder(container, isDraggable, onCommit){
   }
   container.addEventListener('pointerup', finish);
   container.addEventListener('pointercancel', finish);
-  // 드래그 직후 발생하는 클릭(탭 전환) 무시
   container.addEventListener('click', e=>{ if(justDragged){ e.stopPropagation(); e.preventDefault(); } }, true);
 }
 function initTabReorder(){
-  setupReorder(
-    document.getElementById('protocolTabsWrap'),
-    el=>el.classList && el.classList.contains('protocol-tab'),
-    order=>{ commitOrder(protocols, order, p=>p.id); saveData(); renderProtocolTabs(); }
-  );
-  setupReorder(
-    document.getElementById('tabsWrap'),
-    el=>el.classList && el.classList.contains('tab') && !el.classList.contains('idx-tab'),
-    order=>{ commitOrder(sites, order, s=>s.code); saveData(); renderTabs(); }
-  );
+  setupReorder(document.getElementById('protocolTabsWrap'),
+    el=>el.classList&&el.classList.contains('protocol-tab'),
+    order=>{ commitOrder(protocols, order, p=>p.id); saveData(); renderProtocolTabs(); });
+  setupReorder(document.getElementById('tabsWrap'),
+    el=>el.classList&&el.classList.contains('tab')&&!el.classList.contains('idx-tab'),
+    order=>{ commitOrder(sites, order, s=>s.code); saveData(); renderTabs(); });
 }
 
 load(); render(); initTabReorder();
