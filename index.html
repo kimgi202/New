@@ -643,6 +643,7 @@ async function syncFromCloudAfterInit(){
     }
     localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
     localStorage.setItem('irb-v6',JSON.stringify({sites,sections}));
+    normalizeSectionOrdinals();
     render();
     console.log('Supabase 데이터 불러오기 성공!');
   }
@@ -2587,7 +2588,9 @@ function normalizeSectionOrdinals(){
     if(!pd||!pd.sections) return;
     Object.values(pd.sections).forEach(arr=>{
       (arr||[]).forEach(s=>{
-        if((s.type==='result'||s.type==='close') && s.title && /\d+차/.test(s.title)){
+        if(!s.title) return;
+        const isRC = s.type==='result' || s.type==='close' || /(결과보고|종료보고)\s*$/.test(s.title.trim());
+        if(isRC && /\d+차/.test(s.title)){
           s.title=s.title.replace(/(^|\s)\d+차\s+/, '$1'); changed=true;
         }
       });
