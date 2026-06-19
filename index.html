@@ -191,6 +191,11 @@ tr:hover td{background:#f7f7f5}
 .att-chip{display:inline-flex;align-items:center;gap:5px;background:#eef5f3;border:1px solid #dcebe7;border-radius:12px;padding:3px 5px 3px 9px;font-size:11px;max-width:300px}
 .att-chip a{color:#0f7b6c;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;display:inline-block;vertical-align:middle}
 .att-chip.link a{color:#2563aa}
+.att-link-text{color:#2563aa;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;display:inline-block;vertical-align:middle;user-select:none}
+.att-link-text:hover{text-decoration:underline}
+.att-edit{font-size:11px;border:1px solid #0f7b6c;border-radius:5px;padding:3px 7px;min-width:200px;width:230px;font-family:inherit;color:#37352f;outline:none}
+.att-save{border:none;background:#0f7b6c;color:#fff;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;margin-left:5px}
+.att-save:hover{background:#0c6557}
 .att-chip button{border:none;background:transparent;color:#c0392b;cursor:pointer;font-size:12px;padding:0 1px;line-height:1}
 .att-btn{border:1px solid #d4e8e4;background:#fff;color:#0f7b6c;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap}
 .att-btn:hover{background:#f0faf8}
@@ -2049,11 +2054,49 @@ async function removeFromBucket(att){
     try{ await window.supabaseClient.storage.from(ATTACH_BUCKET).remove([att.path]); }catch(e){}
   }
 }
-function attChipHtml(a, delCall){
-  return `<span class="att-chip ${a.kind}">
-    <a href="${esc(a.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(a.name)}">${a.kind==='link'?'🔗':'📎'} ${esc(a.name)}</a>
+let attClickTimer=null;
+function attChipHtml(scope,a,b,att){
+  const isLink=att.kind==='link';
+  const delCall = scope==='sec' ? `secDelAtt('${a}','${b}','${att.id}')` : `idxDelAtt('${a}',${b},'${att.id}')`;
+  const dataAttrs=`data-scope="${scope}" data-a="${esc(String(a))}" data-b="${esc(String(b))}" data-attid="${att.id}" data-url="${esc(att.url)}"`;
+  if(isLink){
+    return `<span class="att-chip link" ${dataAttrs} ondblclick="attEditStart(this)" title="클릭: 열기 · 더블클릭: 수정/복사">
+      <span class="att-link-text" onclick="event.stopPropagation();attLinkClick(this)">🔗 ${esc(att.name)}</span>
+      <button onclick="event.stopPropagation();${delCall}" title="첨부 삭제">✕</button>
+    </span>`;
+  }
+  // 파일: 클릭 시 다운로드 (Supabase ?download 파라미터로 강제 다운로드)
+  const dlUrl=att.url + (att.url.includes('?')?'&':'?') + 'download';
+  return `<span class="att-chip file" ${dataAttrs} title="클릭하여 다운로드">
+    <a href="${esc(dlUrl)}" download="${esc(att.name)}" onclick="event.stopPropagation()">📎 ${esc(att.name)}</a>
     <button onclick="event.stopPropagation();${delCall}" title="첨부 삭제">✕</button>
   </span>`;
+}
+function attLinkClick(el){
+  // 단일 클릭=열기, 더블클릭=수정 구분
+  if(attClickTimer){ return; }
+  const span=el.closest('.att-chip'); const url=span&&span.dataset.url;
+  attClickTimer=setTimeout(()=>{ attClickTimer=null; if(url) window.open(url,'_blank','noopener'); }, 240);
+}
+function attEditStart(span){
+  if(attClickTimer){ clearTimeout(attClickTimer); attClickTimer=null; }
+  const url=span.dataset.url||'';
+  span.innerHTML=`<input class="att-edit" type="text" value="${esc(url)}"><button class="att-save" onmousedown="event.preventDefault()" onclick="attEditSave(this)">저장</button>`;
+  const inp=span.querySelector('input');
+  inp.focus(); inp.select();
+  inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); attEditSave(inp);} else if(e.key==='Escape'){ renderBody(); } };
+}
+function attEditSave(el){
+  const span=el.closest('.att-chip'); if(!span) return;
+  const inp=span.querySelector('input'); if(!inp) return;
+  attSetUrl(span.dataset.scope, span.dataset.a, span.dataset.b, span.dataset.attid, inp.value);
+}
+function attSetUrl(scope,a,b,attId,url){
+  const arr = scope==='sec' ? getSecAtt(a,b) : getIdxAtt(a, +b);
+  const att=arr.find(x=>x.id===attId);
+  if(!att) return;
+  att.url=String(url||'').trim();
+  saveData(); renderBody();
 }
 
 // ── 섹션 첨부 ──
@@ -2077,7 +2120,7 @@ async function secDelAtt(code,secId,id){
 }
 function renderSecAttachments(code,sec){
   const arr=Array.isArray(sec.attachments)?sec.attachments:[];
-  const chips=arr.map(a=>attChipHtml(a, `secDelAtt('${code}','${sec.id}','${a.id}')`)).join('');
+  const chips=arr.map(a=>attChipHtml('sec', code, sec.id, a)).join('');
   return `<div class="att-bar">
     <span class="att-label">📎 첨부</span>
     ${chips||'<span class="att-empty">없음</span>'}
@@ -2108,7 +2151,7 @@ async function idxDelAtt(indexType,idx,id){
 }
 function renderIdxAttachments(indexType,idx,r){
   const arr=Array.isArray(r.attachments)?r.attachments:[];
-  const chips=arr.map(a=>attChipHtml(a, `idxDelAtt('${indexType}',${idx},'${a.id}')`)).join('');
+  const chips=arr.map(a=>attChipHtml('idx', indexType, idx, a)).join('');
   return `<div class="att-mini">
     ${chips}
     <input type="file" id="idxfile_${indexType}_${idx}" style="display:none" onchange="idxUploadFile('${indexType}',${idx},this)">
