@@ -738,8 +738,9 @@ function renderContractList(code){
         <input class="irb-url" placeholder="예: irb.hospital.or.kr" value="${esc(c.irbUrl||'')}" onchange="setSiteContract('${code}','irbUrl',this.value)">
       </div>
       <div class="contract-field">
-        <label>Contract No.</label>
-        <input placeholder="예: 2402CBR03-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
+        <label>IRB No.</label>
+        <input placeholder="예: 2024-08-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
+        <!-- 저장 키는 호환을 위해 contractNo 유지 -->
       </div>
       <div class="contract-field">
         <label>의뢰사</label>
