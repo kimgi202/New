@@ -41,6 +41,8 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .chevron{color:#999;font-size:11px;transition:transform .2s;display:inline-block}
 .chevron.open{transform:rotate(90deg)}
 .table-wrap{overflow-x:auto;width:100%}
+.doc-table{table-layout:fixed}
+.doc-table th{position:relative}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{padding:5px 6px;text-align:left;font-weight:500;color:#787774;border-bottom:1px solid #e9e9e7;white-space:nowrap;font-size:10px;background:#fafafa}
 td{padding:5px 6px;border-bottom:1px solid #f0f0ef;vertical-align:middle;word-break:break-word}
@@ -1747,6 +1749,7 @@ function renderBody(){
     ${showSecForm?renderSecForm():''}
   `+renderTodoPanel(curSite);
   wrap.querySelectorAll('textarea').forEach(autoGrow);
+  setupSecResizers();
 }
 
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
@@ -1874,6 +1877,36 @@ function exportIndexCSV(type){
   a.download=`${(cur?.protocolNo||'protocol')}_${type}_Index.csv`;
   a.click();
 }
+// ── 문서 표 컬럼 폭 (드래그로 조절, 모든 섹션 공통 적용) ──
+const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,96,200];
+let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v1')); if(Array.isArray(v)&&v.length===11) return v.map(Number);}catch(e){} return SEC_COL_DEFAULT.slice(); })();
+function saveSecColW(){ try{ localStorage.setItem('secColW_v1', JSON.stringify(secColW)); }catch(e){} }
+function secColgroup(){ return '<colgroup>'+secColW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup>'; }
+function setupSecResizers(){
+  document.querySelectorAll('.doc-table .col-rsz').forEach(h=>{
+    if(h._init) return; h._init=true;
+    h.addEventListener('pointerdown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const ci=+h.dataset.ci, startX=e.clientX, startW=secColW[ci];
+      h.classList.add('dragging');
+      try{h.setPointerCapture(e.pointerId);}catch(_){}
+      const move=ev=>{
+        const w=Math.max(34, startW+(ev.clientX-startX));
+        secColW[ci]=w;
+        const total=secColW.reduce((a,b)=>a+b,0);
+        document.querySelectorAll('.doc-table').forEach(t=>{
+          const col=t.querySelectorAll('colgroup col')[ci];
+          if(col) col.style.width=w+'px';
+          t.style.width=total+'px';
+        });
+      };
+      const up=()=>{ h.classList.remove('dragging'); document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); saveSecColW(); };
+      document.addEventListener('pointermove',move);
+      document.addEventListener('pointerup',up);
+    });
+  });
+}
+
 function renderSection(code, sec){
   const isOpen=!collapsed[code+sec.id];
   const tot=sec.rows.length;
@@ -1893,19 +1926,20 @@ function renderSection(code, sec){
     </div>
     ${isOpen?renderSectionMeta(code,sec):''}
     ${isOpen?renderSecAttachments(code,sec):''}
-    ${isOpen?`<div class="table-wrap"><table>
+    ${isOpen?`<div class="table-wrap"><table class="doc-table" style="width:${secColW.reduce((a,b)=>a+b,0)}px">
+      ${secColgroup()}
       <thead><tr>
-        <th style="width:22px">✕</th>
-        <th style="width:24px"><input type="checkbox" id="selectAllCb" onchange="const code=getCurSite();const sec=getSec(code,curSecId);if(sec){const all=sec.rows.every(r=>r.selected);sec.rows.forEach(r=>r.selected=!all);saveData();renderBody();}"></th>
-        <th style="width:78px">구분</th>
-        <th style="min-width:140px">문서명</th>
-        <th style="min-width:330px">TMF 파일명</th>
-        <th style="min-width:260px">서버 내 파일명</th>
-        <th style="width:62px">버전</th>
-        <th style="width:116px">Effective Date</th>
-        <th style="width:76px">상태</th>
-        <th style="width:90px">CRA 제출기한</th>
-        <th style="min-width:80px">비고</th>
+        <th>✕</th>
+        <th><input type="checkbox" id="selectAllCb" onchange="const code=getCurSite();const sec=getSec(code,curSecId);if(sec){const all=sec.rows.every(r=>r.selected);sec.rows.forEach(r=>r.selected=!all);saveData();renderBody();}"></th>
+        <th>구분<span class="col-rsz" data-ci="2"></span></th>
+        <th>문서명<span class="col-rsz" data-ci="3"></span></th>
+        <th>TMF 파일명<span class="col-rsz" data-ci="4"></span></th>
+        <th>서버 내 파일명<span class="col-rsz" data-ci="5"></span></th>
+        <th>버전<span class="col-rsz" data-ci="6"></span></th>
+        <th>Effective Date<span class="col-rsz" data-ci="7"></span></th>
+        <th>상태<span class="col-rsz" data-ci="8"></span></th>
+        <th>CRA 제출기한<span class="col-rsz" data-ci="9"></span></th>
+        <th>비고<span class="col-rsz" data-ci="10"></span></th>
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
