@@ -184,6 +184,19 @@ tr:hover td{background:#f7f7f5}
 .sec-grip:hover{color:#0f7b6c}
 .sec-grip:active{cursor:grabbing}
 .sec-dragging{opacity:.95;box-shadow:0 10px 26px rgba(15,123,108,.2);border-radius:8px;position:relative;z-index:20;background:#fff}
+/* ━━━ 첨부파일 ━━━ */
+.att-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;border-bottom:1px solid #f0f0ef;background:#fbfdfc}
+.att-bar .att-label{font-size:11px;color:#787774;font-weight:600;margin-right:2px}
+.att-empty{font-size:11px;color:#bbb}
+.att-chip{display:inline-flex;align-items:center;gap:5px;background:#eef5f3;border:1px solid #dcebe7;border-radius:12px;padding:3px 5px 3px 9px;font-size:11px;max-width:300px}
+.att-chip a{color:#0f7b6c;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;display:inline-block;vertical-align:middle}
+.att-chip.link a{color:#2563aa}
+.att-chip button{border:none;background:transparent;color:#c0392b;cursor:pointer;font-size:12px;padding:0 1px;line-height:1}
+.att-btn{border:1px solid #d4e8e4;background:#fff;color:#0f7b6c;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap}
+.att-btn:hover{background:#f0faf8}
+.att-mini{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px}
+.att-mini .att-chip{font-size:10px;padding:1px 4px 1px 7px;max-width:100%}
+.att-mini .att-btn{padding:2px 7px;font-size:10px}
 .contract-field{display:flex;flex-direction:column;gap:4px}
 .contract-field label{font-size:10px;font-weight:600;color:#787774;letter-spacing:.4px;text-transform:uppercase}
 .contract-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:110px}
@@ -1687,7 +1700,7 @@ function renderIndexBody(){
       <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}',${idx},'na',this.checked)">N/A</label></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
-      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea></td>
+      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}</td>
     </tr>`;
   });
 
@@ -1766,6 +1779,7 @@ function renderSection(code, sec){
       <button class="sec-del-btn" onclick="event.stopPropagation();delSection('${code}','${sec.id}')" title="섹션 삭제">✕</button>
     </div>
     ${isOpen?renderSectionMeta(code,sec):''}
+    ${isOpen?renderSecAttachments(code,sec):''}
     ${isOpen?`<div class="table-wrap"><table>
       <thead><tr>
         <th style="width:22px">✕</th>
@@ -2008,6 +2022,101 @@ function onSelChange(sel,code,secId,idx){
 }
 
 let suppressSecClick=false;
+// ━━━━━━━━━━━━ 첨부파일 (Supabase Storage) ━━━━━━━━━━━━
+const ATTACH_BUCKET='attachments';
+function attToast(msg){
+  let t=document.getElementById('attToast');
+  if(!t){ t=document.createElement('div'); t.id='attToast';
+    t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f7b6c;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.22)';
+    document.body.appendChild(t); }
+  t.textContent=msg||''; t.style.display=msg?'block':'none';
+}
+function safeName(n){ return String(n||'file').replace(/[^\w.\-가-힣]/g,'_'); }
+async function uploadToBucket(file, prefix){
+  if(!window.supabaseClient){ alert('클라우드(Supabase) 연결이 안 돼 있어 파일 업로드를 할 수 없어요. 링크 첨부는 가능해요.'); return null; }
+  const path=prefix+'/'+Date.now()+'_'+safeName(file.name);
+  attToast('업로드 중… '+file.name);
+  try{
+    const {error}=await window.supabaseClient.storage.from(ATTACH_BUCKET).upload(path, file, {upsert:false, contentType:file.type||undefined});
+    if(error){ attToast(''); alert('업로드 실패: '+error.message+'\n\nSupabase에 attachments 버킷과 업로드 권한이 설정돼 있는지 확인해주세요.'); return null; }
+    const {data}=window.supabaseClient.storage.from(ATTACH_BUCKET).getPublicUrl(path);
+    attToast('✅ 업로드 완료'); setTimeout(()=>attToast(''),1200);
+    return {id:makeId('att'), kind:'file', name:file.name, url:data.publicUrl, path:path, size:file.size};
+  }catch(e){ attToast(''); alert('업로드 중 오류: '+e.message); return null; }
+}
+async function removeFromBucket(att){
+  if(att && att.kind==='file' && att.path && window.supabaseClient){
+    try{ await window.supabaseClient.storage.from(ATTACH_BUCKET).remove([att.path]); }catch(e){}
+  }
+}
+function attChipHtml(a, delCall){
+  return `<span class="att-chip ${a.kind}">
+    <a href="${esc(a.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(a.name)}">${a.kind==='link'?'🔗':'📎'} ${esc(a.name)}</a>
+    <button onclick="event.stopPropagation();${delCall}" title="첨부 삭제">✕</button>
+  </span>`;
+}
+
+// ── 섹션 첨부 ──
+function getSecAtt(code,secId){ const s=getSec(code,secId); if(!s) return []; if(!Array.isArray(s.attachments)) s.attachments=[]; return s.attachments; }
+async function secUploadFile(code,secId,inputEl){
+  const f=inputEl.files&&inputEl.files[0]; inputEl.value='';
+  if(!f) return;
+  const att=await uploadToBucket(f, 'sec/'+code+'/'+secId);
+  if(att){ getSecAtt(code,secId).push(att); saveData(); renderBody(); }
+}
+function secAddLink(code,secId){
+  const url=prompt('링크(URL)를 붙여넣어 주세요\n예: 구글드라이브/SharePoint 파일 링크'); if(!url) return;
+  const name=prompt('표시할 이름', (url.split('/').pop()||'링크').slice(0,60))||url;
+  getSecAtt(code,secId).push({id:makeId('att'),kind:'link',name:name.trim(),url:url.trim()});
+  saveData(); renderBody();
+}
+async function secDelAtt(code,secId,id){
+  const arr=getSecAtt(code,secId); const i=arr.findIndex(a=>a.id===id); if(i<0) return;
+  if(!confirm("'"+arr[i].name+"' 첨부를 삭제할까요?")) return;
+  await removeFromBucket(arr[i]); arr.splice(i,1); saveData(); renderBody();
+}
+function renderSecAttachments(code,sec){
+  const arr=Array.isArray(sec.attachments)?sec.attachments:[];
+  const chips=arr.map(a=>attChipHtml(a, `secDelAtt('${code}','${sec.id}','${a.id}')`)).join('');
+  return `<div class="att-bar">
+    <span class="att-label">📎 첨부</span>
+    ${chips||'<span class="att-empty">없음</span>'}
+    <input type="file" id="secfile_${sec.id}" style="display:none" onchange="secUploadFile('${code}','${sec.id}',this)">
+    <button class="att-btn" onclick="document.getElementById('secfile_${sec.id}').click()">📎 파일</button>
+    <button class="att-btn" onclick="secAddLink('${code}','${sec.id}')">🔗 링크</button>
+  </div>`;
+}
+
+// ── Index 항목 첨부 ──
+function getIdxAtt(indexType,idx){ const rows=getIndexRows(indexType); const r=rows[idx]; if(!r) return []; if(!Array.isArray(r.attachments)) r.attachments=[]; return r.attachments; }
+async function idxUploadFile(indexType,idx,inputEl){
+  const f=inputEl.files&&inputEl.files[0]; inputEl.value='';
+  if(!f) return;
+  const att=await uploadToBucket(f, 'idx/'+curProtocolId+'/'+indexType+'/'+idx);
+  if(att){ getIdxAtt(indexType,idx).push(att); saveData(); renderBody(); }
+}
+function idxAddLink(indexType,idx){
+  const url=prompt('링크(URL)를 붙여넣어 주세요'); if(!url) return;
+  const name=prompt('표시할 이름', (url.split('/').pop()||'링크').slice(0,60))||url;
+  getIdxAtt(indexType,idx).push({id:makeId('att'),kind:'link',name:name.trim(),url:url.trim()});
+  saveData(); renderBody();
+}
+async function idxDelAtt(indexType,idx,id){
+  const arr=getIdxAtt(indexType,idx); const i=arr.findIndex(a=>a.id===id); if(i<0) return;
+  if(!confirm("'"+arr[i].name+"' 첨부를 삭제할까요?")) return;
+  await removeFromBucket(arr[i]); arr.splice(i,1); saveData(); renderBody();
+}
+function renderIdxAttachments(indexType,idx,r){
+  const arr=Array.isArray(r.attachments)?r.attachments:[];
+  const chips=arr.map(a=>attChipHtml(a, `idxDelAtt('${indexType}',${idx},'${a.id}')`)).join('');
+  return `<div class="att-mini">
+    ${chips}
+    <input type="file" id="idxfile_${indexType}_${idx}" style="display:none" onchange="idxUploadFile('${indexType}',${idx},this)">
+    <button class="att-btn" onclick="document.getElementById('idxfile_${indexType}_${idx}').click()">📎</button>
+    <button class="att-btn" onclick="idxAddLink('${indexType}',${idx})">🔗</button>
+  </div>`;
+}
+
 function toggleSec(code,secId){
   if(suppressSecClick) return;
   collapsed[code+secId]=!collapsed[code+secId];
