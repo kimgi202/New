@@ -262,13 +262,42 @@ tr:hover td{background:#f7f7f5}
 </style>
 </head>
 <body>
+<style>
+#authGate{position:fixed;inset:0;background:#f7f7f5;z-index:10000;display:flex;align-items:center;justify-content:center}
+.auth-card{background:#fff;border:1px solid #e9e9e7;border-radius:14px;padding:32px 30px;width:340px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.08);text-align:center}
+.auth-logo{font-size:20px;font-weight:700;color:#0f7b6c;margin-bottom:4px}
+.auth-title{font-size:15px;font-weight:600;color:#37352f;margin-bottom:18px}
+.auth-input{width:100%;box-sizing:border-box;border:1px solid #e0e0dd;border-radius:8px;padding:11px 12px;font-size:13px;margin-bottom:10px;outline:none;font-family:inherit}
+.auth-input:focus{border-color:#0f7b6c}
+.auth-btn{width:100%;background:#0f7b6c;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
+.auth-btn:hover{background:#0c6557}
+.auth-msg{font-size:12px;margin-top:12px;min-height:16px;line-height:1.5}
+.auth-toggle{font-size:12px;color:#787774;margin-top:14px}
+.auth-toggle a{color:#0f7b6c;text-decoration:none;font-weight:600}
+#userBar{display:none;align-items:center;gap:8px;font-size:12px;color:#787774}
+#userBar .ub-email{font-weight:600;color:#37352f}
+.ub-logout{border:1px solid #e0e0dd;background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#787774}
+.ub-logout:hover{background:#f7f7f5}
+</style>
+<div id="authGate" data-mode="login" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">📋 IRB Tracker</div>
+    <div class="auth-title" id="authTitle">로그인</div>
+    <input id="authEmail" type="email" placeholder="이메일" class="auth-input" autocomplete="username">
+    <input id="authPw" type="password" placeholder="비밀번호" class="auth-input" autocomplete="current-password" onkeydown="if(event.key==='Enter')authSubmit()">
+    <button id="authSubmitBtn" class="auth-btn" onclick="authSubmit()">로그인</button>
+    <div id="authMsg" class="auth-msg"></div>
+    <div id="authToggleText" class="auth-toggle">계정이 없나요? <a href="#" onclick="authSwitch('signup');return false;">회원가입</a></div>
+  </div>
+</div>
 <div class="header">
   <div class="header-top">
     <div>
       <div class="title">📋 IRB Tracker</div>
       <div class="sub">Protocol별 기관 IRB 현황 관리 · 마지막 저장: <span id="lastSaved">-</span></div>
     </div>
-    <div style="margin-left:auto;display:flex;gap:8px">
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <div id="userBar"><span class="ub-email" id="userEmail"></span><button class="ub-logout" onclick="authSignOut()">로그아웃</button></div>
       <button class="btn" onclick="exportCSV()">📥 CSV</button>
       <button class="btn" onclick="document.getElementById('siteImportInput').click()" title="파일에서 기관 불러오기">📂 기관 가져오기</button>
       <input type="file" id="siteImportInput" accept=".json,application/json" style="display:none" onchange="importSiteFromFile(this)">
@@ -497,7 +526,7 @@ function makeRow(doc){
 
 function load(){
   try{
-    let v11=JSON.parse(localStorage.getItem('irb-v11')||'null');
+    let v11=JSON.parse(localStorage.getItem(lsKeyV11())||'null');
     if(v11 && v11.protocols){
       protocols=v11.protocols||[];
       protocolData=v11.protocolData||{};
@@ -505,7 +534,7 @@ function load(){
       bindCurrentProtocol();
     } else {
       // 기존 v6/v10 구조 → v11 구조로 자동 마이그레이션
-      let s=JSON.parse(localStorage.getItem('irb-v6')||'null');
+      let s=JSON.parse(localStorage.getItem(lsKeyV6())||'null');
       if(s){
         sites=s.sites||[]; sections=s.sections||{};
       } else {
@@ -520,12 +549,7 @@ function load(){
       ensureDefaultProtocol('Protocol 1');
       bindCurrentProtocol();
     }
-    if(!sites.length){
-      sites=[{code:'030',name:'건국대학교병원'},{code:'042',name:'한림대성심병원'}];
-      sites.forEach(s=>initSite(s.code));
-      syncCurrentProtocolData();
-      saveData();
-    }
+    // 신규 사용자: 샘플 기관 없이 빈 템플릿으로 시작 (기관은 직접 추가)
     curSite=sites[0]?.code||null;
   }catch(e){
     console.error('load error',e);
@@ -558,13 +582,16 @@ function migrateV5(old){
 }
 
 let cloudSaveTimer=null;
-const CLOUD_ID='main';
+let CLOUD_ID=null;       // 로그인한 사용자 ID (없으면 비로그인)
+let curUserId=null;
+function lsKeyV11(){ return curUserId ? 'irb-v11-'+curUserId : 'irb-v11'; }
+function lsKeyV6(){ return curUserId ? 'irb-v6-'+curUserId : 'irb-v6'; }
 
 function saveData(){
   syncCurrentProtocolData();
-  localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
+  localStorage.setItem(lsKeyV11(),JSON.stringify({protocols,protocolData,curProtocolId}));
   // 기존 버전과 호환되도록 현재 프로토콜 데이터도 v6 키에 백업
-  localStorage.setItem('irb-v6',JSON.stringify({sites,sections}));
+  localStorage.setItem(lsKeyV6(),JSON.stringify({sites,sections}));
   const el=document.getElementById('lastSaved');
   if(el) el.textContent=new Date().toLocaleString('ko-KR');
   scheduleCloudSave();
@@ -577,7 +604,7 @@ function scheduleCloudSave(){
 }
 
 async function saveToCloud(){
-  if(!window.supabaseClient) return;
+  if(!window.supabaseClient || !CLOUD_ID) return;
   syncCurrentProtocolData();
   const {error}=await window.supabaseClient
     .from('irb_tracker')
@@ -610,43 +637,55 @@ function countProtocolRows(data){
   return count;
 }
 
-async function syncFromCloudAfterInit(){
-  if(!window.supabaseClient) return;
-  const {data,error}=await window.supabaseClient
-    .from('irb_tracker')
-    .select('data')
-    .eq('id',CLOUD_ID)
-    .single();
-  if(error){ console.warn('Supabase 불러오기 실패 또는 데이터 없음:',error); return; }
-  if(data && data.data){
-    const localSnapshot={protocols,protocolData,curProtocolId,sites,sections};
-    const localCount=countProtocolRows({protocolData,sites,sections});
-    const cloudCount=countProtocolRows(data.data);
-
-    // 빈 클라우드 데이터가 기존 로컬 데이터를 덮어쓰지 않도록 보호
-    if(cloudCount===0 && localCount>0){
-      console.warn('Supabase 데이터가 비어 있어 로컬 데이터를 유지합니다.');
+function applyCloudData(d){
+  if(d.protocols){
+    protocols=d.protocols||[]; protocolData=d.protocolData||{};
+    curProtocolId=d.curProtocolId||protocols[0]?.id||null;
+    bindCurrentProtocol();
+  } else {
+    sites=d.sites||[]; sections=d.sections||{};
+    ensureDefaultProtocol('Protocol 1'); bindCurrentProtocol();
+  }
+  curSite=sites[0]?.code||null;
+}
+function persistLocal(){
+  try{
+    localStorage.setItem(lsKeyV11(),JSON.stringify({protocols,protocolData,curProtocolId}));
+    localStorage.setItem(lsKeyV6(),JSON.stringify({sites,sections}));
+  }catch(e){}
+}
+// 로그인한 사용자 전용 데이터 불러오기 (없으면 기존 'main' 이전 or 빈 템플릿)
+async function syncUserCloud(user){
+  if(!window.supabaseClient || !user) return;
+  try{
+    const res=await window.supabaseClient.from('irb_tracker').select('data').eq('id',user.id).maybeSingle();
+    if(res && res.data && res.data.data){
+      // 내 데이터가 이미 클라우드에 있음 (빈 템플릿이라도 그대로 사용)
+      applyCloudData(res.data.data);
+      persistLocal(); normalizeSectionOrdinals(); render();
+      console.log('내 클라우드 데이터 불러옴');
       return;
     }
-
-    if(data.data.protocols){
-      protocols=data.data.protocols||protocols;
-      protocolData=data.data.protocolData||protocolData;
-      curProtocolId=data.data.curProtocolId||protocols[0]?.id||curProtocolId;
-      bindCurrentProtocol();
-    } else {
-      // 클라우드에 기존 v6/v10 구조가 있으면 Protocol 1로 감싸기
-      sites=data.data.sites||sites;
-      sections=data.data.sections||sections;
-      ensureDefaultProtocol('Protocol 1');
-      bindCurrentProtocol();
+    // 내 행이 없음(신규) → 기존 'main' 데이터 이전 여부 확인
+    const mainRes=await window.supabaseClient.from('irb_tracker').select('data').eq('id','main').maybeSingle();
+    const mainData=mainRes && mainRes.data && mainRes.data.data;
+    if(mainData && countProtocolRows(mainData)>0){
+      const ok=confirm('이 계정에는 아직 데이터가 없어요.\n\n기존 트래커 데이터를 이 계정으로 가져올까요?\n\n[확인] = 기존 데이터의 주인 (가져오기)\n[취소] = 새 사용자 (빈 템플릿으로 시작)');
+      if(ok){
+        applyCloudData(mainData);
+        persistLocal();
+        await saveToCloud();
+        normalizeSectionOrdinals(); render();
+        console.log('기존 데이터를 내 계정으로 이전함');
+        return;
+      }
     }
-    localStorage.setItem('irb-v11',JSON.stringify({protocols,protocolData,curProtocolId}));
-    localStorage.setItem('irb-v6',JSON.stringify({sites,sections}));
-    normalizeSectionOrdinals();
+    // 빈 템플릿으로 시작 → 내 id로 빈 행 생성
+    persistLocal();
+    await saveToCloud();
     render();
-    console.log('Supabase 데이터 불러오기 성공!');
-  }
+    console.log('빈 템플릿으로 시작');
+  }catch(e){ console.warn('syncUserCloud 오류:',e); }
 }
 
 function initSite(code){
@@ -2599,7 +2638,7 @@ function normalizeSectionOrdinals(){
   if(changed){ bindCurrentProtocol(); saveData(); }
 }
 
-load(); normalizeSectionOrdinals(); render(); initTabReorder(); initSectionReorder();
+render(); initTabReorder(); initSectionReorder();
 // 모든 textarea: 입력 시 글자에 맞게 높이 자동 확장
 (function(){ const b=document.getElementById('bodyWrap');
   if(b) b.addEventListener('input', e=>{ if(e.target && e.target.tagName==='TEXTAREA') autoGrow(e.target); });
@@ -2617,7 +2656,88 @@ const supabaseClient = supabase.createClient(
 window.supabaseClient = supabaseClient;
 
 console.log("Supabase 연결 성공!", supabaseClient);
-syncFromCloudAfterInit();
+
+// ━━━━━━━━━━━━ 로그인 / 회원가입 + 사용자별 데이터 ━━━━━━━━━━━━
+function loadOffline(){ curUserId=null; CLOUD_ID=null; load(); normalizeSectionOrdinals(); render(); }
+async function authInit(){
+  const gate=document.getElementById('authGate');
+  if(!window.supabaseClient){ if(gate) gate.style.display='none'; loadOffline(); return; } // 안전장치
+  try{
+    const {data}=await supabaseClient.auth.getSession();
+    if(data && data.session && data.session.user){ authShowApp(data.session.user); }
+    else { authShowGate(); }
+  }catch(e){ console.warn('auth init 오류, 게이트 비활성:',e); if(gate) gate.style.display='none'; loadOffline(); }
+  supabaseClient.auth.onAuthStateChange((_ev,session)=>{
+    if(session && session.user){ if(session.user.id!==curUserId) authShowApp(session.user); }
+    else authShowGate();
+  });
+}
+function authShowGate(){
+  const g=document.getElementById('authGate'); if(g) g.style.display='flex';
+  updateUserBar(null);
+  // 이전 사용자 데이터가 화면에 남지 않도록 비우기
+  curUserId=null; CLOUD_ID=null;
+  protocols=[]; protocolData={}; sites=[]; sections={}; curProtocolId=null; curSite=null;
+  render();
+}
+async function authShowApp(user){
+  const g=document.getElementById('authGate'); if(g) g.style.display='none';
+  updateUserBar(user);
+  ensureProfile(user);
+  curUserId=user.id; CLOUD_ID=user.id;
+  load();                       // 내 로컬 캐시 (신규면 빈 템플릿)
+  normalizeSectionOrdinals(); render();
+  await syncUserCloud(user);    // 내 클라우드 데이터로 갱신 (or 이전/빈 템플릿)
+}
+function updateUserBar(user){
+  const bar=document.getElementById('userBar');
+  if(!bar) return;
+  if(user){ bar.style.display='flex'; const e=document.getElementById('userEmail'); if(e) e.textContent=user.email||''; }
+  else bar.style.display='none';
+}
+async function ensureProfile(user){
+  try{
+    const {data}=await supabaseClient.from('profiles').select('id').eq('id',user.id).maybeSingle();
+    if(!data){
+      await supabaseClient.from('profiles').insert({id:user.id, email:user.email, role:'member', approved:false});
+    }
+  }catch(e){ console.warn('profile 생성 확인 오류:',e); }
+}
+function authMsg(t,kind){ const m=document.getElementById('authMsg'); if(!m) return; m.textContent=t||''; m.style.color = kind==='err'?'#c0392b':'#0f7b6c'; }
+function authSwitch(mode){
+  const g=document.getElementById('authGate'); if(g) g.dataset.mode=mode;
+  document.getElementById('authTitle').textContent = mode==='signup'?'회원가입':'로그인';
+  document.getElementById('authSubmitBtn').textContent = mode==='signup'?'가입하기':'로그인';
+  document.getElementById('authToggleText').innerHTML = mode==='signup'
+    ? '이미 계정이 있나요? <a href="#" onclick="authSwitch(\'login\');return false;">로그인</a>'
+    : '계정이 없나요? <a href="#" onclick="authSwitch(\'signup\');return false;">회원가입</a>';
+  authMsg('');
+}
+async function authSubmit(){
+  const email=(document.getElementById('authEmail').value||'').trim();
+  const pw=document.getElementById('authPw').value||'';
+  const mode=(document.getElementById('authGate').dataset.mode)||'login';
+  if(!email||!pw){ authMsg('이메일과 비밀번호를 입력해주세요.','err'); return; }
+  if(mode==='signup' && pw.length<6){ authMsg('비밀번호는 6자 이상이어야 해요.','err'); return; }
+  authMsg('처리 중…');
+  try{
+    if(mode==='signup'){
+      const {data,error}=await supabaseClient.auth.signUp({email,password:pw});
+      if(error){ authMsg('가입 실패: '+error.message,'err'); return; }
+      if(data.user) ensureProfile(data.user);
+      if(data.user && !data.session){ authMsg('가입 완료! 이제 로그인해 주세요.'); authSwitch('login'); return; }
+      authMsg('가입 완료! 🎉');
+    } else {
+      const {error}=await supabaseClient.auth.signInWithPassword({email,password:pw});
+      if(error){ authMsg('로그인 실패: '+error.message,'err'); return; }
+    }
+  }catch(e){ authMsg('오류: '+e.message,'err'); }
+}
+async function authSignOut(){
+  try{ await supabaseClient.auth.signOut(); }catch(e){}
+  authShowGate();
+}
+authInit();
 </script>
 </body>
 </html>
