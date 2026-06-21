@@ -2770,6 +2770,9 @@ async function authInit(){
 function authShowGate(){
   const g=document.getElementById('authGate'); if(g) g.style.display='flex';
   updateUserBar(null);
+  // 로그인 화면을 항상 깨끗한 '로그인' 모드로 초기화 (구글 버튼 포함 정상 표시)
+  try{ authSwitch('login'); }catch(e){}
+  authMsg('');
   // 이전 사용자 데이터가 화면에 남지 않도록 비우기
   curUserId=null; CLOUD_ID=null;
   protocols=[]; protocolData={}; sites=[]; sections={}; curProtocolId=null; curSite=null;
