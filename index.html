@@ -2836,7 +2836,10 @@ async function authGoogle(){
   try{
     const {error}=await supabaseClient.auth.signInWithOAuth({
       provider:'google',
-      options:{ redirectTo: window.location.origin + window.location.pathname }
+      options:{
+        redirectTo: window.location.origin + window.location.pathname,
+        queryParams:{ prompt:'select_account' }   // 항상 계정 선택 화면 표시
+      }
     });
     if(error){ authMsg('구글 로그인 실패: '+error.message,'err'); }
   }catch(e){ authMsg('오류: '+e.message,'err'); }
