@@ -220,26 +220,26 @@ tr:hover td{background:#f7f7f5}
 .att-mini{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px}
 .att-mini .att-chip{font-size:10px;padding:1px 4px 1px 7px;max-width:100%}
 .att-mini .att-btn{padding:2px 7px;font-size:10px}
-/* ━━━ 기관별 할 일(To-do) 패널 ━━━ */
-.todo-tab{position:fixed;right:0;top:150px;z-index:500;background:#0f7b6c;color:#fff;border:none;border-radius:8px 0 0 8px;padding:12px 7px;cursor:pointer;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:-2px 2px 10px rgba(0,0,0,.14)}
-.todo-tab-label{font-size:10px;writing-mode:vertical-rl;letter-spacing:1px}
-.todo-panel{position:fixed;right:14px;top:88px;width:280px;max-height:78vh;display:flex;flex-direction:column;background:#fff;border:1px solid #e0e8e6;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.13);z-index:500;overflow:hidden}
-.todo-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f0faf8;font-size:13px;font-weight:700;color:#0f7b6c}
+/* ━━━ 기관별 할 일(To-do) — 기관 화면 안쪽 인라인 카드 ━━━ */
+.todo-inline{background:#fff;border:1.5px solid #d4e8e4;border-radius:8px;margin:1rem 0;overflow:hidden}
+.todo-inline-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0faf8;cursor:pointer;user-select:none}
+.todo-inline-head:hover{background:#e6f6f2}
+.todo-inline-head .chevron{color:#0f7b6c;font-size:11px;transition:transform .2s;display:inline-block}
+.todo-inline-head .chevron.open{transform:rotate(90deg)}
+.todo-inline-title{font-size:13px;font-weight:700;color:#0f7b6c}
 .todo-cnt{font-weight:400;color:#999;font-size:11px;margin-left:4px}
-.todo-close{border:none;background:transparent;color:#999;cursor:pointer;font-size:15px;line-height:1}
-.todo-sub{font-size:11px;color:#787774;padding:7px 14px 0;font-weight:600}
-.todo-list{flex:1;overflow-y:auto;padding:8px 12px;min-height:40px}
-.todo-item{display:flex;align-items:center;gap:7px;padding:5px 0}
+.todo-inline-body{padding:10px 14px}
+.todo-list{min-height:30px}
+.todo-item{display:flex;align-items:center;gap:8px;padding:5px 0}
 .todo-item input[type=checkbox]{width:16px;height:16px;accent-color:#0f7b6c;cursor:pointer;flex-shrink:0}
-.todo-text{flex:1;border:none;border-bottom:1px solid transparent;font-size:12px;padding:3px 2px;outline:none;background:transparent;min-width:0}
+.todo-text{flex:1;border:none;border-bottom:1px solid #eee;font-size:13px;padding:4px 2px;outline:none;background:transparent;min-width:0}
 .todo-text:focus{border-bottom-color:#0f7b6c}
 .todo-item.done .todo-text{text-decoration:line-through;color:#aaa}
-.todo-del{border:none;background:transparent;color:#c0392b;cursor:pointer;font-size:12px;flex-shrink:0;opacity:.45}
+.todo-del{border:none;background:transparent;color:#c0392b;cursor:pointer;font-size:13px;flex-shrink:0;opacity:.45}
 .todo-del:hover{opacity:1}
-.todo-empty{font-size:11px;color:#bbb;text-align:center;padding:16px 0}
-.todo-add{margin:8px 12px 12px;border:1px solid #d4e8e4;background:#fff;color:#0f7b6c;border-radius:7px;padding:8px;font-size:12px;cursor:pointer}
+.todo-empty{font-size:12px;color:#bbb;text-align:center;padding:14px 0}
+.todo-add{margin-top:10px;border:1px solid #d4e8e4;background:#fff;color:#0f7b6c;border-radius:7px;padding:8px 12px;font-size:12px;cursor:pointer}
 .todo-add:hover{background:#f0faf8}
-@media(max-width:1100px){.todo-panel{top:78px;max-height:70vh}}
 .contract-field{display:flex;flex-direction:column;gap:4px}
 .contract-field label{font-size:10px;font-weight:600;color:#787774;letter-spacing:.4px;text-transform:uppercase}
 .contract-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:110px}
@@ -282,6 +282,30 @@ tr:hover td{background:#f7f7f5}
 .idx-loc{font-family:'Courier New',monospace}
 .index-table td{vertical-align:top}
 </style>
+<style id="warm-theme">
+/* ☕ 따뜻한 크림·웜톤 테마 (레벨 ① 분위기 변경 · 구조는 그대로) */
+body{background:#f4ece1 !important;color:#42392f}
+.header{background:#fffdf9 !important;border-bottom:1px solid #ece1d2 !important}
+.title{color:#3a322a}
+.tabs-wrap{background:#fffdf9 !important;border-bottom:1px solid #ece1d2 !important}
+.body{max-width:1320px}
+.section{background:#fffdf9 !important;border:1px solid #ece1d2 !important;border-radius:14px !important;box-shadow:0 2px 8px rgba(150,110,60,.06) !important}
+.sec-header{background:#faf3e8 !important}
+th{background:#f6ede0 !important;color:#8c7a62 !important;border-bottom:1px solid #ece1d2 !important}
+td{border-bottom:1px solid #f3ebdd !important}
+tr:hover td{background:#faf4ea !important}
+.chip-total{background:#efe6d8;color:#5d5343}
+.progress-bar{background:#ece1d2}
+/* 카드·패널 둥글고 부드럽게 */
+.contract-list,.todo-inline,.contract-list-body,.ct-card,.auth-card{border-radius:14px !important}
+.ct-card{box-shadow:0 1px 4px rgba(150,110,60,.06)}
+/* 입력칸 따뜻한 화이트 */
+.date-input,.ver-input,.text-input,.tmf-input,input[type=text],textarea,select{background:#fffdfa}
+/* 버튼 살짝 부드럽게 */
+.btn{border-radius:8px !important}
+/* 검색창 톤 */
+.search-box input{background:#fffdfa !important;border-color:#e6dccc !important}
+</style>
 </head>
 <body>
 <style>
@@ -303,7 +327,38 @@ tr:hover td{background:#f7f7f5}
 #userBar{display:none;align-items:center;gap:8px;font-size:12px;color:#787774}
 #userBar .ub-email{font-weight:600;color:#37352f}
 .ub-logout{border:1px solid #e0e0dd;background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#787774}
+.ub-feedback{border:1px solid #d4c5e8;background:#faf7fd;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#7a5cab}
+.ub-feedback:hover{background:#f2ebfa}
+.fb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10001;display:flex;align-items:center;justify-content:center}
+.fb-modal{background:#fff;border-radius:14px;padding:24px 24px 20px;width:420px;max-width:92vw;box-shadow:0 14px 50px rgba(0,0,0,.18)}
+.fb-modal h3{margin:0 0 6px;font-size:16px;color:#37352f}
+.fb-desc{font-size:12px;color:#787774;margin-bottom:14px;line-height:1.5}
+.fb-textarea{width:100%;box-sizing:border-box;border:1px solid #e0e0dd;border-radius:9px;padding:12px;font-size:13px;font-family:inherit;min-height:120px;resize:vertical;outline:none}
+.fb-textarea:focus{border-color:#7a5cab}
+.fb-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.fb-send{background:#7a5cab;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.fb-send:hover{background:#684b96}
+.fb-cancel{background:#fff;color:#787774;border:1px solid #e0e0dd;border-radius:8px;padding:10px 16px;font-size:13px;cursor:pointer}
 .ub-logout:hover{background:#f7f7f5}
+.ub-handoff{border:1px solid #d4e8e4;background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#0f7b6c}
+.ub-handoff:hover{background:#f0faf8}
+.ub-inbox{border:1px solid #f0c674;background:#fffaf0;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#b8860b;position:relative}
+.ub-inbox:hover{background:#fff4dd}
+.ub-badge{display:inline-block;background:#e74c3c;color:#fff;border-radius:9px;padding:0 6px;font-size:10px;font-weight:700;margin-left:2px}
+.ho-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:11000;display:flex;align-items:center;justify-content:center}
+.ho-modal{background:#fff;border-radius:14px;width:460px;max-width:92vw;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 16px 50px rgba(0,0,0,.25)}
+.ho-modal h3{margin:0 0 4px;font-size:16px;color:#37352f}
+.ho-modal .ho-desc{font-size:12px;color:#787774;margin-bottom:16px}
+.ho-item{border:1px solid #ececea;border-radius:10px;padding:14px;margin-bottom:10px}
+.ho-item .ho-from{font-size:13px;font-weight:600;color:#37352f}
+.ho-item .ho-date{font-size:11px;color:#999;margin-top:2px}
+.ho-item .ho-acts{display:flex;gap:8px;margin-top:10px}
+.ho-accept{flex:1;background:#0f7b6c;color:#fff;border:none;border-radius:7px;padding:9px;font-size:13px;font-weight:600;cursor:pointer}
+.ho-accept:hover{background:#0c6557}
+.ho-reject{border:1px solid #e0e0dd;background:#fff;color:#787774;border-radius:7px;padding:9px 14px;font-size:13px;cursor:pointer}
+.ho-reject:hover{background:#f7f7f5}
+.ho-empty{font-size:13px;color:#999;text-align:center;padding:24px 0}
+.ho-close{margin-top:8px;width:100%;border:1px solid #e0e0dd;background:#fff;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;color:#555}
 </style>
 <div id="authGate" data-mode="login" style="display:none">
   <div class="auth-card">
@@ -328,7 +383,7 @@ tr:hover td{background:#f7f7f5}
       <div class="sub">Protocol별 기관 IRB 현황 관리 · 마지막 저장: <span id="lastSaved">-</span></div>
     </div>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      <div id="userBar"><span class="ub-email" id="userEmail"></span><button class="ub-logout" onclick="authSignOut()">로그아웃</button></div>
+      <div id="userBar"><span class="ub-email" id="userEmail"></span><button class="ub-handoff" onclick="handoffSend()" title="이 트래커 자료를 다른 가입자에게 넘기기">📤 자료 넘기기</button><button class="ub-inbox" id="handoffInboxBtn" onclick="handoffOpenInbox()" style="display:none" title="받은 인계 자료">📥 받은 자료 <span class="ub-badge" id="handoffBadge">0</span></button><button class="ub-feedback" onclick="feedbackOpen()" title="추가됐으면 하는 기능·개선 의견 보내기">💬 의견</button><button class="ub-logout" onclick="authSignOut()">로그아웃</button></div>
       <button class="btn" onclick="exportCSV()">📥 CSV</button>
       <button class="btn" onclick="document.getElementById('siteImportInput').click()" title="파일에서 기관 불러오기">📂 기관 가져오기</button>
       <input type="file" id="siteImportInput" accept=".json,application/json" style="display:none" onchange="importSiteFromFile(this)">
@@ -363,6 +418,8 @@ tr:hover td{background:#f7f7f5}
 </div>
 <div class="protocol-tabs-wrap" id="protocolTabsWrap"></div>
 <div class="tabs-wrap" id="tabsWrap"></div>
+<div id="handoffModal"></div>
+<div id="feedbackModal"></div>
 <div class="body" id="bodyWrap"></div>
 <div style="text-align:center;color:#c7c7c5;font-size:11px;letter-spacing:2px;padding:18px 0 28px;user-select:none">TEST</div>
 
@@ -619,6 +676,20 @@ let curUserId=null;
 function lsKeyV11(){ return curUserId ? 'irb-v11-'+curUserId : 'irb-v11'; }
 function lsKeyV6(){ return curUserId ? 'irb-v6-'+curUserId : 'irb-v6'; }
 
+let saveToastEnabled=false, lastSaveToast=0;
+function showToastNow(msg){
+  let t=document.getElementById('savedToast');
+  if(!t){ t=document.createElement('div'); t.id='savedToast';
+    t.style.cssText='position:fixed;bottom:22px;right:22px;background:#0f7b6c;color:#fff;padding:9px 16px;border-radius:9px;font-size:13px;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .3s;opacity:0;pointer-events:none';
+    document.body.appendChild(t); }
+  t.textContent=msg; t.style.opacity='1';
+  clearTimeout(t._h); t._h=setTimeout(()=>{ t.style.opacity='0'; }, 1500);
+}
+function savedToast(){
+  if(!saveToastEnabled) return;
+  const now=Date.now(); if(now-lastSaveToast<1000) return;
+  lastSaveToast=now; showToastNow('✓ 저장되었습니다');
+}
 function saveData(){
   syncCurrentProtocolData();
   localStorage.setItem(lsKeyV11(),JSON.stringify({protocols,protocolData,curProtocolId}));
@@ -627,6 +698,7 @@ function saveData(){
   const el=document.getElementById('lastSaved');
   if(el) el.textContent=new Date().toLocaleString('ko-KR');
   scheduleCloudSave();
+  savedToast();
 }
 
 function scheduleCloudSave(){
@@ -692,31 +764,15 @@ async function syncUserCloud(user){
   try{
     const res=await window.supabaseClient.from('irb_tracker').select('data').eq('id',user.id).maybeSingle();
     if(res && res.data && res.data.data){
-      // 내 데이터가 이미 클라우드에 있음 (빈 템플릿이라도 그대로 사용)
+      // 내 데이터가 클라우드에 있음 → 그대로 사용
       applyCloudData(res.data.data);
       persistLocal(); normalizeSectionOrdinals(); render();
-      console.log('내 클라우드 데이터 불러옴');
       return;
     }
-    // 내 행이 없음(신규) → 기존 'main' 데이터 이전 여부 확인
-    const mainRes=await window.supabaseClient.from('irb_tracker').select('data').eq('id','main').maybeSingle();
-    const mainData=mainRes && mainRes.data && mainRes.data.data;
-    if(mainData && countProtocolRows(mainData)>0){
-      const ok=confirm('이 계정에는 아직 데이터가 없어요.\n\n기존 트래커 데이터를 이 계정으로 가져올까요?\n\n[확인] = 기존 데이터의 주인 (가져오기)\n[취소] = 새 사용자 (빈 템플릿으로 시작)');
-      if(ok){
-        applyCloudData(mainData);
-        persistLocal();
-        await saveToCloud();
-        normalizeSectionOrdinals(); render();
-        console.log('기존 데이터를 내 계정으로 이전함');
-        return;
-      }
-    }
-    // 빈 템플릿으로 시작 → 내 id로 빈 행 생성
+    // 신규 사용자 → 확인창 없이 빈 템플릿으로 시작 (내 id로 빈 행 생성)
     persistLocal();
     await saveToCloud();
     render();
-    console.log('빈 템플릿으로 시작');
   }catch(e){ console.warn('syncUserCloud 오류:',e); }
 }
 
@@ -887,7 +943,10 @@ function renderContractList(code){
     </div>
     ${open?`<div class="contract-list-body">
       ${body}
-      <button class="btn ci-add" onclick="addContract('${code}')">+ 계약 추가</button>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+        <button class="btn ci-add" onclick="addContract('${code}')">+ 계약 추가</button>
+        <button class="btn" style="background:#0f7b6c;color:#fff;border-color:#0f7b6c" onclick="saveData();showToastNow('✓ 계약 정보가 저장되었습니다')">💾 저장</button>
+      </div>
     </div>`:''}
   </div>`;
 }
@@ -1705,9 +1764,7 @@ function toggleTodo(code,id){ const t=getTodos(code).find(x=>x.id===id); if(t){ 
 function delTodo(code,id){ const arr=getTodos(code); const i=arr.findIndex(x=>x.id===id); if(i<0) return; arr.splice(i,1); saveData(); renderBody(); }
 function renderTodoPanel(code){
   if(!code) return '';
-  if(!todoPanelOpen){
-    return `<button class="todo-tab" onclick="toggleTodoPanel()" title="할 일 열기">📝<span class="todo-tab-label">할 일</span></button>`;
-  }
+  const open=todoPanelOpen;
   const arr=getTodos(code);
   const done=arr.filter(t=>t.done).length;
   const items=arr.map(t=>`
@@ -1716,12 +1773,15 @@ function renderTodoPanel(code){
       <input type="text" class="todo-text" value="${esc(t.text||'')}" placeholder="할 일 입력" onchange="setTodoText('${code}','${t.id}',this.value)" onkeydown="if(event.key==='Enter')addTodo('${code}')">
       <button class="todo-del" onclick="delTodo('${code}','${t.id}')" title="삭제">✕</button>
     </div>`).join('');
-  const siteName=(sites.find(s=>s.code===code)||{}).name||'';
-  return `<div class="todo-panel">
-    <div class="todo-head"><span>📝 할 일 <span class="todo-cnt">${done}/${arr.length}</span></span><button class="todo-close" onclick="toggleTodoPanel()" title="닫기">✕</button></div>
-    <div class="todo-sub">${code} · ${esc(siteName)}</div>
-    <div class="todo-list">${items||'<div class="todo-empty">할 일이 없어요.<br>아래 버튼으로 추가하세요.</div>'}</div>
-    <button class="todo-add" onclick="addTodo('${code}')">+ 할 일 추가</button>
+  return `<div class="todo-inline">
+    <div class="todo-inline-head" onclick="toggleTodoPanel()">
+      <span class="chevron${open?' open':''}">▶</span>
+      <span class="todo-inline-title">📝 할 일 <span class="todo-cnt">${done}/${arr.length}</span></span>
+    </div>
+    ${open?`<div class="todo-inline-body">
+      <div class="todo-list">${items||'<div class="todo-empty">할 일이 없어요. 아래 버튼으로 추가하세요.</div>'}</div>
+      <button class="todo-add" onclick="addTodo('${code}')">+ 할 일 추가</button>
+    </div>`:''}
   </div>`;
 }
 
@@ -1746,6 +1806,7 @@ function renderBody(){
       </div>
     </div>
     ${renderContractList(curSite)}
+    ${renderTodoPanel(curSite)}
     <div class="search-box">
       <span style="color:#bbb">🔍</span>
       <input id="searchInput" placeholder="문서명 검색..." value="${esc(searchTerm)}" oninput="onSearch(this.value)">
@@ -1757,7 +1818,7 @@ function renderBody(){
       <button class="btn" onclick="exportCSV()">📥 CSV</button>
     </div>
     ${showSecForm?renderSecForm():''}
-  `+renderTodoPanel(curSite);
+  `;
   wrap.querySelectorAll('textarea').forEach(autoGrow);
   setupSecResizers();
 }
@@ -1941,15 +2002,15 @@ function renderSection(code, sec){
       <thead><tr>
         <th>✕</th>
         <th><input type="checkbox" id="selectAllCb" onchange="const code=getCurSite();const sec=getSec(code,curSecId);if(sec){const all=sec.rows.every(r=>r.selected);sec.rows.forEach(r=>r.selected=!all);saveData();renderBody();}"></th>
-        <th>구분<span class="col-rsz" data-ci="2"></span></th>
-        <th>문서명<span class="col-rsz" data-ci="3"></span></th>
-        <th>TMF 파일명<span class="col-rsz" data-ci="4"></span></th>
-        <th>서버 내 파일명<span class="col-rsz" data-ci="5"></span></th>
-        <th>버전<span class="col-rsz" data-ci="6"></span></th>
-        <th>Effective Date<span class="col-rsz" data-ci="7"></span></th>
-        <th>상태<span class="col-rsz" data-ci="8"></span></th>
-        <th>CRA 제출기한<span class="col-rsz" data-ci="9"></span></th>
-        <th>비고<span class="col-rsz" data-ci="10"></span></th>
+        <th title="문서 종류 (신청서·의뢰서·동의서·통지서 등). 추가할 때 선택해요.">구분<span class="col-rsz" data-ci="2"></span></th>
+        <th title="문서 이름. 더블클릭하면 이름을 수정할 수 있어요.">문서명<span class="col-rsz" data-ci="3"></span></th>
+        <th title="TMF(Trial Master File)에 보관된 실제 파일명을 적어요.">TMF 파일명<span class="col-rsz" data-ci="4"></span></th>
+        <th title="사내 서버에 저장한 위치/파일명(경로)을 적어요.">서버 내 파일명<span class="col-rsz" data-ci="5"></span></th>
+        <th title="문서 버전. 동의서는 Master_Site, 변경대비표는 v1.0 → v2.0 형태로 적어요.">버전<span class="col-rsz" data-ci="6"></span></th>
+        <th title="해당 버전의 효력 발생일(Effective Date).">Effective Date<span class="col-rsz" data-ci="7"></span></th>
+        <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="8"></span></th>
+        <th title="마감일을 넣으면 D-day가 자동 표시돼요.">CRA 제출기한<span class="col-rsz" data-ci="9"></span></th>
+        <th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요.">비고<span class="col-rsz" data-ci="10"></span></th>
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
@@ -2132,26 +2193,26 @@ function rowHtml(code,secId,idx,row,total){
 }
 
 function addDocRowHtml(){
-  return `<tr class="add-row">
-    <td><select class="add-doc-sel" id="addDtype">
-      <option value="doc">제출 문서</option>
-      <option value="app">신청서</option>
-      <option value="req">의뢰서</option>
-      <option value="consent">동의서</option>
-      <option value="notice">통지서</option>
-      <option value="eval">평가록</option>
-      <option value="minutes">회의록</option>
-      <option value="custom">기타</option>
-    </select></td>
-    <td colspan="2"><input class="add-doc-input" id="addDocName" placeholder="문서명 입력 후 Enter" onkeydown="if(event.key==='Enter')confirmAddDoc()" oninput="autoCheckNeedVer()"></td>
-    <td colspan="2"><label style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;cursor:pointer">
-      <input type="checkbox" id="addNeedVer"> 버전/Effective Date 필요
-    </label></td>
-    <td colspan="6" style="text-align:right">
+  return `<tr class="add-row"><td colspan="11">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 2px">
+      <select class="add-doc-sel" id="addDtype">
+        <option value="doc">제출 문서</option>
+        <option value="app">신청서</option>
+        <option value="req">의뢰서</option>
+        <option value="consent">동의서</option>
+        <option value="notice">통지서</option>
+        <option value="eval">평가록</option>
+        <option value="minutes">회의록</option>
+        <option value="custom">기타</option>
+      </select>
+      <input class="add-doc-input" id="addDocName" placeholder="문서명 입력 후 Enter" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')confirmAddDoc()" oninput="autoCheckNeedVer()">
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
+        <input type="checkbox" id="addNeedVer"> 버전/Effective Date 필요
+      </label>
       <button class="add-confirm-btn" onclick="confirmAddDoc()">추가</button>
-      <button class="add-cancel-btn" style="margin-left:6px" onclick="cancelAddDoc()">취소</button>
-    </td><td></td>
-  </tr>`;
+      <button class="add-cancel-btn" onclick="cancelAddDoc()">취소</button>
+    </div>
+  </td></tr>`;
 }
 
 function renderSecForm(){
@@ -2753,7 +2814,7 @@ window.supabaseClient = supabaseClient;
 console.log("Supabase 연결 성공!", supabaseClient);
 
 // ━━━━━━━━━━━━ 로그인 / 회원가입 + 사용자별 데이터 ━━━━━━━━━━━━
-function loadOffline(){ curUserId=null; CLOUD_ID=null; load(); normalizeSectionOrdinals(); render(); }
+function loadOffline(){ curUserId=null; CLOUD_ID=null; load(); normalizeSectionOrdinals(); render(); setTimeout(()=>{ saveToastEnabled=true; },1500); }
 async function authInit(){
   const gate=document.getElementById('authGate');
   if(!window.supabaseClient){ if(gate) gate.style.display='none'; loadOffline(); return; } // 안전장치
@@ -2770,6 +2831,8 @@ async function authInit(){
 function authShowGate(){
   const g=document.getElementById('authGate'); if(g) g.style.display='flex';
   updateUserBar(null);
+  saveToastEnabled=false;
+  curUserEmail=''; updateHandoffBadge(0); handoffCloseModal();
   // 로그인 화면을 항상 깨끗한 '로그인' 모드로 초기화 (구글 버튼 포함 정상 표시)
   try{ authSwitch('login'); }catch(e){}
   authMsg('');
@@ -2783,9 +2846,12 @@ async function authShowApp(user){
   updateUserBar(user);
   ensureProfile(user);
   curUserId=user.id; CLOUD_ID=user.id;
+  curUserEmail=(user.email||'').toLowerCase();
   load();                       // 내 로컬 캐시 (신규면 빈 템플릿)
   normalizeSectionOrdinals(); render();
   await syncUserCloud(user);    // 내 클라우드 데이터로 갱신 (or 이전/빈 템플릿)
+  checkHandoffInbox();          // 받은 인계 자료 확인
+  setTimeout(()=>{ saveToastEnabled=true; }, 1500);
 }
 function updateUserBar(user){
   const bar=document.getElementById('userBar');
@@ -2844,6 +2910,134 @@ async function authGoogle(){
     if(error){ authMsg('구글 로그인 실패: '+error.message,'err'); }
   }catch(e){ authMsg('오류: '+e.message,'err'); }
 }
+// ━━━━━━━━━━━━ 자료 인수인계 (이메일 방식) ━━━━━━━━━━━━
+let curUserEmail='';
+// 받은 자료를 기존 데이터에 '추가/병합' (덮어쓰기 X, 이름 겹치면 (인계됨))
+function mergeHandoffData(payload){
+  if(!payload) return 0;
+  let inProtocols, inData;
+  if(payload.protocols){ inProtocols=payload.protocols||[]; inData=payload.protocolData||{}; }
+  else { const pid='leg'; inProtocols=[{id:pid,name:'인계 자료'}]; inData={[pid]:{sites:payload.sites||[],sections:payload.sections||{},indexes:{}}}; }
+  let added=0;
+  inProtocols.forEach(p=>{
+    const src=JSON.parse(JSON.stringify(inData[p.id]||{sites:[],sections:{},indexes:{}}));
+    let name=p.name||'인계 과제';
+    if(protocols.some(x=>x.name===name)){
+      name=name+' (인계됨)';
+      let base=name, n=2;
+      while(protocols.some(x=>x.name===name)){ name=base+' '+n; n++; }
+    }
+    const newId=makeId('p');
+    const np=Object.assign({},p,{id:newId,name:name});
+    protocols.push(np);
+    protocolData[newId]=src;
+    added++;
+  });
+  return added;
+}
+async function handoffSend(){
+  if(!window.supabaseClient){ alert('로그인 상태에서만 사용할 수 있어요.'); return; }
+  const raw=prompt('자료를 넘길 상대방의 이메일을 입력하세요.\n(상대가 이 트래커에 가입한 이메일이어야 받을 수 있어요)');
+  if(raw===null) return;
+  const email=(raw||'').trim().toLowerCase();
+  if(!/^.+@.+\..+$/.test(email)){ alert('이메일 형식이 올바르지 않아요.'); return; }
+  if(email===curUserEmail){ alert('본인에게는 넘길 수 없어요.'); return; }
+  if(!confirm(email+' 님에게 현재 트래커 자료 전체를 넘길까요?\n\n· 상대가 수락하면 상대 트래커에 "추가"됩니다 (덮어쓰기 아님)\n· 겹치는 과제는 (인계됨)으로 따로 보관돼요')) return;
+  try{
+    syncCurrentProtocolData();
+    const payload={protocols,protocolData,curProtocolId};
+    const {error}=await window.supabaseClient.from('handoffs').insert({from_email:curUserEmail||'', to_email:email, payload:payload, status:'pending'});
+    if(error){ alert('전송 실패: '+error.message); return; }
+    showToastNow('✓ '+email+' 님에게 자료를 보냈어요');
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function checkHandoffInbox(){
+  const btn=document.getElementById('handoffInboxBtn');
+  if(!window.supabaseClient || !curUserEmail){ if(btn) btn.style.display='none'; return; }
+  try{
+    const {data,error}=await window.supabaseClient.from('handoffs').select('id').eq('to_email',curUserEmail).eq('status','pending');
+    const n=(error||!data)?0:data.length;
+    updateHandoffBadge(n);
+  }catch(e){ console.warn('inbox check 오류:',e); }
+}
+function updateHandoffBadge(n){
+  const btn=document.getElementById('handoffInboxBtn'), b=document.getElementById('handoffBadge');
+  if(!btn) return;
+  if(n>0){ btn.style.display=''; if(b) b.textContent=n; }
+  else btn.style.display='none';
+}
+async function handoffOpenInbox(){
+  const modal=document.getElementById('handoffModal'); if(!modal) return;
+  modal.innerHTML='<div class="ho-overlay"><div class="ho-modal"><div class="ho-empty">불러오는 중…</div></div></div>';
+  try{
+    const {data,error}=await window.supabaseClient.from('handoffs').select('id,from_email,created_at').eq('to_email',curUserEmail).eq('status','pending').order('created_at',{ascending:false});
+    if(error){ modal.innerHTML=''; alert('불러오기 실패: '+error.message); return; }
+    const items=(data||[]).map(h=>`
+      <div class="ho-item">
+        <div class="ho-from">📤 ${esc(h.from_email||'(알 수 없음)')}</div>
+        <div class="ho-date">${new Date(h.created_at).toLocaleString('ko-KR')}</div>
+        <div class="ho-acts">
+          <button class="ho-accept" onclick="handoffAccept('${h.id}')">받기 (내 트래커에 추가)</button>
+          <button class="ho-reject" onclick="handoffReject('${h.id}')">삭제</button>
+        </div>
+      </div>`).join('');
+    modal.innerHTML=`<div class="ho-overlay" onclick="if(event.target===this)handoffCloseModal()"><div class="ho-modal">
+      <h3>📥 받은 인계 자료</h3>
+      <div class="ho-desc">받으면 기존 데이터에 추가돼요 (덮어쓰기 아님). 겹치는 과제는 (인계됨)으로 따로 보관돼요.</div>
+      ${items||'<div class="ho-empty">받은 자료가 없어요.</div>'}
+      <button class="ho-close" onclick="handoffCloseModal()">닫기</button>
+    </div></div>`;
+  }catch(e){ modal.innerHTML=''; alert('오류: '+e.message); }
+}
+function handoffCloseModal(){ const m=document.getElementById('handoffModal'); if(m) m.innerHTML=''; }
+async function handoffAccept(id){
+  try{
+    const {data,error}=await window.supabaseClient.from('handoffs').select('payload,from_email').eq('id',id).maybeSingle();
+    if(error||!data){ alert('불러오기 실패'); return; }
+    const added=mergeHandoffData(data.payload);
+    saveData(); render();
+    await window.supabaseClient.from('handoffs').update({status:'accepted'}).eq('id',id);
+    handoffCloseModal();
+    showToastNow('✓ 자료를 받았어요 (과제 '+added+'개 추가)');
+    checkHandoffInbox();
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function handoffReject(id){
+  if(!confirm('이 인계 자료를 삭제할까요? (되돌릴 수 없어요)')) return;
+  try{
+    await window.supabaseClient.from('handoffs').delete().eq('id',id);
+    handoffOpenInbox(); checkHandoffInbox();
+  }catch(e){ alert('오류: '+e.message); }
+}
+
+// ━━━ 기능 의견/피드백 ━━━
+function feedbackOpen(){
+  const m=document.getElementById('feedbackModal'); if(!m) return;
+  m.innerHTML=`<div class="fb-overlay" onclick="if(event.target===this)feedbackClose()"><div class="fb-modal">
+    <h3>💬 기능 의견 보내기</h3>
+    <div class="fb-desc">추가됐으면 하는 기능이나 불편한 점을 자유롭게 남겨주세요. 개발에 참고할게요!</div>
+    <textarea class="fb-textarea" id="fbText" placeholder="예) 문서별 마감 알림이 있으면 좋겠어요 / ○○ 화면이 불편해요"></textarea>
+    <div class="fb-acts">
+      <button class="fb-cancel" onclick="feedbackClose()">취소</button>
+      <button class="fb-send" onclick="feedbackSend()">보내기</button>
+    </div>
+  </div></div>`;
+  setTimeout(()=>{ const t=document.getElementById('fbText'); if(t) t.focus(); },50);
+}
+function feedbackClose(){ const m=document.getElementById('feedbackModal'); if(m) m.innerHTML=''; }
+async function feedbackSend(){
+  const t=document.getElementById('fbText');
+  const msg=(t&&t.value||'').trim();
+  if(!msg){ alert('의견 내용을 입력해주세요.'); return; }
+  if(!window.supabaseClient){ alert('로그인 상태에서만 보낼 수 있어요.'); return; }
+  try{
+    const {error}=await window.supabaseClient.from('feedback').insert({user_email:curUserEmail||'', message:msg});
+    if(error){ alert('전송 실패: '+error.message); return; }
+    feedbackClose();
+    showToastNow('✓ 소중한 의견 감사합니다!');
+  }catch(e){ alert('오류: '+e.message); }
+}
+
 async function authSignOut(){
   try{ await supabaseClient.auth.signOut(); }catch(e){}
   authShowGate();
