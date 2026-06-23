@@ -350,10 +350,31 @@ tr:hover td{background:#f6f8fb !important}
 <style id="redesign-shell">
 /* 🧭 전면 리디자인 — 좌측 사이드바 앱 셸 */
 body{padding-left:238px}
-#appSidebar{position:fixed;left:0;top:0;bottom:0;width:238px;background:#fbfcfd;border-right:1px solid #e4e8ee;display:flex;flex-direction:column;padding:16px 12px 12px;overflow-y:auto;z-index:90}
+#appSidebar{position:fixed;left:0;top:0;bottom:0;width:238px;background:#fbfcfd;border-right:1px solid #e4e8ee;display:flex;flex-direction:column;padding:16px 12px 12px;overflow-y:auto;z-index:90;transition:left .22s ease}
+.sb-collapse{margin-left:auto;border:none;background:transparent;color:#9aa3b2;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:5px}
+.sb-collapse:hover{background:#eef1f5;color:#2c5282}
+#sbOpenBtn{position:fixed;left:10px;top:12px;z-index:95;display:none;width:34px;height:34px;border:1px solid #e4e8ee;background:#fff;border-radius:8px;font-size:15px;color:#4a5567;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(20,40,80,.08)}
+#sbOpenBtn:hover{background:#f0f4f9;color:#2c5282}
+/* 닫힘 상태: 사이드바 숨기고 본문 넓게 + 열기 버튼 표시 */
+body.sb-collapsed{padding-left:0}
+body.sb-collapsed #appSidebar{left:-244px}
+body.sb-collapsed #sbOpenBtn{display:flex}
+/* 닫혔을 때 화면 왼쪽 가장자리에 마우스 올리면 사이드바가 살짝 나타남 */
+body.sb-collapsed #appSidebar:hover{left:0;box-shadow:4px 0 24px rgba(20,40,80,.14)}
+body.sb-collapsed.sb-peek #appSidebar{left:0;box-shadow:4px 0 24px rgba(20,40,80,.14)}
+.sb-hover-zone{position:fixed;left:0;top:0;bottom:0;width:14px;z-index:88;display:none}
+body.sb-collapsed .sb-hover-zone{display:block}
 .sb-logo{font-size:15px;font-weight:700;color:#1f2a3a;padding:2px 8px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .sb-logo .sb-badge2{font-size:10px;font-weight:600;background:#e8edf3;color:#2c5282;padding:1px 6px;border-radius:5px}
 .sb-label{font-size:11px;color:#9aa3b2;font-weight:600;letter-spacing:.03em;padding:12px 8px 5px}
+.sb-search-wrap{position:relative;padding:0 2px 4px}
+.sb-search{width:100%;box-sizing:border-box;border:1px solid #e0e6ee;border-radius:8px;padding:7px 10px;font-size:12px;background:#fff;outline:none}
+.sb-search:focus{border-color:#2c5282}
+.sb-search-results{display:none;margin-top:4px;background:#fff;border:1px solid #e4e8ee;border-radius:8px;box-shadow:0 6px 20px rgba(20,40,80,.12);overflow:hidden;max-height:260px;overflow-y:auto}
+.qs-item{padding:8px 10px;font-size:12px;color:#37404f;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.qs-item:hover,.qs-item.active{background:#eef3fa;color:#2c5282}
+.qs-sub{font-size:10px;color:#9aa3b2;flex-shrink:0}
+.qs-empty{padding:8px 10px;font-size:12px;color:#aab}
 #appSidebar .protocol-tabs-wrap,#appSidebar .tabs-wrap{display:flex;flex-direction:column;gap:2px;overflow:visible;padding:0;background:transparent;border:none}
 #appSidebar .tab,#appSidebar .protocol-tab{width:100%;text-align:left;border:none !important;border-bottom:none !important;border-radius:7px;padding:8px 10px;font-size:13px;white-space:normal;color:#4a5567;line-height:1.35}
 #appSidebar .tab:hover,#appSidebar .protocol-tab:hover{background:#eef1f5;color:#2c5282}
@@ -2123,7 +2144,10 @@ function renderIndexBody(){
           &nbsp;·&nbsp; 완료 ${done}/${target.length} · 이슈 ${issue} · N/A ${naCount}
         </div>
       </div>
-      <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="idx-add-btn" style="margin-top:0" onclick="addIndexRow('${type}')">+ 항목 추가</button>
+        <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
+      </div>
     </div>
     <div class="index-table-wrap"><table class="index-table" style="width:${idxColW.reduce((a,b)=>a+b,0)}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
@@ -3305,8 +3329,11 @@ function buildShell(){
   const ub=document.getElementById('userBar');
   if(!sb || !ptw || !tw) return;
   const logo=document.createElement('div'); logo.className='sb-logo';
-  logo.innerHTML='📋 IRB Tracker <span class="sb-badge2">Test</span>';
+  logo.innerHTML='📋 IRB Tracker <span class="sb-badge2">Test</span><button class="sb-collapse" onclick="toggleSidebar()" title="사이드바 닫기">◀</button>';
   sb.appendChild(logo);
+  const search=document.createElement('div'); search.className='sb-search-wrap';
+  search.innerHTML='<input id="sbSearch" class="sb-search" placeholder="🔍 빠른 이동 (홈·기관·Index)" autocomplete="off" oninput="quickSearch(this.value)" onkeydown="quickSearchKey(event)"><div id="sbSearchResults" class="sb-search-results"></div>';
+  sb.appendChild(search);
   const l1=document.createElement('div'); l1.className='sb-label'; l1.textContent='과제'; sb.appendChild(l1);
   sb.appendChild(ptw);
   const l2=document.createElement('div'); l2.className='sb-label'; l2.textContent='메뉴'; sb.appendChild(l2);
@@ -3317,6 +3344,63 @@ function buildShell(){
   sb.appendChild(adminBtn);
   if(ub){ const w=document.createElement('div'); w.className='sb-user'; w.appendChild(ub); sb.appendChild(w); }
   sb.dataset.built='1';
+  // 사이드바 열기 버튼(닫혔을 때 좌상단) + 상태 복원
+  if(!document.getElementById('sbOpenBtn')){
+    const ob=document.createElement('button');
+    ob.id='sbOpenBtn'; ob.title='사이드바 열기'; ob.textContent='☰';
+    ob.onclick=toggleSidebar;
+    document.body.appendChild(ob);
+  }
+  try{ if(localStorage.getItem('sbCollapsed')==='1') document.body.classList.add('sb-collapsed'); }catch(e){}
+  // 닫힘 상태에서 좌측 가장자리 hover 시 살짝 미리보기
+  if(!document.querySelector('.sb-hover-zone')){
+    const zone=document.createElement('div'); zone.className='sb-hover-zone';
+    document.body.appendChild(zone);
+    zone.addEventListener('mouseenter',()=>{ if(document.body.classList.contains('sb-collapsed')) document.body.classList.add('sb-peek'); });
+    sb.addEventListener('mouseleave',()=>{ document.body.classList.remove('sb-peek'); });
+  }
+}
+function toggleSidebar(){
+  const collapsed=document.body.classList.toggle('sb-collapsed');
+  try{ localStorage.setItem('sbCollapsed', collapsed?'1':'0'); }catch(e){}
+}
+// 🔍 빠른 이동: 홈·기관·Index·과제 검색해서 바로 이동
+function quickSearchItems(){
+  const items=[];
+  items.push({label:'🏠 홈', sub:'', go:()=>switchHome()});
+  (sites||[]).forEach(s=>items.push({label:`${s.code} ${s.name||''}`.trim(), sub:'기관', go:()=>switchSite(s.code)}));
+  (getIndexTypesForProtocol()||[]).forEach(t=>items.push({label:`📑 ${t} Index`, sub:'Index', go:()=>switchIndex(t)}));
+  (protocols||[]).forEach(p=>{ if(p.id!==curProtocolId) items.push({label:`📁 ${p.protocolNo||p.projectName||p.name||'Protocol'}`, sub:'과제', go:()=>switchProtocol(p.id)}); });
+  return items;
+}
+let qsResults=[], qsActive=-1;
+function quickSearch(q){
+  const box=document.getElementById('sbSearchResults'); if(!box) return;
+  q=(q||'').trim().toLowerCase();
+  if(!q){ box.innerHTML=''; box.style.display='none'; qsResults=[]; return; }
+  qsResults=quickSearchItems().filter(it=>it.label.toLowerCase().includes(q)).slice(0,8);
+  qsActive=qsResults.length?0:-1;
+  renderQsResults();
+}
+function renderQsResults(){
+  const box=document.getElementById('sbSearchResults'); if(!box) return;
+  if(!qsResults.length){ box.innerHTML='<div class="qs-empty">결과 없음</div>'; box.style.display='block'; return; }
+  box.innerHTML=qsResults.map((it,i)=>`<div class="qs-item${i===qsActive?' active':''}" onmousedown="quickSearchPick(${i})">${esc(it.label)}${it.sub?`<span class="qs-sub">${it.sub}</span>`:''}</div>`).join('');
+  box.style.display='block';
+}
+function quickSearchPick(i){
+  const it=qsResults[i]; if(!it) return;
+  it.go();
+  const inp=document.getElementById('sbSearch'); if(inp) inp.value='';
+  const box=document.getElementById('sbSearchResults'); if(box){ box.innerHTML=''; box.style.display='none'; }
+  qsResults=[];
+}
+function quickSearchKey(e){
+  if(!qsResults.length){ if(e.key==='Enter'){ quickSearch(e.target.value); } return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); qsActive=(qsActive+1)%qsResults.length; renderQsResults(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); qsActive=(qsActive-1+qsResults.length)%qsResults.length; renderQsResults(); }
+  else if(e.key==='Enter'){ e.preventDefault(); quickSearchPick(qsActive>=0?qsActive:0); }
+  else if(e.key==='Escape'){ const box=document.getElementById('sbSearchResults'); if(box){box.innerHTML='';box.style.display='none';} qsResults=[]; }
 }
 buildShell();
 authInit();
