@@ -304,6 +304,40 @@ tr:hover td{background:#f6f8fb !important}
 .date-input,.ver-input,.text-input,.tmf-input,input[type=text],textarea,select{background:#fff}
 .btn{border-radius:7px !important}
 .search-box input{background:#fff !important;border-color:#dde3ec !important}
+/* 🏠 홈 대시보드 */
+.home-tab{font-weight:600 !important}
+.home-head{display:flex;align-items:baseline;gap:8px;margin-bottom:16px}
+.home-title{font-size:18px;font-weight:600;color:#1f2a3a}
+.home-sub{font-size:13px;color:#9aa3b2}
+.home-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px}
+.home-stat{background:#fff;border:1px solid #e4e8ee;border-radius:10px;padding:14px 16px}
+.hs-label{font-size:13px;color:#76819a;margin-bottom:4px}
+.hs-val{font-size:26px;font-weight:600;color:#1f2a3a;line-height:1.1}
+.home-cols{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.home-section-label{font-size:13px;color:#5b6b80;font-weight:600;margin-bottom:10px}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.home-card{background:#fff;border:1px solid #e4e8ee;border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.home-card:hover{box-shadow:0 4px 14px rgba(30,50,80,.10);transform:translateY(-1px)}
+.hc-top{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:5px}
+.hc-name{font-weight:600;font-size:13px;color:#28303d}
+.hc-badge{font-size:11px;padding:2px 8px;border-radius:7px;white-space:nowrap}
+.hb-done{background:#e6f4ea;color:#1e6e3e}
+.hb-prog{background:#e8edf3;color:#2c5282}
+.hb-issue{background:#fce8e8;color:#b8281f}
+.hb-wait{background:#f0f0ef;color:#787774}
+.hc-sub{font-size:12px;color:#7b8597;margin-bottom:10px}
+.hc-bar{height:6px;background:#eef1f5;border-radius:3px;overflow:hidden}
+.hc-fill{height:100%;background:#2c5282;border-radius:3px;transition:width .3s}
+.hc-pct{font-size:11px;color:#9aa3b2;margin-top:5px}
+.home-dl{background:#fff;border:1px solid #e4e8ee;border-radius:12px;padding:14px}
+.home-dl-title{font-size:13px;font-weight:600;color:#5b6b80;margin-bottom:10px}
+.hdl-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f3f7;cursor:pointer;font-size:12px}
+.hdl-item:last-child{border-bottom:none}
+.hdl-item:hover .hdl-name{color:#2c5282}
+.hdl-name{color:#3a4453;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdl-dday{font-weight:600;white-space:nowrap;padding:2px 6px;border-radius:4px}
+.hdl-empty{font-size:12px;color:#aab;text-align:center;padding:12px 0}
+@media(max-width:780px){.home-cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -567,7 +601,7 @@ let protocols=[], protocolData={};
 let curProtocolId=null;
 let sites=[], sections={};
 let curSite=null, addingDoc=null, showSecForm=false, searchTerm='';
-let curView='site', curIndexType=null; // 'site' | 'index'
+let curView='home', curIndexType=null; // 'home' | 'site' | 'index'
 const collapsed={};
 const indexSecCollapsed={};
 
@@ -1595,7 +1629,7 @@ function switchProtocol(id){
   syncCurrentProtocolData();
   curProtocolId=id;
   bindCurrentProtocol();
-  curView='site'; curIndexType=null;
+  curView='home'; curIndexType=null;
   addingDoc=null; showSecForm=false; searchTerm='';
   saveData();
   render();
@@ -1740,9 +1774,18 @@ function renderTabs(){
       idxTypes.map(t=>`<div class="tab idx-tab${(curView==='index'&&curIndexType===t)?' active':''}" onclick="switchIndex('${t}')">📑 ${t} Index</div>`).join('')
     : '';
   document.getElementById('tabsWrap').innerHTML=
+    `<div class="tab home-tab${curView==='home'?' active':''}" onclick="switchHome()">🏠 홈</div>`+
+    `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
     sites.map(s=>`<div class="tab${(curView==='site'&&s.code===curSite)?' active':''}" data-key="${s.code}" onclick="switchSite('${s.code}')">${s.code} ${s.name}</div>`).join('')+
     `<div class="tab-add" onclick="openSiteModal()">+</div>`+
     idxTabs;
+}
+
+function switchHome(){
+  curView='home'; curIndexType=null;
+  addingDoc=null; showSecForm=false; searchTerm='';
+  renderTabs(); renderBody();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function switchIndex(type){
@@ -1784,7 +1827,79 @@ function renderTodoPanel(code){
   </div>`;
 }
 
+function renderHomeBody(){
+  const wrap=document.getElementById('bodyWrap');
+  const proto=getCurProtocol();
+  // 기관별 통계 집계
+  let totDocs=0, totOk=0, totIss=0;
+  const cards=sites.map(s=>{
+    const secs=sections[s.code]||[];
+    let t=0,ok=0,iss=0;
+    secs.forEach(sec=>(sec.rows||[]).forEach(r=>{ t++; if(r.status==='ok')ok++; if(r.status==='issue')iss++; }));
+    totDocs+=t; totOk+=ok; totIss+=iss;
+    const pct=t?Math.round(ok/t*100):0;
+    let badge, bcls;
+    if(iss>0){ badge='이슈 '+iss; bcls='hb-issue'; }
+    else if(pct>=100){ badge='완료'; bcls='hb-done'; }
+    else if(t>0){ badge='진행'; bcls='hb-prog'; }
+    else { badge='대기'; bcls='hb-wait'; }
+    return {s,t,ok,iss,pct,badge,bcls};
+  });
+  const totPct=totDocs?Math.round(totOk/totDocs*100):0;
+  // 다가오는 마감 수집
+  const deadlines=[];
+  sites.forEach(s=>{
+    (sections[s.code]||[]).forEach(sec=>{
+      (sec.rows||[]).forEach(r=>{
+        if(r.deadline && r.status!=='ok'){
+          const d=calcDday(r.deadline);
+          if(d.days!==null) deadlines.push({code:s.code, name:r.name||'문서', dday:d, days:d.days});
+        }
+      });
+    });
+  });
+  deadlines.sort((a,b)=>a.days-b.days);
+  const topDl=deadlines.slice(0,8);
+
+  const statCards=`<div class="home-stats">
+    <div class="home-stat"><div class="hs-label">기관</div><div class="hs-val">${sites.length}</div></div>
+    <div class="home-stat"><div class="hs-label">문서</div><div class="hs-val">${totDocs}</div></div>
+    <div class="home-stat"><div class="hs-label">완료율</div><div class="hs-val" style="color:#1e6e3e">${totPct}%</div></div>
+    <div class="home-stat"><div class="hs-label">이슈</div><div class="hs-val" style="color:#c0392b">${totIss}</div></div>
+  </div>`;
+
+  const siteCards = sites.length ? `<div class="home-grid">${cards.map(c=>`
+    <div class="home-card" onclick="switchSite('${c.s.code}')">
+      <div class="hc-top"><span class="hc-name">${c.s.code} ${esc(c.s.name||'')}</span><span class="hc-badge ${c.bcls}">${c.badge}</span></div>
+      <div class="hc-sub">${c.s.piName?'PI '+esc(c.s.piName)+' · ':''}문서 ${c.t}</div>
+      <div class="hc-bar"><div class="hc-fill" style="width:${c.pct}%"></div></div>
+      <div class="hc-pct">완료 ${c.pct}%</div>
+    </div>`).join('')}</div>` : '<div class="empty">기관을 추가하면 여기에 카드로 표시돼요</div>';
+
+  const dlList = `<div class="home-dl">
+    <div class="home-dl-title">📅 다가오는 마감</div>
+    ${topDl.length ? topDl.map(d=>`
+      <div class="hdl-item" onclick="switchSite('${d.code}')">
+        <span class="hdl-name">${d.code} · ${esc(d.name)}</span>
+        <span class="hdl-dday ${d.dday.cls}">${d.dday.txt}</span>
+      </div>`).join('') : '<div class="hdl-empty">마감 기한이 설정된 문서가 없어요</div>'}
+  </div>`;
+
+  wrap.innerHTML=`
+    <div class="home-head"><span class="home-title">${esc(proto?.name||'홈')}</span><span class="home-sub">/ 홈 대시보드</span></div>
+    ${statCards}
+    <div class="home-cols">
+      <div class="home-col-main">
+        <div class="home-section-label">기관 <span style="color:#aaa;font-weight:400">· 카드를 누르면 상세로</span></div>
+        ${siteCards}
+      </div>
+      <div class="home-col-side">${dlList}</div>
+    </div>
+  `;
+}
+
 function renderBody(){
+  if(curView==='home'){ renderHomeBody(); return; }
   if(curView==='index'){ renderIndexBody(); return; }
   const wrap=document.getElementById('bodyWrap');
   if(!curSite){wrap.innerHTML='<div class="empty">현재 Protocol에 기관을 추가해주세요</div>';return;}
