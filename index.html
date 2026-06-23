@@ -1597,6 +1597,8 @@ const INDEX_TEMPLATES = {
 
 // Study Type → 사용할 Index 목록
 function getIndexTypesForProtocol(){
+  // ISF/TMF Index는 회사 내부 자산 → 관리자(본인) 계정에서만 노출
+  if(typeof isAdmin==='function' && !isAdmin()) return [];
   const cur=getCurProtocol?.();
   const type=cur?.studyType||'PMS';
   if(type==='임상시험') return ['ISF','PSF','TMF'];
