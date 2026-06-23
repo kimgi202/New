@@ -255,6 +255,14 @@ tr:hover td{background:#f7f7f5}
 .contract-field input.irb-url{min-width:240px;font-family:'Courier New',monospace;font-size:11px}
 /* ━━━ Index 뷰 ━━━ */
 .idx-tab{color:#0f7b6c}
+.idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:12px;text-align:center}
+.idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:13px}
+.idx-num-input:focus,.idx-title-input:focus{border-color:#2c5282;outline:none}
+.idx-del-row{display:inline-block;margin-top:6px;border:none;background:transparent;color:#c0392b;font-size:11px;cursor:pointer;opacity:.6;padding:2px 4px}
+.idx-del-row:hover{opacity:1}
+.idx-add-btn{margin-top:12px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer}
+.idx-add-btn:hover{background:#f0f4f9}
+.idx-empty-hint{color:#9aa3b2;font-size:13px;text-align:center;padding:24px 0 4px}
 .index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto}
 .index-table{border-collapse:collapse;font-size:12px;table-layout:fixed}
 .index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap;position:relative}
@@ -381,6 +389,7 @@ body{padding-left:238px}
 .auth-guide code{background:#dcefe9;color:#0f6b58;padding:1px 5px;border-radius:4px;font-size:11px;font-family:monospace}
 .auth-guide-fb{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #bcdcd3;color:#2c6e5d}
 .auth-guide-warn{display:block;margin-top:7px;color:#b35309;font-weight:500}
+.auth-guide-privacy{display:block;margin-top:5px;color:#5b6b80}
 .auth-input{width:100%;box-sizing:border-box;border:1px solid #e0e0dd;border-radius:8px;padding:11px 12px;font-size:13px;margin-bottom:10px;outline:none;font-family:inherit}
 .auth-input:focus{border-color:#0f7b6c}
 .auth-btn{width:100%;background:#0f7b6c;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
@@ -443,6 +452,7 @@ body{padding-left:238px}
       처음이신가요? <b>나만의 이메일</b>로 <b>회원가입</b>하면 바로 써볼 수 있어요 🙂<br>
       실제 메일이 아니어도 돼요 (예: <code>내별명@test.com</code>, <code>cra1@test.com</code>) + <b>비밀번호 6자 이상</b><br>
       <span class="auth-guide-warn">⚠️ 똑같은 이메일을 쓰면 서로 데이터가 섞여요. <b>각자 다른 이메일</b>로 가입해주세요!</span>
+      <span class="auth-guide-privacy">🔒 테스트용이니, 개인정보가 신경 쓰이면 실제 이름·정보 대신 <b>가명·임의값</b>으로 넣어주세요!</span>
       <span class="auth-guide-fb">💬 써보시고 <b>왼쪽 아래 ‘의견’ 버튼</b>에 좋은 점·불편한 점·추가했으면 하는 기능 <b>뭐든 편하게</b> 남겨주세요! 😊</span>
     </div>
     <div class="auth-title" id="authTitle">로그인</div>
@@ -478,8 +488,9 @@ body{padding-left:238px}
 </div>
 <div class="protocol-bar">
   <span class="protocol-label">Contract No.</span>
-  <div id="contractInputWrapper" style="display:none">
+  <div id="contractInputWrapper" style="display:none;gap:4px;align-items:center">
     <input class="protocol-select" id="contractInput" placeholder="Contract No. 입력" onchange="setContractNo(this.value)" onkeydown="if(event.key==='Enter')setContractNo(this.value)">
+    <button type="button" onclick="switchBackToContractDropdown()" title="목록에서 선택" style="border:1px solid #dde3ec;background:#fff;border-radius:6px;padding:5px 8px;font-size:11px;color:#787774;cursor:pointer;white-space:nowrap">▼ 목록</button>
   </div>
   <select class="protocol-select" id="contractSelect" onchange="onContractSelectChange(this.value)">
     <option value="">직접 입력</option>
@@ -491,11 +502,16 @@ body{padding-left:238px}
   <span class="protocol-label">Sponsor</span>
   <input class="protocol-name-input small" id="sponsorInput" placeholder="예: CSL Korea" onchange="setProjectField('sponsor',this.value)">
   <span class="protocol-label">Study Type</span>
-  <select class="protocol-select" id="studyTypeSelect" onchange="setProjectField('studyType',this.value); refreshInitialSectionsForCurrentProtocol();">
-    <option value="PMS">PMS</option>
-    <option value="임상시험">임상시험</option>
-    <option value="기타">기타</option>
-  </select>
+  <input class="protocol-select" id="studyTypeInput" list="studyTypePresets" placeholder="예: PMS / 임상시험 2상" onchange="setProjectField('studyType',this.value); refreshInitialSectionsForCurrentProtocol(); render();">
+  <datalist id="studyTypePresets">
+    <option value="PMS"></option>
+    <option value="임상시험 1상"></option>
+    <option value="임상시험 2상"></option>
+    <option value="임상시험 3상"></option>
+    <option value="임상시험 4상"></option>
+    <option value="임상시험"></option>
+    <option value="기타"></option>
+  </datalist>
   <button class="btn" onclick="openProtocolModal()">+ Protocol</button>
   <button class="btn btn-danger" onclick="deleteProtocol()">Protocol 삭제</button>
 </div>
@@ -568,9 +584,18 @@ function clinicalInitialDocs(){
   ];
 }
 
+// Study Type 자유 입력값 → 카테고리 분류 (임상시험 / PMS / 기타)
+function studyCategory(t){
+  const s=(t||'').toString();
+  if(/임상|[1-4]\s*상|phase/i.test(s)) return '임상시험';
+  if(/PMS|재심사|시판/i.test(s)) return 'PMS';
+  if(!s.trim()) return 'PMS';
+  return '기타';
+}
+
 function getInitialDocsForCurrentProtocol(){
   const cur=getCurProtocol?.();
-  const type=cur?.studyType || 'PMS';
+  const type=studyCategory(cur?.studyType);
   if(type==='임상시험') return clinicalInitialDocs();
   if(type==='PMS') return pmsInitialDocs();
   return pmsInitialDocs();
@@ -1597,17 +1622,15 @@ const INDEX_TEMPLATES = {
 
 // Study Type → 사용할 Index 목록
 function getIndexTypesForProtocol(){
-  // ISF/TMF Index는 회사 내부 자산 → 관리자(본인) 계정에서만 노출
-  if(typeof isAdmin==='function' && !isAdmin()) return [];
   const cur=getCurProtocol?.();
-  const type=cur?.studyType||'PMS';
+  const type=studyCategory(cur?.studyType);
   if(type==='임상시험') return ['ISF','PSF','TMF'];
   if(type==='PMS') return ['ISF','TMF'];
   return []; // 기타
 }
 function indexTemplateKey(indexType){
   const cur=getCurProtocol?.();
-  const type=cur?.studyType||'PMS';
+  const type=studyCategory(cur?.studyType);
   if(indexType==='ISF') return type==='임상시험'?'ISF_CLINICAL':'ISF_PMS';
   if(indexType==='PSF') return 'PSF_CLINICAL';
   if(indexType==='TMF') return type==='임상시험'?'TMF_CLINICAL':'TMF_PMS';
@@ -1623,10 +1646,16 @@ function getIndexRows(indexType){
   const tmpl=INDEX_TEMPLATES[tmplKey]||[];
   const storeKey=indexType+'__'+tmplKey; // study type 바뀌면 다른 템플릿으로 분리 저장
   if(!pd.indexes[storeKey]){
-    pd.indexes[storeKey]=tmpl.map(it=>({
-      n:it.n, t:it.t, h:!!it.h, sub:it.sub||null, ref:it.ref||'',
-      na:false, status:'pend', location:'', note:''
-    }));
+    if(typeof isAdmin==='function' && isAdmin()){
+      // 관리자(본인): 회사 템플릿으로 시작
+      pd.indexes[storeKey]=tmpl.map(it=>({
+        n:it.n, t:it.t, h:!!it.h, sub:it.sub||null, ref:it.ref||'',
+        na:false, status:'pend', location:'', note:''
+      }));
+    } else {
+      // 일반 사용자: 빈 Index → 본인이 직접 항목 추가
+      pd.indexes[storeKey]=[];
+    }
   }
   return pd.indexes[storeKey];
 }
@@ -1637,6 +1666,23 @@ function setIndexField(indexType, idx, field, val){
   row[field]=val;
   saveData();
   if(field==='na'||field==='status') renderBody();
+}
+// 사용자가 직접 Index 항목 추가/편집/삭제 (방식 A)
+function addIndexRow(type){
+  const rows=getIndexRows(type);
+  rows.push({n:'', t:'', h:false, sub:null, ref:'', na:false, status:'pend', location:'', note:'', custom:true});
+  saveData(); renderBody();
+  setTimeout(()=>{ const els=document.querySelectorAll('.idx-title-input'); const last=els[els.length-1]; if(last) last.focus(); },40);
+}
+function setIndexRowMeta(type, idx, field, val){
+  const rows=getIndexRows(type); const r=rows[idx];
+  if(r){ r[field]=val; saveData(); }
+}
+function delIndexRow(type, idx){
+  const rows=getIndexRows(type);
+  if(!rows[idx]) return;
+  if(!confirm('이 Index 항목을 삭제할까요?')) return;
+  rows.splice(idx,1); saveData(); renderBody();
 }
 
 
@@ -1654,16 +1700,16 @@ function renderProtocolTabs(){
   const contractInput=document.getElementById('contractInput');
   if(contractSelect && contractInputWrapper){
     contractSelect.innerHTML='<option value="">직접 입력</option>'+PROJECT_MASTER.map(p=>`<option value="${p.contractNo}">${p.contractNo}</option>`).join('');
-    // 현재 contractNo가 PROJECT_MASTER에 있으면 드롭다운, 없으면 입력칸
+    // 직접입력 모드이거나, 현재 contractNo가 마스터에 없는 값이면 입력칸 / 아니면 드롭다운
     const isInMaster=PROJECT_MASTER.find(p=>p.contractNo===cur?.contractNo);
-    if(isInMaster||!cur?.contractNo){
+    if(contractManualMode || (cur?.contractNo && !isInMaster)){
+      contractSelect.style.display='none';
+      contractInputWrapper.style.display='flex';
+      contractInput.value=cur?.contractNo||'';
+    } else {
       contractSelect.style.display='block';
       contractInputWrapper.style.display='none';
       contractSelect.value=cur?.contractNo||'';
-    } else {
-      contractSelect.style.display='none';
-      contractInputWrapper.style.display='block';
-      contractInput.value=cur?.contractNo||'';
     }
   }
   const input=document.getElementById('protocolNameInput');
@@ -1672,8 +1718,8 @@ function renderProtocolTabs(){
   if(projectInput) projectInput.value=cur?.projectName||'';
   const sponsorInput=document.getElementById('sponsorInput');
   if(sponsorInput) sponsorInput.value=cur?.sponsor||'';
-  const studyTypeSelect=document.getElementById('studyTypeSelect');
-  if(studyTypeSelect) studyTypeSelect.value=cur?.studyType||'PMS';
+  const studyTypeInput=document.getElementById('studyTypeInput');
+  if(studyTypeInput) studyTypeInput.value=cur?.studyType||'';
 }
 
 function switchProtocol(id){
@@ -1681,6 +1727,7 @@ function switchProtocol(id){
   syncCurrentProtocolData();
   curProtocolId=id;
   bindCurrentProtocol();
+  contractManualMode=false;
   curView='home'; curIndexType=null;
   addingDoc=null; showSecForm=false; searchTerm='';
   saveData();
@@ -1726,16 +1773,19 @@ function applyProjectMaster(contractNo){
   render();
 }
 
+let contractManualMode=false;
 function onContractSelectChange(val){
   const cur=getCurProtocol();
   if(!cur) return;
   if(val===''){
-    // "직접 입력" 선택 → 입력칸 표시
+    // "직접 입력" 선택 → 입력칸 표시 (모드 고정)
+    contractManualMode=true;
     document.getElementById('contractSelect').style.display='none';
-    document.getElementById('contractInputWrapper').style.display='block';
+    document.getElementById('contractInputWrapper').style.display='flex';
     setTimeout(()=>document.getElementById('contractInput').focus(),50);
   } else {
     // 기존 프로젝트 선택 → applyProjectMaster 실행
+    contractManualMode=false;
     applyProjectMaster(val);
   }
 }
@@ -1751,6 +1801,7 @@ function setContractNo(val){
 
 function switchBackToContractDropdown(){
   // 입력칸에서 드롭다운으로 돌아가기
+  contractManualMode=false;
   document.getElementById('contractInputWrapper').style.display='none';
   document.getElementById('contractSelect').style.display='block';
   document.getElementById('contractSelect').value='';
@@ -2046,14 +2097,20 @@ function renderIndexBody(){
     if(secNum && indexSecCollapsed[type+secNum]) return;
     const subHtml=r.sub?`<div class="idx-sub">${r.sub.map(s=>'– '+esc(s)).join('<br>')}</div>`:'';
     const naChecked=r.na?'checked':'';
+    const numCell = r.custom
+      ? `<td class="idx-num"><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></td>`
+      : `<td class="idx-num">${esc(r.n)}</td>`;
+    const titleCell = r.custom
+      ? `<td class="idx-name"><input type="text" class="idx-title-input" value="${esc(r.t||'')}" placeholder="문서명 입력" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)"></td>`
+      : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
     bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
-      <td class="idx-num">${esc(r.n)}</td>
-      <td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>
+      ${numCell}
+      ${titleCell}
       <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}',${idx},'na',this.checked)">N/A</label></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
-      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}</td>
+      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}${r.custom?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
     </tr>`;
   });
 
@@ -2081,6 +2138,8 @@ function renderIndexBody(){
       </tr></thead>
       <tbody>${bodyRows}</tbody>
     </table></div>
+    ${rows.length===0?`<div class="idx-empty-hint">아직 Index 항목이 없어요. 아래 버튼으로 우리 회사 Index 항목을 직접 추가해보세요!</div>`:''}
+    <button class="idx-add-btn" onclick="addIndexRow('${type}')">+ 항목 추가</button>
   `;
   // 렌더 직후 위치/비고 textarea 높이를 내용에 맞게 조정
   wrap.querySelectorAll('.idx-loc,.idx-note').forEach(autoGrow);
