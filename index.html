@@ -2063,9 +2063,9 @@ function renderBody(){
 
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
 // ── Index 컬럼 폭 (커서 드래그로 조절, localStorage 저장) ──
-const IDX_COL_DEFAULT=[34,50,300,52,80,380,200];
-let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v1')); if(Array.isArray(v)&&v.length===7) return v.map(Number);}catch(e){} return IDX_COL_DEFAULT.slice(); })();
-function saveIdxColW(){ try{ localStorage.setItem('idxColW_v1', JSON.stringify(idxColW)); }catch(e){} }
+const IDX_COL_DEFAULT=[34,50,280,52,80,220,200,200,180];
+let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v2')); if(Array.isArray(v)&&v.length===9) return v.map(Number);}catch(e){} return IDX_COL_DEFAULT.slice(); })();
+function saveIdxColW(){ try{ localStorage.setItem('idxColW_v2', JSON.stringify(idxColW)); }catch(e){} }
 function setupIdxResizers(){
   const table=document.querySelector('.index-table'); if(!table) return;
   const cols=table.querySelectorAll('colgroup col');
@@ -2110,7 +2110,7 @@ function renderIndexBody(){
     if(r.h){
       const open=!indexSecCollapsed[type+r.n];
       bodyRows+=`<tr class="idx-sec-row" onclick="toggleIndexSec('${type}','${r.n}')">
-        <td colspan="6"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}</td></tr>`;
+        <td colspan="9"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}</td></tr>`;
       return;
     }
     // 상위 섹션이 접혀 있으면 숨김
@@ -2131,6 +2131,8 @@ function renderIndexBody(){
       <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}',${idx},'na',this.checked)">N/A</label></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
+      <td><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea></td>
+      <td><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea></td>
       <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}${r.custom?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
     </tr>`;
   });
@@ -2158,7 +2160,9 @@ function renderIndexBody(){
         <th>N/A<span class="col-rsz" data-ci="3"></span></th>
         <th>상태<span class="col-rsz" data-ci="4"></span></th>
         <th>위치 / 파일명<span class="col-rsz" data-ci="5"></span></th>
-        <th>비고</th>
+        <th title="지난 모니터링 방문까지 Filing 완료한 항목">이전 Filing<span class="col-rsz" data-ci="6"></span></th>
+        <th title="이번 모니터링 방문에 Filing 할 항목">이번 Filing<span class="col-rsz" data-ci="7"></span></th>
+        <th>비고<span class="col-rsz" data-ci="8"></span></th>
       </tr></thead>
       <tbody>${bodyRows}</tbody>
     </table></div>
@@ -2184,12 +2188,12 @@ function exportIndexCSV(type){
   let csv='\uFEFF';
   csv+=`Protocol,${(cur?.protocolNo||cur?.name||'').replace(/,/g,' ')}\n`;
   csv+=`Index,${type}\n\n`;
-  csv+='No,Title,NA,Status,Location/FileName,Note\n';
+  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note\n';
   const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
   rows.forEach(r=>{
-    if(r.h){ csv+=`${r.n},"${r.t}",,,,\n`; return; }
+    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,\n`; return; }
     const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
-    csv+=`${r.n},${q(r.t)},${r.na?'NA':''},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.note)}\n`;
+    csv+=`${r.n},${q(r.t)},${r.na?'NA':''},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)}\n`;
   });
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');
