@@ -263,7 +263,12 @@ tr:hover td{background:#f7f7f5}
 .idx-add-btn{margin-top:12px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer}
 .idx-add-btn:hover{background:#f0f4f9}
 .idx-empty-hint{color:#9aa3b2;font-size:13px;text-align:center;padding:24px 0 4px}
-.index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto}
+.index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto;scrollbar-width:none}
+.index-table-wrap::-webkit-scrollbar{display:none}
+.idx-topscroll{position:sticky;z-index:60;overflow-x:auto;overflow-y:hidden;height:14px;background:#eef1f5;border:1px solid #e4e8ee;border-bottom:none;border-radius:6px 6px 0 0}
+.idx-topscroll::-webkit-scrollbar{height:11px}
+.idx-topscroll::-webkit-scrollbar-thumb{background:#c2cdda;border-radius:6px}
+.idx-topscroll::-webkit-scrollbar-thumb:hover{background:#aab6c6}
 .index-table{border-collapse:collapse;font-size:12px;table-layout:fixed}
 .index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap;position:relative}
 .col-rsz{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:8;touch-action:none;user-select:none}
@@ -578,6 +583,8 @@ const PROJECT_MASTER = [
   {contractNo:'2410PRO03', projectName:'PG-102', protocolNo:'PG-102-P2-01', sponsor:'프로젠(ProGen)', studyType:'임상시험'},
   {contractNo:'2505BIS03', projectName:'CartiLife 재심사', protocolNo:'BS-CTL-PMS', sponsor:'바이오솔루션', studyType:'PMS'},
 ];
+// 마스터 목록(회사 내부 계약 정보)은 관리자(본인)에게만 노출
+function projectMaster(){ return (typeof isAdmin==='function' && isAdmin()) ? PROJECT_MASTER : []; }
 
 function pmsInitialDocs(){
   return [
@@ -1720,9 +1727,9 @@ function renderProtocolTabs(){
   const contractInputWrapper=document.getElementById('contractInputWrapper');
   const contractInput=document.getElementById('contractInput');
   if(contractSelect && contractInputWrapper){
-    contractSelect.innerHTML='<option value="">직접 입력</option>'+PROJECT_MASTER.map(p=>`<option value="${p.contractNo}">${p.contractNo}</option>`).join('');
+    contractSelect.innerHTML='<option value="">직접 입력</option>'+projectMaster().map(p=>`<option value="${p.contractNo}">${p.contractNo}</option>`).join('');
     // 직접입력 모드이거나, 현재 contractNo가 마스터에 없는 값이면 입력칸 / 아니면 드롭다운
-    const isInMaster=PROJECT_MASTER.find(p=>p.contractNo===cur?.contractNo);
+    const isInMaster=projectMaster().find(p=>p.contractNo===cur?.contractNo);
     if(contractManualMode || (cur?.contractNo && !isInMaster)){
       contractSelect.style.display='none';
       contractInputWrapper.style.display='flex';
@@ -1776,7 +1783,7 @@ function setProjectField(field,value){
 function applyProjectMaster(contractNo){
   const cur=getCurProtocol();
   if(!cur) return;
-  const master=PROJECT_MASTER.find(p=>p.contractNo===contractNo);
+  const master=projectMaster().find(p=>p.contractNo===contractNo);
   if(!master){
     cur.contractNo='';
     saveData();
@@ -2151,7 +2158,8 @@ function renderIndexBody(){
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
       </div>
     </div>
-    <div class="index-table-wrap"><table class="index-table" style="width:${idxColW.reduce((a,b)=>a+b,0)}px">
+    <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
+    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table" style="width:${idxColW.reduce((a,b)=>a+b,0)}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
       <thead><tr>
         <th>✓</th>
@@ -2172,6 +2180,24 @@ function renderIndexBody(){
   // 렌더 직후 위치/비고 textarea 높이를 내용에 맞게 조정
   wrap.querySelectorAll('.idx-loc,.idx-note').forEach(autoGrow);
   setupIdxResizers();
+  setupIdxTopScroll();
+}
+function setupIdxTopScroll(){
+  const top=document.getElementById('idxTopScroll');
+  const inner=document.getElementById('idxTopScrollInner');
+  const wrap=document.getElementById('idxTableWrap');
+  const table=wrap&&wrap.querySelector('.index-table');
+  if(!top||!inner||!wrap||!table) return;
+  const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
+  setW();
+  let lock=false;
+  top.addEventListener('scroll',()=>{ if(lock)return; lock=true; wrap.scrollLeft=top.scrollLeft; lock=false; });
+  wrap.addEventListener('scroll',()=>{ if(lock)return; lock=true; top.scrollLeft=wrap.scrollLeft; lock=false; });
+  const hdr=document.querySelector('.header');
+  const setTop=()=>{ top.style.top=(hdr?hdr.offsetHeight:0)+'px'; };
+  setTop();
+  if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
+  window.addEventListener('resize',()=>{ setW(); setTop(); });
 }
 function autoGrow(el){
   el.style.height='auto';
