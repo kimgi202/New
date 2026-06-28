@@ -42,7 +42,8 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .chevron.open{transform:rotate(90deg)}
 .table-wrap{overflow-x:auto;width:100%}
 .doc-table{table-layout:fixed}
-.doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7),.doc-table.hide-vercols th:nth-child(8),.doc-table.hide-vercols td:nth-child(8){display:none}
+.doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7),.doc-table.hide-vercols th:nth-child(8),.doc-table.hide-vercols td:nth-child(8){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0}
+.doc-table.hide-vercols th:nth-child(7)>*,.doc-table.hide-vercols td:nth-child(7)>*,.doc-table.hide-vercols th:nth-child(8)>*,.doc-table.hide-vercols td:nth-child(8)>*{display:none}
 .ver-toggle-btn{margin-left:6px;border:1px solid #d6deea;background:#fff;color:#2c5282;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap}
 .ver-toggle-btn:hover{background:#eef3fa}
 .doc-table th{position:relative}
@@ -1991,16 +1992,19 @@ function renderHomeBody(){
     return {s,t,ok,iss,pct,badge,bcls};
   });
   const totPct=totDocs?Math.round(totOk/totDocs*100):0;
-  // 다가오는 마감 수집
+  // 다가오는 마감 수집 (섹션 단위 CRA 제출기한)
   const deadlines=[];
   sites.forEach(s=>{
     (sections[s.code]||[]).forEach(sec=>{
-      (sec.rows||[]).forEach(r=>{
-        if(r.deadline && r.status!=='ok'){
-          const d=calcDday(r.deadline);
-          if(d.days!==null) deadlines.push({code:s.code, name:r.name||'문서', dday:d, days:d.days});
+      const dl=sec.meta&&sec.meta.craDeadline;
+      if(dl){
+        const rows=sec.rows||[];
+        const allDone=rows.length>0 && rows.every(r=>r.status==='ok');
+        if(!allDone){
+          const d=calcDday(dl);
+          if(d.days!==null) deadlines.push({code:s.code, name:sec.title||'섹션', dday:d, days:d.days});
         }
-      });
+      }
     });
   });
   deadlines.sort((a,b)=>a.days-b.days);
@@ -2242,9 +2246,9 @@ function exportIndexCSV(type){
   a.click();
 }
 // ── 문서 표 컬럼 폭 (드래그로 조절, 모든 섹션 공통 적용) ──
-const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,96,200];
-let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v1')); if(Array.isArray(v)&&v.length===11) return v.map(Number);}catch(e){} return SEC_COL_DEFAULT.slice(); })();
-function saveSecColW(){ try{ localStorage.setItem('secColW_v1', JSON.stringify(secColW)); }catch(e){} }
+const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,200];
+let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v2')); if(Array.isArray(v)&&v.length===10) return v.map(Number);}catch(e){} return SEC_COL_DEFAULT.slice(); })();
+function saveSecColW(){ try{ localStorage.setItem('secColW_v2', JSON.stringify(secColW)); }catch(e){} }
 // 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
 let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
@@ -2253,8 +2257,8 @@ function secDisplayWidths(){
   const w=secColW.slice();
   if(!showVerCols){
     const freed=(w[6]||0)+(w[7]||0);
-    const share=Math.round(freed/3);
-    w[3]+=share; w[4]+=share; w[5]+=(freed-share*2); // 문서명·TMF·서버
+    const share=Math.round(freed/4);
+    w[3]+=share; w[4]+=share; w[5]+=share; w[9]+=(freed-share*3); // 문서명·TMF·서버·비고
     w[6]=0; w[7]=0;
   }
   return w;
@@ -2319,13 +2323,12 @@ function renderSection(code, sec){
         <th title="문서 버전. 동의서는 Master_Site, 변경대비표는 v1.0 → v2.0 형태로 적어요.">버전<span class="col-rsz" data-ci="6"></span></th>
         <th title="해당 버전의 효력 발생일(Effective Date).">Effective Date<span class="col-rsz" data-ci="7"></span></th>
         <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="8"></span></th>
-        <th title="마감일을 넣으면 D-day가 자동 표시돼요.">CRA 제출기한<span class="col-rsz" data-ci="9"></span></th>
-        <th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요.">비고<span class="col-rsz" data-ci="10"></span></th>
+        <th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요.">비고<span class="col-rsz" data-ci="9"></span></th>
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
         ${isAddingHere?addDocRowHtml():''}
-        ${searchTerm&&!anyMatch?`<tr><td colspan="11" class="no-match">검색 결과 없음</td></tr>`:''}
+        ${searchTerm&&!anyMatch?`<tr><td colspan="10" class="no-match">검색 결과 없음</td></tr>`:''}
       </tbody>
     </table></div>`:''}
   </div>`;
@@ -2415,7 +2418,9 @@ function setSecMeta(code,secId,field,val){
 }
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
+  const dl=meta.craDeadline?calcDday(meta.craDeadline):null;
   return `<div class="sec-meta">
+    <div class="meta-field"><span>CRA 제출기한</span><div style="display:flex;gap:8px;align-items:center"><input type="date" value="${meta.craDeadline||''}" onchange="setSecMeta('${code}','${sec.id}','craDeadline',this.value)" style="width:140px">${dl&&dl.txt?`<span class="${dl.cls}">${dl.txt}</span>`:''}</div></div>
     <div class="meta-field"><span>제출일</span><div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:#666;min-width:60px">CRA</span><input type="date" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:120px"><span style="font-size:12px;color:#666;min-width:50px">PI</span><input type="date" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:120px"></div></div>
     <div class="meta-field"><span>접수일</span><input type="date" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
     <div class="meta-field"><span>IRB 승인일</span><input type="date" value="${meta.approvalDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalDate',this.value)"></div>
@@ -2497,13 +2502,12 @@ function rowHtml(code,secId,idx,row,total){
     <td><select class="sel ${stCls(row.status)}" onchange="onSelChange(this,'${code}','${secId}',${idx})">
       ${stOpts(row.status)}
     </select></td>
-    <td>${row.deadline?`<div class="${dday.cls}">${dday.txt}</div>`:row.status!=='done'?`<input type="date" class="deadline-input" onchange="${setter},'deadline',this.value)">`:na()}</td>
     <td><textarea class="text-input" rows="1" placeholder="메모" oninput="autoGrow(this)" onchange="${setter},'note',this.value)">${esc(row.note||'')}</textarea></td>
   </tr>`;
 }
 
 function addDocRowHtml(){
-  return `<tr class="add-row"><td colspan="11">
+  return `<tr class="add-row"><td colspan="10">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 2px">
       <select class="add-doc-sel" id="addDtype">
         <option value="doc">제출 문서</option>
