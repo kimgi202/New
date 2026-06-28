@@ -42,6 +42,9 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .chevron.open{transform:rotate(90deg)}
 .table-wrap{overflow-x:auto;width:100%}
 .doc-table{table-layout:fixed}
+.doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7),.doc-table.hide-vercols th:nth-child(8),.doc-table.hide-vercols td:nth-child(8){display:none}
+.ver-toggle-btn{margin-left:6px;border:1px solid #d6deea;background:#fff;color:#2c5282;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap}
+.ver-toggle-btn:hover{background:#eef3fa}
 .doc-table th{position:relative}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{padding:5px 6px;text-align:left;font-weight:500;color:#787774;border-bottom:1px solid #e9e9e7;white-space:nowrap;font-size:10px;background:#fafafa}
@@ -522,11 +525,11 @@ body.sb-collapsed .sb-hover-zone{display:block}
     <option value="">직접 입력</option>
   </select>
   <span class="protocol-label">Protocol No.</span>
-  <input class="protocol-name-input" id="protocolNameInput" placeholder="예: CSL654-5017 / PG-102-P2-01" onchange="renameProtocol(this.value)">
+  <input class="protocol-name-input" id="protocolNameInput" placeholder="프로토콜 번호" onchange="renameProtocol(this.value)">
   <span class="protocol-label">Project</span>
-  <input class="protocol-name-input small" id="projectNameInput" placeholder="예: Afstyla / Tavneos" onchange="setProjectField('projectName',this.value)">
+  <input class="protocol-name-input small" id="projectNameInput" placeholder="프로젝트명" onchange="setProjectField('projectName',this.value)">
   <span class="protocol-label">Sponsor</span>
-  <input class="protocol-name-input small" id="sponsorInput" placeholder="예: CSL Korea" onchange="setProjectField('sponsor',this.value)">
+  <input class="protocol-name-input small" id="sponsorInput" placeholder="스폰서" onchange="setProjectField('sponsor',this.value)">
   <span class="protocol-label">Study Type</span>
   <input class="protocol-select" id="studyTypeInput" list="studyTypePresets" placeholder="예: PMS / 임상시험 2상" onchange="setProjectField('studyType',this.value); refreshInitialSectionsForCurrentProtocol(); render();">
   <datalist id="studyTypePresets">
@@ -585,6 +588,13 @@ const PROJECT_MASTER = [
 ];
 // 마스터 목록(회사 내부 계약 정보)은 관리자(본인)에게만 노출
 function projectMaster(){ return (typeof isAdmin==='function' && isAdmin()) ? PROJECT_MASTER : []; }
+// Contract No. 드롭다운 목록: 관리자=회사 마스터 / 일반 사용자=본인이 입력해 누적된 계약번호
+function contractOptions(){
+  if(typeof isAdmin==='function' && isAdmin()) return PROJECT_MASTER.map(p=>p.contractNo);
+  const set=new Set();
+  (protocols||[]).forEach(p=>{ const c=(p.contractNo||'').trim(); if(c) set.add(c); });
+  return [...set];
+}
 
 function pmsInitialDocs(){
   return [
@@ -1042,7 +1052,7 @@ function renderContractList(code){
       </div>
       <div class="contract-field">
         <label>의뢰사</label>
-        <input placeholder="예: CSL Korea" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:120px">
+        <input placeholder="스폰서" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:120px">
       </div>
       <div class="contract-field">
         <label>PI 이름</label>
@@ -1727,10 +1737,10 @@ function renderProtocolTabs(){
   const contractInputWrapper=document.getElementById('contractInputWrapper');
   const contractInput=document.getElementById('contractInput');
   if(contractSelect && contractInputWrapper){
-    contractSelect.innerHTML='<option value="">직접 입력</option>'+projectMaster().map(p=>`<option value="${p.contractNo}">${p.contractNo}</option>`).join('');
-    // 직접입력 모드이거나, 현재 contractNo가 마스터에 없는 값이면 입력칸 / 아니면 드롭다운
-    const isInMaster=projectMaster().find(p=>p.contractNo===cur?.contractNo);
-    if(contractManualMode || (cur?.contractNo && !isInMaster)){
+    contractSelect.innerHTML='<option value="">＋ 직접 입력</option>'+contractOptions().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    // 직접입력 모드이거나, 현재 contractNo가 목록에 없는 값이면 입력칸 / 아니면 드롭다운
+    const inList=contractOptions().includes(cur?.contractNo);
+    if(contractManualMode || (cur?.contractNo && !inList)){
       contractSelect.style.display='none';
       contractInputWrapper.style.display='flex';
       contractInput.value=cur?.contractNo||'';
@@ -1812,9 +1822,13 @@ function onContractSelectChange(val){
     document.getElementById('contractInputWrapper').style.display='flex';
     setTimeout(()=>document.getElementById('contractInput').focus(),50);
   } else {
-    // 기존 프로젝트 선택 → applyProjectMaster 실행
+    // 목록에서 선택
     contractManualMode=false;
-    applyProjectMaster(val);
+    if(typeof isAdmin==='function' && isAdmin() && PROJECT_MASTER.find(p=>p.contractNo===val)){
+      applyProjectMaster(val); // 관리자: 마스터에서 프로젝트 정보 자동완성
+    } else {
+      setContractNo(val);      // 일반 사용자: 계약번호만 설정
+    }
   }
 }
 
@@ -2231,7 +2245,11 @@ function exportIndexCSV(type){
 const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,96,200];
 let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v1')); if(Array.isArray(v)&&v.length===11) return v.map(Number);}catch(e){} return SEC_COL_DEFAULT.slice(); })();
 function saveSecColW(){ try{ localStorage.setItem('secColW_v1', JSON.stringify(secColW)); }catch(e){} }
-function secColgroup(){ return '<colgroup>'+secColW.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup>'; }
+// 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
+let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
+function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
+function secTableWidth(){ let s=secColW.reduce((a,b)=>a+b,0); if(!showVerCols) s-=(secColW[6]+secColW[7]); return s; }
+function secColgroup(){ return '<colgroup>'+secColW.map((w,i)=>`<col style="width:${(!showVerCols&&(i===6||i===7))?0:w}px">`).join('')+'</colgroup>'; }
 function setupSecResizers(){
   document.querySelectorAll('.doc-table .col-rsz').forEach(h=>{
     if(h._init) return; h._init=true;
@@ -2272,11 +2290,12 @@ function renderSection(code, sec){
       <span class="sec-title">${sec.title}</span>
       <span class="sec-badge ${bc}">${done}/${tot}</span>
       <button class="sec-add-btn" onclick="event.stopPropagation();startAddDoc('${code}','${sec.id}')">+ 문서 추가</button>
+      <button class="ver-toggle-btn" onclick="event.stopPropagation();toggleVerCols()" title="버전·Effective Date 칸 ${showVerCols?'숨기기':'펼치기'}">${showVerCols?'⊟ 버전·Eff':'⊞ 버전·Eff'}</button>
       <button class="sec-del-btn" onclick="event.stopPropagation();delSection('${code}','${sec.id}')" title="섹션 삭제">✕</button>
     </div>
     ${isOpen?renderSectionMeta(code,sec):''}
     ${isOpen?renderSecAttachments(code,sec):''}
-    ${isOpen?`<div class="table-wrap"><table class="doc-table" style="width:${secColW.reduce((a,b)=>a+b,0)}px">
+    ${isOpen?`<div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}" style="width:${secTableWidth()}px">
       ${secColgroup()}
       <thead><tr>
         <th>✕</th>
@@ -2327,7 +2346,7 @@ function renderContractPanel(code){
       </div>
       <div class="contract-field">
         <label>Contract No.</label>
-        <input placeholder="예: 2402CBR03-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
+        <input placeholder="계약번호" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
       </div>
       <div class="contract-field">
         <label>계약일 (시작일)</label>
@@ -2339,7 +2358,7 @@ function renderContractPanel(code){
       </div>
       <div class="contract-field">
         <label>의뢰사</label>
-        <input placeholder="예: CSL Korea" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:130px">
+        <input placeholder="스폰서" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:130px">
       </div>
       <div class="contract-field">
         <label>PI 이름</label>
