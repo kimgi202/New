@@ -2248,8 +2248,19 @@ function saveSecColW(){ try{ localStorage.setItem('secColW_v1', JSON.stringify(s
 // 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
 let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
-function secTableWidth(){ let s=secColW.reduce((a,b)=>a+b,0); if(!showVerCols) s-=(secColW[6]+secColW[7]); return s; }
-function secColgroup(){ return '<colgroup>'+secColW.map((w,i)=>`<col style="width:${(!showVerCols&&(i===6||i===7))?0:w}px">`).join('')+'</colgroup>'; }
+// 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 문서명·TMF·서버 칸에 자동 분배
+function secDisplayWidths(){
+  const w=secColW.slice();
+  if(!showVerCols){
+    const freed=(w[6]||0)+(w[7]||0);
+    const share=Math.round(freed/3);
+    w[3]+=share; w[4]+=share; w[5]+=(freed-share*2); // 문서명·TMF·서버
+    w[6]=0; w[7]=0;
+  }
+  return w;
+}
+function secTableWidth(){ return secDisplayWidths().reduce((a,b)=>a+b,0); }
+function secColgroup(){ return '<colgroup>'+secDisplayWidths().map(w=>`<col style="width:${w}px">`).join('')+'</colgroup>'; }
 function setupSecResizers(){
   document.querySelectorAll('.doc-table .col-rsz').forEach(h=>{
     if(h._init) return; h._init=true;
@@ -2261,10 +2272,11 @@ function setupSecResizers(){
       const move=ev=>{
         const w=Math.max(34, startW+(ev.clientX-startX));
         secColW[ci]=w;
-        const total=secColW.reduce((a,b)=>a+b,0);
+        const dw=secDisplayWidths();
+        const total=dw.reduce((a,b)=>a+b,0);
         document.querySelectorAll('.doc-table').forEach(t=>{
-          const col=t.querySelectorAll('colgroup col')[ci];
-          if(col) col.style.width=w+'px';
+          const cols=t.querySelectorAll('colgroup col');
+          dw.forEach((width,i)=>{ if(cols[i]) cols[i].style.width=width+'px'; });
           t.style.width=total+'px';
         });
       };
