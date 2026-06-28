@@ -40,7 +40,12 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .sec-del-btn:hover{color:#a33}
 .chevron{color:#999;font-size:11px;transition:transform .2s;display:inline-block}
 .chevron.open{transform:rotate(90deg)}
-.table-wrap{overflow-x:auto;width:100%}
+.table-wrap{overflow-x:auto;width:100%;scrollbar-width:none}
+.table-wrap::-webkit-scrollbar{display:none}
+.doc-topscroll{position:sticky;z-index:55;overflow-x:auto;overflow-y:hidden;height:14px;background:#eef1f5;border:1px solid #e4e8ee;border-bottom:none;border-radius:6px 6px 0 0;margin-top:4px}
+.doc-topscroll::-webkit-scrollbar{height:11px}
+.doc-topscroll::-webkit-scrollbar-thumb{background:#c2cdda;border-radius:6px}
+.doc-topscroll::-webkit-scrollbar-thumb:hover{background:#aab6c6}
 .doc-table{table-layout:fixed}
 .doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7),.doc-table.hide-vercols th:nth-child(8),.doc-table.hide-vercols td:nth-child(8){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0}
 .doc-table.hide-vercols th:nth-child(7)>*,.doc-table.hide-vercols td:nth-child(7)>*,.doc-table.hide-vercols th:nth-child(8)>*,.doc-table.hide-vercols td:nth-child(8)>*{display:none}
@@ -2084,6 +2089,38 @@ function renderBody(){
   `;
   wrap.querySelectorAll('textarea').forEach(autoGrow);
   setupSecResizers();
+  setupDocTopScroll();
+}
+let _docTopScrollResizeBound=false;
+function setupDocTopScroll(){
+  const hdr=document.querySelector('.header');
+  const topVal=(hdr?hdr.offsetHeight:0)+'px';
+  document.querySelectorAll('.doc-topscroll').forEach(top=>{
+    const inner=top.querySelector('.doc-topscroll-inner');
+    const wrap=top.nextElementSibling; // .table-wrap
+    const table=wrap&&wrap.querySelector('.doc-table');
+    if(!inner||!wrap||!table) return;
+    const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
+    setW();
+    let lock=false;
+    top.addEventListener('scroll',()=>{ if(lock)return; lock=true; wrap.scrollLeft=top.scrollLeft; lock=false; });
+    wrap.addEventListener('scroll',()=>{ if(lock)return; lock=true; top.scrollLeft=wrap.scrollLeft; lock=false; });
+    top.style.top=topVal;
+    if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
+  });
+  if(!_docTopScrollResizeBound){
+    _docTopScrollResizeBound=true;
+    window.addEventListener('resize',()=>{
+      const h=((document.querySelector('.header')||{}).offsetHeight||0)+'px';
+      document.querySelectorAll('.doc-topscroll').forEach(t=>{
+        t.style.top=h;
+        const inner=t.querySelector('.doc-topscroll-inner');
+        const wrap=t.nextElementSibling;
+        const table=wrap&&wrap.querySelector('.doc-table');
+        if(inner&&table) inner.style.width=table.scrollWidth+'px';
+      });
+    });
+  }
 }
 
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
@@ -2311,7 +2348,7 @@ function renderSection(code, sec){
     </div>
     ${isOpen?renderSectionMeta(code,sec):''}
     ${isOpen?renderSecAttachments(code,sec):''}
-    ${isOpen?`<div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}" style="width:${secTableWidth()}px">
+    ${isOpen?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}" style="width:${secTableWidth()}px">
       ${secColgroup()}
       <thead><tr>
         <th>✕</th>
