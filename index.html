@@ -344,6 +344,8 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
 .flog-entry input:focus,.flog-entry textarea:focus,.flog-entry select:focus{border-color:#2c5282}
 .flog-del{border:none;background:transparent;color:#c0392b;cursor:pointer;font-size:13px;padding:3px;border-radius:5px}
 .flog-del:hover{background:#fbe9e7}
+.flog-copy{border:1px solid #cdd8e6;background:#f3f7fc;color:#2c5282;cursor:pointer;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px}
+.flog-copy:hover{background:#2c5282;color:#fff}
 .flog-add{margin-top:6px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer}
 .flog-add:hover{background:#eef3fa}
 .flog-empty{font-size:12px;color:#9aa3b2;padding:8px 2px}
@@ -1948,6 +1950,23 @@ function setFilingLogField(type, idx, li, field, val){
   r.filingLog[li][field]=val; saveData();
   if(field==='status') renderBody();
 }
+function copyFilingContent(type, idx, li){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
+  const text=(r.filingLog[li].content||'').trim();
+  if(!text){ showToastNow('복사할 파일명이 없어요'); return; }
+  const done=()=>showToastNow('✓ 파일명 복사됨 — Monitoring Report에 붙여넣기');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopyText(text,done));
+  } else fallbackCopyText(text,done);
+}
+function fallbackCopyText(text, done){
+  try{
+    const ta=document.createElement('textarea'); ta.value=text;
+    ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    done&&done();
+  }catch(e){ showToastNow('복사 실패 — 직접 선택해 복사해주세요'); }
+}
 function filingLogRowHtml(type, idx, r){
   const log=r.filingLog||[];
   const entries=log.map((e,li)=>`
@@ -1959,6 +1978,7 @@ function filingLogRowHtml(type, idx, r){
           <option value="done"${e.status!=='partial'?' selected':''}>완료</option>
           <option value="partial"${e.status==='partial'?' selected':''}>일부</option>
         </select>
+        <button class="flog-copy" onclick="copyFilingContent('${type}',${idx},${li})" title="이 회차 파일명 복사">📋 복사</button>
         <button class="flog-del" onclick="delFilingLogEntry('${type}',${idx},${li})" title="이 회차 삭제">✕</button>
       </div>
       <textarea class="flog-content" rows="2" placeholder="이 회차에 Filing한 문서 파일명을 줄바꿈(Enter)으로 적으세요&#10;예) CartiLife_PMP_V1.0_20250225_signed_F&#10;    CartiLife_PMP_V2.0_20250625_Signed_F" oninput="autoGrow(this)" onchange="setFilingLogField('${type}',${idx},${li},'content',this.value)">${esc(e.content||'')}</textarea>
