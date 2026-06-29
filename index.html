@@ -274,6 +274,14 @@ tr:hover td{background:#f7f7f5}
 .idx-tab-del{margin-left:6px;font-size:10px;color:#b0b0b0;opacity:.6;padding:0 3px;border-radius:4px}
 .idx-tab-del:hover{opacity:1;color:#c0392b;background:#fbe9e7}
 .idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:12px;text-align:center}
+.idx-num-wrap{display:flex;align-items:center;gap:2px}
+.idx-num-wrap .idx-num-input{flex:1;min-width:0;padding:4px 2px}
+.idx-drag-grip{flex-shrink:0;cursor:grab;color:#b6bfcc;font-size:13px;line-height:1;padding:0 1px;user-select:none;touch-action:none}
+.idx-drag-grip:hover{color:#2c5282}
+.idx-drag-grip:active{cursor:grabbing}
+tr.idx-dragging{opacity:.5;background:#eef3fa !important}
+tr.idx-drop-before td{box-shadow:inset 0 2px 0 #2c5282}
+tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
 .idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:13px}
 .idx-num-input:focus,.idx-title-input:focus{border-color:#2c5282;outline:none}
 .idx-del-row{display:inline-block;margin-top:6px;border:none;background:transparent;color:#c0392b;font-size:11px;cursor:pointer;opacity:.6;padding:2px 4px}
@@ -1901,6 +1909,14 @@ function delIndexRow(type, idx){
   if(!confirm('이 Index 항목을 삭제할까요?')) return;
   rows.splice(idx,1); saveData(); renderBody();
 }
+// Index 항목 위/아래 이동
+function moveIndexRow(type, idx, dir){
+  const rows=getIndexRows(type);
+  const j=idx+dir;
+  if(j<0 || j>=rows.length) return;
+  const tmp=rows[idx]; rows[idx]=rows[j]; rows[j]=tmp;
+  saveData(); renderBody();
+}
 // ── Index 섹션(카테고리) 수정·삭제·추가, 전체 비우기 ──
 function indexStoreKey(type){ return type+'__'+indexTemplateKey(type); }
 function setIndexRowsArray(type, arr){
@@ -2343,7 +2359,7 @@ function setupDocTopScroll(){
 
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
 // ── Index 컬럼 폭 (커서 드래그로 조절, localStorage 저장) ──
-const IDX_COL_DEFAULT=[34,50,280,52,80,220,200,200,180];
+const IDX_COL_DEFAULT=[34,64,280,52,80,210,200,200,180];
 let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v2')); if(Array.isArray(v)&&v.length===9) return v.map(Number);}catch(e){} return IDX_COL_DEFAULT.slice(); })();
 function saveIdxColW(){ try{ localStorage.setItem('idxColW_v2', JSON.stringify(idxColW)); }catch(e){} }
 function setupIdxResizers(){
@@ -2402,12 +2418,12 @@ function renderIndexBody(){
     const naChecked=r.na?'checked':'';
     const editable = r.custom || (typeof isAdmin==='function' && isAdmin());
     const numCell = editable
-      ? `<td class="idx-num"><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></td>`
+      ? `<td class="idx-num"><div class="idx-num-wrap"><span class="idx-drag-grip" title="꾹 눌러서 위·아래로 드래그">⠿</span><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></div></td>`
       : `<td class="idx-num">${esc(r.n)}</td>`;
     const titleCell = editable
       ? `<td class="idx-name"><input type="text" class="idx-title-input" value="${esc(r.t||'')}" placeholder="문서명 입력" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
       : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
-    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}">
+    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}" data-ridx="${idx}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
       ${numCell}
       ${titleCell}
@@ -2986,6 +3002,50 @@ function commitSectionOrder(code, order){
   sections[code]=next;
   saveData(); renderBody();
 }
+function initIndexReorder(){
+  const body=document.getElementById('bodyWrap');
+  if(!body || body._idxReorderInit) return;
+  body._idxReorderInit=true;
+  body.addEventListener('pointerdown', e=>{
+    const grip=e.target.closest('.idx-drag-grip');
+    if(!grip) return;
+    const tr=grip.closest('tr.idx-row'); if(!tr) return;
+    const type=curIndexType; if(!type) return;
+    const fromIdx=+tr.dataset.ridx;
+    e.preventDefault(); e.stopPropagation();
+    const sy=e.clientY; let dragging=false;
+    let targetIdx=fromIdx, insertAfter=false;
+    try{grip.setPointerCapture(e.pointerId);}catch(_){}
+    tr.classList.add('idx-drag-active');
+    const clearMarks=()=>body.querySelectorAll('.idx-drop-before,.idx-drop-after').forEach(r=>r.classList.remove('idx-drop-before','idx-drop-after'));
+    const move=ev=>{
+      if(!dragging){ if(Math.abs(ev.clientY-sy)<5) return; dragging=true; tr.classList.add('idx-dragging'); }
+      ev.preventDefault();
+      const rows=[...body.querySelectorAll('tr.idx-row')];
+      clearMarks();
+      let found=null, after=false;
+      for(const r of rows){ if(r===tr) continue; const rc=r.getBoundingClientRect(); if(ev.clientY>=rc.top && ev.clientY<=rc.bottom){ found=r; after=(ev.clientY> rc.top+rc.height/2); break; } }
+      if(found){ found.classList.add(after?'idx-drop-after':'idx-drop-before'); targetIdx=+found.dataset.ridx; insertAfter=after; }
+    };
+    const up=()=>{
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      clearMarks();
+      tr.classList.remove('idx-dragging','idx-drag-active');
+      if(dragging && targetIdx!==fromIdx){
+        const arr=getIndexRows(type);
+        let to=targetIdx+(insertAfter?1:0);
+        const item=arr.splice(fromIdx,1)[0];
+        if(fromIdx<to) to--;
+        to=Math.max(0,Math.min(arr.length,to));
+        arr.splice(to,0,item);
+        saveData(); renderBody();
+      }
+    };
+    document.addEventListener('pointermove',move);
+    document.addEventListener('pointerup',up);
+  });
+}
 function initSectionReorder(){
   const body=document.getElementById('bodyWrap');
   if(!body || body._secReorderInit) return;
@@ -3368,7 +3428,7 @@ function normalizeSectionOrdinals(){
   if(changed){ bindCurrentProtocol(); saveData(); }
 }
 
-render(); initTabReorder(); initSectionReorder();
+render(); initTabReorder(); initSectionReorder(); initIndexReorder();
 // 모든 textarea: 입력 시 글자에 맞게 높이 자동 확장
 (function(){ const b=document.getElementById('bodyWrap');
   if(b) b.addEventListener('input', e=>{ if(e.target && e.target.tagName==='TEXTAREA') autoGrow(e.target); });
