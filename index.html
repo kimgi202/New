@@ -2290,11 +2290,12 @@ function renderIndexBody(){
     if(secNum && indexSecCollapsed[type+secNum]) return;
     const subHtml=r.sub?`<div class="idx-sub">${r.sub.map(s=>'– '+esc(s)).join('<br>')}</div>`:'';
     const naChecked=r.na?'checked':'';
-    const numCell = r.custom
+    const editable = r.custom || (typeof isAdmin==='function' && isAdmin());
+    const numCell = editable
       ? `<td class="idx-num"><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></td>`
       : `<td class="idx-num">${esc(r.n)}</td>`;
-    const titleCell = r.custom
-      ? `<td class="idx-name"><input type="text" class="idx-title-input" value="${esc(r.t||'')}" placeholder="문서명 입력" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)"></td>`
+    const titleCell = editable
+      ? `<td class="idx-name"><input type="text" class="idx-title-input" value="${esc(r.t||'')}" placeholder="문서명 입력" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
       : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
     bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
@@ -2305,7 +2306,7 @@ function renderIndexBody(){
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
       <td><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea></td>
       <td><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea></td>
-      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}${r.custom?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
+      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
     </tr>`;
   });
 
