@@ -169,6 +169,8 @@ tr:hover td{background:#f7f7f5}
 .deadline-over{background:#fce8e8;color:#c80e0e;padding:4px 6px;border-radius:4px;font-size:11px;text-align:center;font-weight:500}
 .row-checkbox{width:24px;text-align:center;cursor:pointer}.row-checkbox input{width:16px;height:16px;cursor:pointer}
 .row-selected{background:#e0f5f0 !important}
+.bulk-del-th{border:none;background:transparent;color:inherit;font-size:13px;cursor:pointer;padding:2px 5px;border-radius:5px;font-weight:600}
+.bulk-del-th:hover{background:#c0392b;color:#fff}
 .history-icon{color:#0f7b6c;cursor:pointer;text-decoration:underline;margin-left:4px;font-size:12px}.history-icon:hover{opacity:0.7}
 .deadline-input{padding:4px 6px;font-size:11px;border:1px solid #e9e9e7;border-radius:4px;width:100%;font-weight:bold}
 .batch-bar{background:#f0f7f6;border:1px solid #c5dbd8;border-radius:6px;padding:10px 12px;margin:8px 0;display:none;gap:8px;align-items:center;font-size:12px}.batch-bar.active{display:flex}
@@ -1292,6 +1294,30 @@ function calcDday(deadline){
 function toggleRowSelect(code,secId,idx){
   const sec=getSec(code,secId);
   if(sec&&sec.rows[idx]){sec.rows[idx].selected=!sec.rows[idx].selected;saveData();renderBody();}
+}
+// 체크박스 클릭 (Shift = 범위 선택)
+let _lastCbIdx={};
+function rowCbClick(e,code,secId,idx){
+  const sec=getSec(code,secId); if(!sec||!sec.rows[idx]) return;
+  const key=code+'|'+secId;
+  const val=e.target.checked;
+  if(e.shiftKey && _lastCbIdx[key]!=null){
+    const a=Math.min(_lastCbIdx[key],idx), b=Math.max(_lastCbIdx[key],idx);
+    for(let i=a;i<=b;i++){ if(sec.rows[i]) sec.rows[i].selected=val; }
+  } else {
+    sec.rows[idx].selected=val;
+  }
+  _lastCbIdx[key]=idx;
+  saveData(); renderBody();
+}
+// 선택한 항목 일괄 삭제
+function bulkDelSelected(code,secId){
+  const sec=getSec(code,secId); if(!sec) return;
+  const selCount=sec.rows.filter(r=>r.selected).length;
+  if(selCount===0){ alert('선택된 항목이 없어요.\n왼쪽 체크박스로 삭제할 항목을 먼저 선택해주세요. (Shift+클릭으로 여러 개 한번에 선택 가능)'); return; }
+  if(!confirm(`선택한 ${selCount}개 항목을 삭제할까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  sec.rows=sec.rows.filter(r=>!r.selected);
+  saveData(); renderBody();
 }
 
 // 모두 선택/해제
@@ -2548,7 +2574,7 @@ function renderSection(code, sec){
     ${isOpen?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}" style="width:${secTableWidth()}px">
       ${secColgroup()}
       <thead><tr>
-        <th>✕</th>
+        <th><button class="bulk-del-th" onclick="bulkDelSelected('${code}','${sec.id}')" title="선택한 항목 일괄 삭제">✕</button></th>
         <th><input type="checkbox" id="selectAllCb" onchange="const code=getCurSite();const sec=getSec(code,curSecId);if(sec){const all=sec.rows.every(r=>r.selected);sec.rows.forEach(r=>r.selected=!all);saveData();renderBody();}"></th>
         <th title="문서 종류 (신청서·의뢰서·동의서·통지서 등). 추가할 때 선택해요.">구분<span class="col-rsz" data-ci="2"></span></th>
         <th title="문서 이름. 더블클릭하면 이름을 수정할 수 있어요.">문서명<span class="col-rsz" data-ci="3"></span></th>
@@ -2710,7 +2736,7 @@ function rowHtml(code,secId,idx,row,total){
   const histTxt=row.history&&row.history.length>0?`<span class="history-icon" onclick="showHistory('${code}','${secId}',${idx})">📋</span>`:'';
   return `<tr class="${hidden?'row-hidden':''}${row.selected?' row-selected':''}">
     <td style="width:22px"><button class="del-btn" onclick="delRow('${code}','${secId}',${idx})" title="삭제">✕</button></td>
-    <td class="row-checkbox"><input type="checkbox" ${row.selected?'checked':''} onchange="toggleRowSelect('${code}','${secId}',${idx})"></td>
+    <td class="row-checkbox"><input type="checkbox" ${row.selected?'checked':''} onclick="rowCbClick(event,'${code}','${secId}',${idx})"></td>
     <td>
       <div style="display:flex;align-items:center;gap:4px">
         <div class="move-btns">
