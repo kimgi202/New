@@ -282,7 +282,8 @@ tr:hover td{background:#f7f7f5}
 tr.idx-dragging{opacity:.5;background:#eef3fa !important}
 tr.idx-drop-before td{box-shadow:inset 0 2px 0 #2c5282}
 tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
-.idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:13px}
+.idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:13px;font-family:inherit;resize:none;overflow:hidden;line-height:1.45;min-height:30px;white-space:pre-wrap;word-break:break-word;display:block;outline:none}
+.idx-name{white-space:pre-wrap;word-break:break-word}
 .idx-num-input:focus,.idx-title-input:focus{border-color:#2c5282;outline:none}
 .idx-del-row{display:inline-block;margin-top:6px;border:none;background:transparent;color:#c0392b;font-size:11px;cursor:pointer;opacity:.6;padding:2px 4px}
 .idx-del-row:hover{opacity:1}
@@ -2563,7 +2564,7 @@ function renderIndexBody(){
       ? `<td class="idx-num"><div class="idx-num-wrap"><span class="idx-drag-grip" title="꾹 눌러서 위·아래로 드래그">⠿</span><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></div></td>`
       : `<td class="idx-num">${esc(r.n)}</td>`;
     const titleCell = editable
-      ? `<td class="idx-name"><input type="text" class="idx-title-input" value="${esc(r.t||'')}" placeholder="문서명 입력" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
+      ? `<td class="idx-name"><textarea class="idx-title-input" rows="1" placeholder="문서명 입력" oninput="autoGrow(this)" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${esc(r.t||'')}</textarea>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
       : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
     bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}" data-ridx="${idx}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
@@ -2616,7 +2617,7 @@ function renderIndexBody(){
     <button class="idx-add-btn" onclick="addIndexRow('${type}')">+ 항목 추가</button>
   `;
   // 렌더 직후 위치/비고 textarea 높이를 내용에 맞게 조정
-  wrap.querySelectorAll('.idx-loc,.idx-note').forEach(autoGrow);
+  wrap.querySelectorAll('.idx-loc,.idx-note,.idx-title-input,.flog-content').forEach(autoGrow);
   setupIdxResizers();
   setupIdxTopScroll();
 }
