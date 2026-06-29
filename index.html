@@ -278,6 +278,11 @@ tr:hover td{background:#f7f7f5}
 .idx-del-row:hover{opacity:1}
 .idx-add-btn{margin-top:12px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer}
 .idx-add-btn:hover{background:#f0f4f9}
+.idx-clear-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.idx-clear-btn:hover{background:#fdf2f1}
+.idx-sec-ctrls{float:right;display:inline-flex;gap:2px}
+.idx-sec-ctrls button{border:none;background:transparent;cursor:pointer;font-size:13px;padding:1px 5px;border-radius:5px;opacity:.55}
+.idx-sec-ctrls button:hover{opacity:1;background:rgba(0,0,0,.06)}
 .idx-empty-hint{color:#9aa3b2;font-size:13px;text-align:center;padding:24px 0 4px}
 .index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto;scrollbar-width:none}
 .index-table-wrap::-webkit-scrollbar{display:none}
@@ -302,8 +307,10 @@ tr:hover td{background:#f7f7f5}
 .idx-name{font-weight:500;color:#37352f;line-height:1.4;white-space:normal;word-break:break-word}
 .idx-ref{display:inline-block;margin-left:6px;font-size:10px;color:#b8860b;background:#fef7e8;border-radius:4px;padding:1px 6px;font-weight:500;white-space:normal}
 .idx-sub{font-size:10.5px;color:#999;margin-top:2px;line-height:1.45;white-space:normal}
-.na-lbl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#787774;cursor:pointer}
-.na-lbl input{width:14px;height:14px;cursor:pointer}
+.na-lbl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#787774;cursor:pointer;white-space:nowrap}
+.na-lbl input{width:14px;height:14px;cursor:pointer;flex-shrink:0}
+.idx-na-cell{text-align:center;overflow:hidden}
+.idx-na-cell .na-lbl{white-space:nowrap}
 .idx-loc,.idx-note{width:100%;border:1px solid #e9e9e7;border-radius:4px;padding:4px 6px;font-size:11px;font-family:inherit;outline:none;color:#37352f;resize:vertical;overflow:hidden;line-height:1.45;min-height:24px;white-space:pre-wrap;word-break:break-word;display:block;box-sizing:border-box}
 .idx-loc{min-width:0}
 .idx-note{min-width:0}
@@ -1868,6 +1875,46 @@ function delIndexRow(type, idx){
   if(!confirm('이 Index 항목을 삭제할까요?')) return;
   rows.splice(idx,1); saveData(); renderBody();
 }
+// ── Index 섹션(카테고리) 수정·삭제·추가, 전체 비우기 ──
+function indexStoreKey(type){ return type+'__'+indexTemplateKey(type); }
+function setIndexRowsArray(type, arr){
+  if(!curProtocolId) return;
+  const pd=protocolData[curProtocolId]; if(!pd) return;
+  if(!pd.indexes) pd.indexes={};
+  pd.indexes[indexStoreKey(type)]=arr;
+}
+function editIndexSection(type, idx){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.h) return;
+  const nt=prompt('섹션 제목 수정', r.t); if(nt===null) return;
+  const t=nt.trim(); if(t){ r.t=t; saveData(); renderBody(); }
+}
+function delIndexSection(type, idx){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.h) return;
+  const secNum=r.n;
+  const childCount=rows.filter(x=>!x.h && (x.n||'').split('.')[0]===secNum).length;
+  if(!confirm(`'${r.n}. ${r.t}' 섹션과 그 안의 항목 ${childCount}개를 모두 삭제할까요?\n(백업 복원으로 되돌릴 수 있어요)`)) return;
+  const kept=rows.filter((x,i)=>{
+    if(i===idx) return false;
+    if(!x.h && (x.n||'').split('.')[0]===secNum) return false;
+    return true;
+  });
+  setIndexRowsArray(type, kept); saveData(); renderBody();
+}
+function addIndexSection(type){
+  const rows=getIndexRows(type);
+  let num=(prompt('새 섹션 번호를 입력하세요 (예: 5)')||'').trim().replace(/['"\\]/g,'');
+  if(!num) return;
+  const title=(prompt('새 섹션 제목을 입력하세요 (예: 모니터링 기록)')||'').trim();
+  if(!title) return;
+  rows.push({n:num, t:title, h:true, custom:true});
+  saveData(); renderBody();
+}
+function clearIndex(type){
+  const rows=getIndexRows(type);
+  if(!rows.length){ alert('이미 비어 있어요.'); return; }
+  if(!confirm(`이 Index의 모든 항목(${rows.length}개)을 비울까요?\n(백업 복원으로 되돌릴 수 있어요)`)) return;
+  setIndexRowsArray(type, []); saveData(); renderBody();
+}
 
 
 function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
@@ -2283,7 +2330,7 @@ function setupIdxResizers(){
       h.classList.add('dragging');
       try{h.setPointerCapture(e.pointerId);}catch(_){}
       const move=ev=>{
-        const w=Math.max(40, startW+(ev.clientX-startX));
+        const w=Math.max(44, startW+(ev.clientX-startX));
         idxColW[ci]=w;
         if(cols[ci]) cols[ci].style.width=w+'px';
         table.style.width=idxColW.reduce((a,b)=>a+b,0)+'px';
@@ -2316,8 +2363,10 @@ function renderIndexBody(){
   rows.forEach((r,idx)=>{
     if(r.h){
       const open=!indexSecCollapsed[type+r.n];
+      const secEditable = r.custom || (typeof isAdmin==='function' && isAdmin());
+      const ctrls = secEditable ? `<span class="idx-sec-ctrls" onclick="event.stopPropagation()"><button onclick="editIndexSection('${type}',${idx})" title="섹션 제목 수정">✏️</button><button onclick="delIndexSection('${type}',${idx})" title="섹션 삭제">🗑️</button></span>` : '';
       bodyRows+=`<tr class="idx-sec-row" onclick="toggleIndexSec('${type}','${r.n}')">
-        <td colspan="9"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}</td></tr>`;
+        <td colspan="9"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${ctrls}</td></tr>`;
       return;
     }
     // 상위 섹션이 접혀 있으면 숨김
@@ -2356,6 +2405,8 @@ function renderIndexBody(){
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexRow('${type}')">+ 항목 추가</button>
+        <button class="idx-add-btn" style="margin-top:0" onclick="addIndexSection('${type}')">+ 섹션 추가</button>
+        <button class="idx-clear-btn" onclick="clearIndex('${type}')" title="이 Index의 모든 항목 삭제">🗑️ 전체 비우기</button>
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
       </div>
     </div>
