@@ -325,6 +325,28 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
 .idx-loc{min-width:0}
 .idx-note{min-width:0}
 .idx-loc:focus,.idx-note:focus{border-color:#0f7b6c}
+.flog-toggle{display:inline-block;margin-top:6px;border:1px solid #cdd8e6;background:#f3f7fc;color:#2c5282;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer}
+.flog-toggle:hover{background:#e7eff8}
+.flog-toggle.open{background:#2c5282;color:#fff;border-color:#2c5282}
+.idx-log-row>td{background:#f7f9fc;padding:0 14px 14px}
+.flog-wrap{border:1px solid #dde6f1;border-top:none;border-radius:0 0 10px 10px;background:#fbfcfe;padding:12px 14px}
+.flog-head{font-size:13px;font-weight:700;color:#1f3a5f;margin-bottom:10px}
+.flog-cnt{font-size:11px;color:#7b8aa0;font-weight:500;margin-left:4px}
+.flog-entry{margin-bottom:8px;padding:9px 10px;border-radius:8px;border:1px solid #e8eef6;background:#fff}
+.flog-entry.flog-partial{background:#fff8ec;border-color:#f3dcae}
+.flog-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.flog-round{width:90px;flex-shrink:0}
+.flog-date{width:140px;flex-shrink:0}
+.flog-status{width:80px;flex-shrink:0}
+.flog-top .flog-del{margin-left:auto}
+.flog-entry input,.flog-entry textarea,.flog-entry select{border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:11px;font-family:inherit;outline:none;color:#37352f;box-sizing:border-box}
+.flog-content{width:100%;display:block;resize:vertical;overflow:hidden;line-height:1.5;min-height:48px;white-space:pre-wrap;word-break:break-word;font-family:'Courier New',monospace;font-size:11px;background:#fcfdff}
+.flog-entry input:focus,.flog-entry textarea:focus,.flog-entry select:focus{border-color:#2c5282}
+.flog-del{border:none;background:transparent;color:#c0392b;cursor:pointer;font-size:13px;padding:3px;border-radius:5px}
+.flog-del:hover{background:#fbe9e7}
+.flog-add{margin-top:6px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer}
+.flog-add:hover{background:#eef3fa}
+.flog-empty{font-size:12px;color:#9aa3b2;padding:8px 2px}
 .idx-loc{font-family:'Courier New',monospace}
 .index-table td{vertical-align:top}
 </style>
@@ -1903,6 +1925,50 @@ function setIndexRowMeta(type, idx, field, val){
   const rows=getIndexRows(type); const r=rows[idx];
   if(r){ r[field]=val; saveData(); }
 }
+// ── 회차별 Filing 이력 ──
+function toggleFilingLog(type, idx){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r) return;
+  r.logOpen=!r.logOpen; saveData(); renderBody();
+}
+function addFilingLogEntry(type, idx){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r) return;
+  if(!r.filingLog) r.filingLog=[];
+  const nextRound=(r.filingLog.length+1)+'회차';
+  const today=new Date().toISOString().slice(0,10);
+  r.filingLog.push({round:nextRound, date:today, content:'', status:'done'});
+  r.logOpen=true; saveData(); renderBody();
+}
+function delFilingLogEntry(type, idx, li){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.filingLog) return;
+  if(!confirm('이 회차 기록을 삭제할까요?')) return;
+  r.filingLog.splice(li,1); saveData(); renderBody();
+}
+function setFilingLogField(type, idx, li, field, val){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
+  r.filingLog[li][field]=val; saveData();
+  if(field==='status') renderBody();
+}
+function filingLogRowHtml(type, idx, r){
+  const log=r.filingLog||[];
+  const entries=log.map((e,li)=>`
+    <div class="flog-entry flog-${e.status==='partial'?'partial':'done'}">
+      <div class="flog-top">
+        <input class="flog-round" value="${esc(e.round||'')}" placeholder="회차" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
+        <input type="date" class="flog-date" value="${esc(e.date||'')}" onchange="setFilingLogField('${type}',${idx},${li},'date',this.value)">
+        <select class="flog-status" onchange="setFilingLogField('${type}',${idx},${li},'status',this.value)">
+          <option value="done"${e.status!=='partial'?' selected':''}>완료</option>
+          <option value="partial"${e.status==='partial'?' selected':''}>일부</option>
+        </select>
+        <button class="flog-del" onclick="delFilingLogEntry('${type}',${idx},${li})" title="이 회차 삭제">✕</button>
+      </div>
+      <textarea class="flog-content" rows="2" placeholder="이 회차에 Filing한 문서 파일명을 줄바꿈(Enter)으로 적으세요&#10;예) CartiLife_PMP_V1.0_20250225_signed_F&#10;    CartiLife_PMP_V2.0_20250625_Signed_F" oninput="autoGrow(this)" onchange="setFilingLogField('${type}',${idx},${li},'content',this.value)">${esc(e.content||'')}</textarea>
+    </div>`).join('');
+  return `<tr class="idx-log-row"><td colspan="9"><div class="flog-wrap">
+    <div class="flog-head">🗂 회차별 Filing 이력 <span class="flog-cnt">${log.length}건</span></div>
+    ${log.length?entries:'<div class="flog-empty">아직 기록이 없어요. 아래 버튼으로 1회차부터 남겨보세요.</div>'}
+    <button class="flog-add" onclick="addFilingLogEntry('${type}',${idx})">+ 회차 기록 추가</button>
+  </div></td></tr>`;
+}
 function delIndexRow(type, idx){
   const rows=getIndexRows(type);
   if(!rows[idx]) return;
@@ -2432,8 +2498,9 @@ function renderIndexBody(){
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
       <td><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea></td>
       <td><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea></td>
-      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
+      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
     </tr>`;
+    if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
   });
 
   wrap.innerHTML=`
