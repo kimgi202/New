@@ -346,6 +346,30 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
 .flog-del:hover{background:#fbe9e7}
 .flog-copy{border:1px solid #cdd8e6;background:#f3f7fc;color:#2c5282;cursor:pointer;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px}
 .flog-copy:hover{background:#2c5282;color:#fff}
+.prevfiling-wrap{display:flex;align-items:flex-start;gap:4px}
+.prevfiling-wrap .idx-note{flex:1;min-width:0}
+.prevfiling-view{flex-shrink:0;border:1px solid #cdd8e6;background:#f3f7fc;color:#2c5282;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:5px;line-height:1}
+.prevfiling-view:hover{background:#2c5282}
+.fh-overlay{position:fixed;inset:0;background:rgba(20,30,50,.45);display:flex;align-items:center;justify-content:center;z-index:100001;padding:20px}
+.fh-modal{background:#fff;border-radius:14px;width:520px;max-width:94vw;max-height:84vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.fh-mhead{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid #eef0f3;font-size:15px;font-weight:700;color:#1f2a3a}
+.fh-x{border:none;background:transparent;font-size:16px;cursor:pointer;color:#9aa3b2}
+.fh-x:hover{color:#1f2a3a}
+.fh-list{overflow-y:auto;padding:14px 18px}
+.fh-entry{border:1px solid #e8eef6;border-left:4px solid #1d9e75;border-radius:8px;padding:10px 12px;margin-bottom:9px;background:#fbfdfc}
+.fh-entry.fh-e-partial{border-left-color:#e0a91b;background:#fffaf0}
+.fh-entry-top{font-size:13px;color:#28303d;margin-bottom:5px}
+.fh-date{color:#7b8aa0;font-size:12px;margin:0 4px}
+.fh-badge{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600}
+.fh-badge.fh-done{background:#e1f5ee;color:#0f6e56}
+.fh-badge.fh-partial{background:#fdf3da;color:#8a5a06}
+.fh-content{font-family:'Courier New',monospace;font-size:11.5px;color:#37352f;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.fh-nocontent,.fh-empty{color:#9aa3b2}
+.fh-empty{text-align:center;padding:24px 0;font-size:13px;line-height:1.7}
+.fh-summary{margin-top:6px;padding:9px 12px;background:#eef4fb;border-radius:8px;font-size:12.5px;color:#1f3a5f}
+.fh-acts{padding:12px 18px;border-top:1px solid #eef0f3;display:flex;justify-content:flex-end}
+.fh-close-btn{background:#2c5282;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.fh-close-btn:hover{background:#234166}
 .flog-add{margin-top:6px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer}
 .flog-add:hover{background:#eef3fa}
 .flog-empty{font-size:12px;color:#9aa3b2;padding:8px 2px}
@@ -1967,6 +1991,38 @@ function fallbackCopyText(text, done){
     done&&done();
   }catch(e){ showToastNow('복사 실패 — 직접 선택해 복사해주세요'); }
 }
+// 🔍 이전 Filing 이력 팝업
+function showFilingHistory(type, idx){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r) return;
+  const log=r.filingLog||[];
+  const title=esc(r.t||'(제목 없음)');
+  let body;
+  if(!log.length){
+    body=`<div class="fh-empty">아직 회차 기록이 없어요.<br>🗂 회차 이력에서 <b>+ 회차 기록 추가</b>로 남겨보세요.</div>`;
+  }else{
+    body=log.map(e=>{
+      const partial=e.status==='partial';
+      const badge=partial?'<span class="fh-badge fh-partial">일부</span>':'<span class="fh-badge fh-done">완료</span>';
+      const icon=partial?'⚠️':'✅';
+      const content=esc(e.content||'').replace(/\n/g,'<br>')||'<span class="fh-nocontent">(내용 없음)</span>';
+      return `<div class="fh-entry${partial?' fh-e-partial':''}">
+        <div class="fh-entry-top">${icon} <b>${esc(e.round||'')}</b> <span class="fh-date">${esc(e.date||'')}</span> ${badge}</div>
+        <div class="fh-content">${content}</div>
+      </div>`;
+    }).join('');
+    const last=log[log.length-1];
+    body+=`<div class="fh-summary">→ 최근: <b>${esc(last.round||'')}</b>까지 Filing함 (${esc(last.date||'')})</div>`;
+  }
+  let m=document.getElementById('filingHistModal');
+  if(!m){ m=document.createElement('div'); m.id='filingHistModal'; document.body.appendChild(m); }
+  m.innerHTML=`<div class="fh-overlay" onclick="if(event.target===this)closeFilingHistory()">
+    <div class="fh-modal">
+      <div class="fh-mhead"><span>📋 ${title} · Filing 이력</span><button class="fh-x" onclick="closeFilingHistory()">✕</button></div>
+      <div class="fh-list">${body}</div>
+      <div class="fh-acts"><button class="fh-close-btn" onclick="closeFilingHistory()">닫기</button></div>
+    </div></div>`;
+}
+function closeFilingHistory(){ const m=document.getElementById('filingHistModal'); if(m) m.innerHTML=''; }
 function filingLogRowHtml(type, idx, r){
   const log=r.filingLog||[];
   const entries=log.map((e,li)=>`
@@ -2516,7 +2572,7 @@ function renderIndexBody(){
       <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}',${idx},'na',this.checked)">N/A</label></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
-      <td><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea></td>
+      <td><div class="prevfiling-wrap"><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea><button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
       <td><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea></td>
       <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
     </tr>`;
