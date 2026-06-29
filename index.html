@@ -267,6 +267,10 @@ tr:hover td{background:#f7f7f5}
 .contract-field input.irb-url{min-width:240px;font-family:'Courier New',monospace;font-size:11px}
 /* ━━━ Index 뷰 ━━━ */
 .idx-tab{color:#0f7b6c}
+.idx-add-tab{color:#2c5282 !important;border:1px dashed #b9c6d6 !important;font-weight:600}
+#appSidebar .idx-add-tab:hover{background:#eef3fa !important}
+.idx-tab-del{margin-left:6px;font-size:10px;color:#b0b0b0;opacity:.6;padding:0 3px;border-radius:4px}
+.idx-tab-del:hover{opacity:1;color:#c0392b;background:#fbe9e7}
 .idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:12px;text-align:center}
 .idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:13px}
 .idx-num-input:focus,.idx-title-input:focus{border-color:#2c5282;outline:none}
@@ -1778,9 +1782,12 @@ const INDEX_TEMPLATES = {
 function getIndexTypesForProtocol(){
   const cur=getCurProtocol?.();
   const type=studyCategory(cur?.studyType);
-  if(type==='임상시험') return ['ISF','PSF','TMF'];
-  if(type==='PMS') return ['ISF','TMF'];
-  return []; // 기타
+  let base=[];
+  if(type==='임상시험') base=['ISF','PSF','TMF'];
+  else if(type==='PMS') base=['ISF','TMF'];
+  const pd=curProtocolId?protocolData[curProtocolId]:null;
+  const custom=(pd&&pd.customIndexes)||[];
+  return base.concat(custom);
 }
 function indexTemplateKey(indexType){
   const cur=getCurProtocol?.();
@@ -1788,7 +1795,30 @@ function indexTemplateKey(indexType){
   if(indexType==='ISF') return type==='임상시험'?'ISF_CLINICAL':'ISF_PMS';
   if(indexType==='PSF') return 'PSF_CLINICAL';
   if(indexType==='TMF') return type==='임상시험'?'TMF_CLINICAL':'TMF_PMS';
-  return 'ISF_PMS';
+  return 'CUSTOM__'+indexType; // 사용자 커스텀 Index → 템플릿 없음(빈 시작)
+}
+// 새 Index 탭 생성 / 삭제 (과제별, 모든 사용자)
+function addCustomIndex(){
+  if(!curProtocolId){ alert('먼저 과제를 선택해주세요.'); return; }
+  let name=(prompt('새 Index 이름을 입력하세요\n(예: 약물안전성, 모니터링, 검체관리)')||'').trim();
+  name=name.replace(/['"\\]/g,''); // 따옴표 등 제거(오류 방지)
+  if(!name) return;
+  const pd=protocolData[curProtocolId];
+  if(!pd.customIndexes) pd.customIndexes=[];
+  if(['ISF','PSF','TMF'].includes(name)||pd.customIndexes.includes(name)){ alert('이미 있는 Index 이름이에요.'); return; }
+  pd.customIndexes.push(name);
+  saveData();
+  switchIndex(name);
+}
+function delCustomIndex(type){
+  if(!curProtocolId) return;
+  const pd=protocolData[curProtocolId];
+  if(!pd||!pd.customIndexes) return;
+  if(!confirm(`'${type}' Index를 삭제할까요?\n입력한 내용도 함께 사라져요. (백업 복원으로 되돌릴 수 있어요)`)) return;
+  pd.customIndexes=pd.customIndexes.filter(t=>t!==type);
+  if(pd.indexes){ delete pd.indexes[type+'__CUSTOM__'+type]; }
+  if(curIndexType===type){ curView='home'; curIndexType=null; }
+  saveData(); renderTabs(); renderBody();
 }
 // 인덱스 행 데이터 (없으면 템플릿에서 생성, 기존 입력값은 보존)
 function getIndexRows(indexType){
@@ -2030,10 +2060,15 @@ function deleteProtocol(){
 
 function renderTabs(){
   const idxTypes=getIndexTypesForProtocol();
-  const idxTabs = idxTypes.length
-    ? `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
-      idxTypes.map(t=>`<div class="tab idx-tab${(curView==='index'&&curIndexType===t)?' active':''}" onclick="switchIndex('${t}')">📑 ${t} Index</div>`).join('')
-    : '';
+  const pd=curProtocolId?protocolData[curProtocolId]:null;
+  const customSet=new Set((pd&&pd.customIndexes)||[]);
+  const idxTabs = `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
+    idxTypes.map(t=>{
+      const act=(curView==='index'&&curIndexType===t)?' active':'';
+      const isCustom=customSet.has(t);
+      return `<div class="tab idx-tab${act}" onclick="switchIndex('${t}')">📑 ${esc(t)}${isCustom?'':' Index'}${isCustom?`<span class="idx-tab-del" title="이 Index 삭제" onclick="event.stopPropagation();delCustomIndex('${t}')">✕</span>`:''}</div>`;
+    }).join('')+
+    `<div class="tab idx-add-tab" onclick="addCustomIndex()" title="새 Index 만들기">+ Index</div>`;
   document.getElementById('tabsWrap').innerHTML=
     `<div class="tab home-tab${curView==='home'?' active':''}" onclick="switchHome()">🏠 홈</div>`+
     `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
