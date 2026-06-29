@@ -2449,6 +2449,7 @@ function renderIndexBody(){
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexRow('${type}')">+ 항목 추가</button>
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexSection('${type}')">+ 섹션 추가</button>
         <button class="idx-clear-btn" onclick="clearIndex('${type}')" title="이 Index의 모든 항목 삭제">🗑️ 전체 비우기</button>
+        <button class="btn" onclick="importIndexCSV('${type}')" title="CSV 파일을 불러와 현재 Index에 추가">📤 CSV 불러오기</button>
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
       </div>
     </div>
@@ -2502,6 +2503,86 @@ function idxStOpts(cur){
   return opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
 }
 function toggleIndexSec(type,num){ indexSecCollapsed[type+num]=!indexSecCollapsed[type+num]; renderBody(); }
+// ── CSV 파서 (따옴표·콤마·줄바꿈 처리) ──
+function parseCSV(text){
+  const rows=[]; let row=[]; let cur=''; let i=0; let inQ=false;
+  while(i<text.length){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){ cur+='"'; i+=2; continue; } inQ=false; i++; continue; }
+      cur+=ch; i++; continue;
+    }
+    if(ch==='"'){ inQ=true; i++; continue; }
+    if(ch===','){ row.push(cur); cur=''; i++; continue; }
+    if(ch==='\r'){ i++; continue; }
+    if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; i++; continue; }
+    cur+=ch; i++;
+  }
+  if(cur!=='' || row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+// ── Index CSV 불러오기 (기존 항목 끝에 추가) ──
+function importIndexCSV(type){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='.csv,text/csv';
+  inp.onchange=()=>{
+    const file=inp.files&&inp.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        let text=String(reader.result||'');
+        if(text.charCodeAt(0)===0xFEFF) text=text.slice(1); // BOM 제거
+        const rows=parseCSV(text);
+        if(!rows.length){ alert('빈 파일이에요.'); return; }
+        // 데이터 시작 위치: 'No' 헤더 줄 다음부터
+        let start=0, headerFound=false;
+        for(let i=0;i<rows.length;i++){
+          if((rows[i][0]||'').trim().toLowerCase()==='no'){ start=i+1; headerFound=true; break; }
+        }
+        if(!headerFound){
+          start=0;
+          while(start<rows.length){
+            const c0=(rows[start][0]||'').trim().toLowerCase();
+            if(c0==='protocol'||c0==='index'||rows[start].every(c=>!String(c).trim())){ start++; continue; }
+            break;
+          }
+        }
+        const stMap={'미확인':'pend','진행중':'wip','완료':'ok','이슈':'issue'};
+        const newRows=[];
+        for(let i=start;i<rows.length;i++){
+          const r=rows[i]; if(!r || r.every(c=>!String(c).trim())) continue;
+          const no=String(r[0]||'').trim(), title=String(r[1]||'').trim();
+          const na=String(r[2]||'').trim(), status=String(r[3]||'').trim();
+          const loc=String(r[4]||'').trim(), prev=String(r[5]||'').trim();
+          const thisF=String(r[6]||'').trim(), note=String(r[7]||'').trim();
+          if(!title && !no) continue;
+          const otherEmpty=![na,status,loc,prev,thisF,note].some(c=>c);
+          const isHeader=otherEmpty && /^\d+$/.test(no) && !!title;
+          if(isHeader){
+            newRows.push({n:no, t:title, h:true, custom:true});
+          } else {
+            newRows.push({
+              n:no, t:title,
+              na:na.toUpperCase()==='NA',
+              status:stMap[status]||'pend',
+              location:loc, prevFiling:prev, thisFiling:thisF, note:note,
+              custom:true
+            });
+          }
+        }
+        if(!newRows.length){ alert('불러올 항목이 없어요.\nCSV 형식을 확인해주세요 (No, Title, NA, Status, Location/FileName, PrevFiling, ThisFiling, Note).'); return; }
+        const itemN=newRows.filter(r=>!r.h).length, secN=newRows.filter(r=>r.h).length;
+        if(!confirm(`항목 ${itemN}개${secN?` · 섹션 ${secN}개`:''}를 현재 Index 끝에 추가할까요?\n(기존 항목은 그대로 두고 뒤에 붙어요. ⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+        const arr=getIndexRows(type);
+        newRows.forEach(nr=>arr.push(nr));
+        saveData(); renderBody();
+        showToastNow(`✓ ${itemN}개 항목을 불러왔어요`);
+      }catch(err){ alert('CSV 불러오기 실패: '+err.message); }
+    };
+    reader.readAsText(file,'utf-8');
+  };
+  inp.click();
+}
 function exportIndexCSV(type){
   const rows=getIndexRows(type);
   const cur=getCurProtocol();
