@@ -317,6 +317,8 @@ tr:hover td{background:#f7f7f5}
 .idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:12px;text-align:center}
 .idx-num-wrap{display:flex;align-items:center;gap:2px}
 .idx-sel{width:14px;height:14px;flex-shrink:0;cursor:pointer;accent-color:#c0392b;margin:0}
+.idx-sel-sec{vertical-align:middle;margin-right:4px}
+.idx-sec-selected td{background:#fdecea !important}
 .idx-num-wrap .idx-num-input{flex:1;min-width:0;padding:4px 2px}
 .idx-drag-grip{flex-shrink:0;cursor:grab;color:#b6bfcc;font-size:13px;line-height:1;padding:0 1px;user-select:none;touch-action:none}
 .idx-drag-grip:hover{color:#2c5282}
@@ -332,8 +334,12 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
 .idx-add-btn{margin-top:12px;border:1px dashed #b9c6d6;background:#fff;color:#2c5282;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer}
 .idx-add-btn:hover{background:#f0f4f9}
 .idx-clear-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.idx-bulkdel-btn{margin-top:0;border:1px solid #cdd8e6;background:#fff;color:#2c5282;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.idx-bulkdel-btn:hover{background:#eef3fa}
+.idx-bulkdel-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.idx-bulkdel-btn:hover{background:#fdf2f1}
+.idx-doselect-btn{margin-top:0;border:1px solid #c0392b;background:#c0392b;color:#fff;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer}
+.idx-doselect-btn:hover{background:#a93226}
+.idx-cancelsel-btn{margin-top:0;border:1px solid #d8d8d4;background:#fff;color:#666;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer}
+.idx-cancelsel-btn:hover{background:#f3f3f1}
 .idx-clear-btn:hover{background:#fdf2f1}
 .idx-sec-ctrls{float:right;display:inline-flex;gap:2px}
 .idx-sec-ctrls button{border:none;background:transparent;cursor:pointer;font-size:13px;padding:1px 5px;border-radius:5px;opacity:.55}
@@ -2167,7 +2173,13 @@ function setIndexRowsArray(type, arr){
   pd.indexes[indexStoreKey(type)]=arr;
 }
 // ── Index 다중 선택 → 일괄 삭제 ──
+let idxSelMode=false;
 let _lastIdxSel=null;
+function toggleIdxSelMode(type){
+  idxSelMode=!idxSelMode;
+  if(!idxSelMode){ const rows=getIndexRows(type); rows.forEach(r=>r.selected=false); _lastIdxSel=null; }
+  renderBody();
+}
 function idxSelClick(e, type, idx){
   const rows=getIndexRows(type); if(!rows[idx]) return;
   const val=e.target.checked;
@@ -2180,13 +2192,28 @@ function idxSelClick(e, type, idx){
   _lastIdxSel=idx;
   saveData(); renderBody();
 }
+function idxSecSelClick(e, type, idx){
+  const rows=getIndexRows(type); if(!rows[idx]) return;
+  rows[idx].selected=e.target.checked;
+  _lastIdxSel=null;
+  saveData(); renderBody();
+}
 function bulkDelIndexSelected(type){
   const rows=getIndexRows(type);
-  const sel=rows.filter(r=>!r.h && r.selected).length;
-  if(sel===0){ alert('선택된 항목이 없어요.\nNo. 칸의 체크박스로 삭제할 항목을 먼저 선택해주세요. (Shift+클릭으로 여러 개 한번에 선택 가능)'); return; }
-  if(!confirm(`선택한 ${sel}개 항목을 삭제할까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
-  const kept=rows.filter(r=>r.h || !r.selected);
+  // 삭제 대상 모으기: 섹션 선택 시 헤더 + 다음 섹션 전까지 항목 모두 포함
+  const del=new Set();
+  for(let i=0;i<rows.length;i++){
+    if(!rows[i].selected) continue;
+    del.add(i);
+    if(rows[i].h){ for(let j=i+1;j<rows.length && !rows[j].h;j++) del.add(j); }
+  }
+  if(del.size===0){ alert('선택된 항목이 없어요.\n선택 모드에서 항목·섹션의 체크박스로 먼저 선택해주세요. (Shift+클릭으로 여러 항목 선택 가능)'); return; }
+  let secN=0, itemN=0;
+  del.forEach(i=>{ rows[i].h?secN++:itemN++; });
+  if(!confirm(`선택한 ${secN?`섹션 ${secN}개 · `:''}항목 ${itemN}개를 삭제할까요?${secN?'\n(섹션을 지우면 그 안의 항목들도 함께 삭제돼요)':''}\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  const kept=rows.filter((r,i)=>!del.has(i));
   setIndexRowsArray(type, kept);
+  idxSelMode=false; _lastIdxSel=null;
   saveData(); renderBody();
 }
 function editIndexSection(type, idx){
@@ -2673,8 +2700,9 @@ function renderIndexBody(){
       curSecCollapsed=!open; // 이 섹션 이후 항목들은 위치상 이 섹션에 속함
       const secEditable = r.custom || (typeof isAdmin==='function' && isAdmin());
       const ctrls = secEditable ? `<span class="idx-sec-ctrls" onclick="event.stopPropagation()"><button onclick="editIndexSection('${type}',${idx})" title="섹션 제목 수정">✏️</button><button onclick="delIndexSection('${type}',${idx})" title="섹션 삭제">🗑️</button></span>` : '';
-      bodyRows+=`<tr class="idx-sec-row" onclick="toggleIndexSec('${type}','${r.n}')">
-        <td colspan="9"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${ctrls}</td></tr>`;
+      const secSel = idxSelMode ? `<input type="checkbox" class="idx-sel idx-sel-sec" ${r.selected?'checked':''} onclick="event.stopPropagation();idxSecSelClick(event,'${type}',${idx})" title="이 섹션 선택 (안의 항목도 함께 삭제)"> ` : '';
+      bodyRows+=`<tr class="idx-sec-row${r.selected?' idx-sec-selected':''}" onclick="toggleIndexSec('${type}','${r.n}')">
+        <td colspan="9">${secSel}<span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${ctrls}</td></tr>`;
       return;
     }
     // 위치상 직전 섹션이 접혀 있으면 숨김 (번호 무관 — 커스텀 항목도 포함)
@@ -2683,7 +2711,7 @@ function renderIndexBody(){
     const naChecked=r.na?'checked':'';
     const editable = r.custom || (typeof isAdmin==='function' && isAdmin());
     const numCell = editable
-      ? `<td class="idx-num"><div class="idx-num-wrap"><input type="checkbox" class="idx-sel" ${r.selected?'checked':''} onclick="idxSelClick(event,'${type}',${idx})" title="선택 (Shift+클릭=범위)"><span class="idx-drag-grip" title="꾹 눌러서 위·아래로 드래그">⠿</span><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></div></td>`
+      ? `<td class="idx-num"><div class="idx-num-wrap">${idxSelMode?`<input type="checkbox" class="idx-sel" ${r.selected?'checked':''} onclick="idxSelClick(event,'${type}',${idx})" title="선택 (Shift+클릭=범위)">`:''}<span class="idx-drag-grip" title="꾹 눌러서 위·아래로 드래그">⠿</span><input type="text" class="idx-num-input" value="${esc(r.n||'')}" placeholder="No." onchange="setIndexRowMeta('${type}',${idx},'n',this.value)"></div></td>`
       : `<td class="idx-num">${esc(r.n)}</td>`;
     const titleCell = editable
       ? `<td class="idx-name"><textarea class="idx-title-input" rows="1" placeholder="문서명 입력" oninput="autoGrow(this)" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${esc(r.t||'')}</textarea>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
@@ -2712,12 +2740,17 @@ function renderIndexBody(){
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
+        ${idxSelMode ? `
+        <button class="idx-doselect-btn" onclick="bulkDelIndexSelected('${type}')" title="체크한 항목·섹션 삭제">🗑️ 선택 삭제 (${(getIndexRows(type).filter(r=>r.selected)).length})</button>
+        <button class="idx-cancelsel-btn" onclick="toggleIdxSelMode('${type}')">취소</button>
+        ` : `
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexRow('${type}')">+ 항목 추가</button>
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexSection('${type}')">+ 섹션 추가</button>
-        <button class="idx-bulkdel-btn" onclick="bulkDelIndexSelected('${type}')" title="체크한 항목들 한번에 삭제">✕ 선택 삭제</button>
+        <button class="idx-bulkdel-btn" onclick="toggleIdxSelMode('${type}')" title="항목을 체크해서 여러 개 삭제">✕ 선택 삭제</button>
         <button class="idx-clear-btn" onclick="clearIndex('${type}')" title="이 Index의 모든 항목 삭제">🗑️ 전체 비우기</button>
         <button class="btn" onclick="importIndexCSV('${type}')" title="CSV 파일을 불러와 현재 Index에 추가">📤 CSV 불러오기</button>
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
+        `}
       </div>
     </div>
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
