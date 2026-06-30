@@ -1175,15 +1175,15 @@ function deleteContract(code,id){
 }
 function ctNum(s){ const n=parseFloat(String(s==null?'':s).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
 function ctWon(n){ return Math.round(n).toLocaleString('ko-KR'); }
-// 연구비 = 계약금액 + (VAT 10%) + (간접비 N%)  → 자동 계산 문구 생성
+// 연구비 = 계약금액 + 간접비(N%) + VAT 10%[(계약금액+간접비)의 10%]  → 자동 계산 문구 생성
 function ctCalcText(base, vat, indirectPct){
   if(!(base>0)) return '';
-  const vatAmt = vat ? base*0.1 : 0;
   const indAmt = base*(ctNum(indirectPct)/100);
-  const total = base + vatAmt + indAmt;
+  const vatAmt = vat ? (base+indAmt)*0.1 : 0;   // VAT = (계약금액+간접비)×10%
+  const total = base + indAmt + vatAmt;
   let parts=[];
-  if(vat) parts.push('VAT '+ctWon(vatAmt));
   if(ctNum(indirectPct)>0) parts.push('간접비 '+ctWon(indAmt));
+  if(vat) parts.push('VAT '+ctWon(vatAmt));
   const detail = parts.length? ' ('+parts.join(' + ')+')' : '';
   return '연구비 ₩'+ctWon(total)+detail;
 }
