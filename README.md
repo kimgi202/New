@@ -1,4 +1,4 @@
-# IRB Submission Tracker
+# CRA Documant Manager
 
 CRA를 위한 IRB 제출 추적 도구
 
