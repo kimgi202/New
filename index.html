@@ -618,11 +618,10 @@ body.sb-collapsed .sb-hover-zone{display:block}
   <div class="auth-card">
     <div class="auth-logo">📋 CRA Document Manager</div>
     <div class="auth-guide">
-      처음이신가요? <b>나만의 이메일</b>로 <b>회원가입</b>하면 바로 써볼 수 있어요 🙂<br>
-      실제 메일이 아니어도 돼요 (예: <code>내별명@test.com</code>, <code>cra1@test.com</code>) + <b>비밀번호 6자 이상</b><br>
-      <span class="auth-guide-warn">⚠️ 똑같은 이메일을 쓰면 서로 데이터가 섞여요. <b>각자 다른 이메일</b>로 가입해주세요!</span>
-      <span class="auth-guide-privacy">🔒 개인정보가 신경 쓰이면 실제 이름·정보 대신 <b>가명·임의값</b>으로 넣어주세요!</span>
-      <span class="auth-guide-fb">💬 써보시고 <b>왼쪽 아래 ‘의견’ 버튼</b>에 좋은 점·불편한 점·추가했으면 하는 기능 <b>뭐든 편하게</b> 남겨주세요! 😊</span>
+      처음이신가요? <b>이메일</b>로 <b>회원가입</b>하면 바로 시작할 수 있어요 🙂<br>
+      <b>비밀번호는 6자 이상</b>으로 설정해주세요.<br>
+      <span class="auth-guide-warn">⚠️ 계정마다 데이터가 분리돼요. <b>본인 이메일</b>로 가입해주세요. 같은 이메일을 함께 쓰면 데이터가 섞여요.</span>
+      <span class="auth-guide-privacy">🔒 입력하신 내용은 <b>본인 계정에만</b> 저장돼요.</span>
     </div>
     <div class="auth-title" id="authTitle">로그인</div>
     <input id="authEmail" type="email" placeholder="이메일" class="auth-input" autocomplete="username">
@@ -719,19 +718,13 @@ body.sb-collapsed .sb-hover-zone{display:block}
 <script>
 
 // ── Project Master ───────────────────────────────────────────────
-const PROJECT_MASTER = [
-  {contractNo:'2402CBR03', projectName:'Afstyla (앱스틸라)', protocolNo:'CSL627_5005', sponsor:'CSL Korea', studyType:'PMS'},
-  {contractNo:'2402CVF01', projectName:'Tavneos (타브네오스)', protocolNo:'CS-AVA-2022-051', sponsor:'CSL Korea', studyType:'PMS'},
-  {contractNo:'2407CBR04', projectName:'Idelvion', protocolNo:'CSL654-5017', sponsor:'CSL Korea', studyType:'PMS'},
-  {contractNo:'2410PRO03', projectName:'PG-102', protocolNo:'PG-102-P2-01', sponsor:'프로젠(ProGen)', studyType:'임상시험'},
-  {contractNo:'2505BIS03', projectName:'CartiLife 재심사', protocolNo:'BS-CTL-PMS', sponsor:'바이오솔루션', studyType:'PMS'},
-];
+const PROJECT_MASTER = [];
 // 마스터 목록(회사 내부 계약 정보)은 관리자(본인)에게만 노출
 function projectMaster(){ return (typeof isAdmin==='function' && isAdmin()) ? PROJECT_MASTER : []; }
-// Contract No. 드롭다운 목록: 관리자=회사 마스터 / 일반 사용자=본인이 입력해 누적된 계약번호
+// Contract No. 드롭다운: 본인이 입력해 누적된 계약번호 (+ 관리자 마스터가 있으면 포함)
 function contractOptions(){
-  if(typeof isAdmin==='function' && isAdmin()) return PROJECT_MASTER.map(p=>p.contractNo);
   const set=new Set();
+  if(typeof isAdmin==='function' && isAdmin()) PROJECT_MASTER.forEach(p=>{ if(p.contractNo) set.add(p.contractNo); });
   (protocols||[]).forEach(p=>{ const c=(p.contractNo||'').trim(); if(c) set.add(c); });
   return [...set];
 }
@@ -1994,6 +1987,24 @@ function getIndexRows(indexType){
     }
   }
   return pd.indexes[storeKey];
+}
+// ── [1단계 마이그레이션] 본인(관리자)의 모든 Index를 견본→내 데이터로 확정 저장 (한 번만) ──
+function materializeMyIndexes(){
+  if(!(typeof isAdmin==='function' && isAdmin())) return; // 관리자 본인만
+  if(!curUserId) return;
+  const flagKey='idxMaterialized_'+curUserId;
+  if(localStorage.getItem(flagKey)==='1') return; // 이미 했으면 skip
+  const savedCur=curProtocolId;
+  try{
+    (protocols||[]).forEach(p=>{
+      if(!protocolData[p.id]) return;
+      curProtocolId=p.id;
+      getIndexTypesForProtocol().forEach(t=>{ getIndexRows(t); }); // 없으면 견본으로 생성됨
+    });
+  } finally { curProtocolId=savedCur; }
+  saveData(); // 클라우드에 저장 → 이후 템플릿을 지워도 안전
+  localStorage.setItem(flagKey,'1');
+  console.log('[마이그레이션] 모든 Index를 내 데이터로 확정 저장 완료');
 }
 function setIndexField(indexType, idx, field, val){
   const rows=getIndexRows(indexType);
@@ -3795,6 +3806,7 @@ async function authShowApp(user){
   load();                       // 내 로컬 캐시 (신규면 빈 템플릿)
   normalizeSectionOrdinals(); render();
   await syncUserCloud(user);    // 내 클라우드 데이터로 갱신 (or 이전/빈 템플릿)
+  materializeMyIndexes();       // [1단계] 내 모든 Index를 내 데이터로 확정 저장 (한 번만)
   checkHandoffInbox();          // 받은 인계 자료 확인
   updateAdminMenu();            // 관리자면 '받은 의견' 메뉴 표시
   setTimeout(()=>{ saveToastEnabled=true; }, 1500);
