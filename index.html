@@ -295,6 +295,8 @@ tr:hover td{background:#f7f7f5}
 .contract-field label{font-size:10px;font-weight:600;color:#787774;letter-spacing:.4px;text-transform:uppercase}
 .contract-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:110px}
 .contract-field input:focus{border-color:#0f7b6c}
+.ct-reason{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;width:100%;resize:none;overflow:hidden;line-height:1.5;min-height:42px;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;display:block}
+.ct-reason:focus{border-color:#0f7b6c}
 .contract-field.wide input{min-width:200px}
 .contract-field.memo textarea{font-size:12px;border:1px solid #e9e9e7;border-radius:6px;padding:5px 8px;color:#37352f;background:#fff;outline:none;font-family:inherit;min-width:220px;resize:vertical;min-height:32px;line-height:1.4}
 .contract-field.memo textarea:focus{border-color:#0f7b6c}
@@ -1283,7 +1285,7 @@ function renderContractList(code){
       </div>` : `
       <div class="contract-field" style="flex:1;min-width:220px">
         <label>변경 사유</label>
-        <input type="text" value="${esc(it.reason||'')}" placeholder="변경 사유를 입력하세요" onchange="setContractField('${code}','${it.id}','reason',this.value)">
+        <textarea class="ct-reason" rows="2" placeholder="변경 사유를 입력하세요 (Enter로 줄바꿈)" oninput="autoGrow(this)" onchange="setContractField('${code}','${it.id}','reason',this.value)">${esc(it.reason||'')}</textarea>
       </div>`;
     return `<div class="ct-card${isInit?' init':''}">
       <div class="ct-card-head">
