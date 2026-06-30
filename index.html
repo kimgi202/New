@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>IRB Tracker Test</title>
+<title>CRA Document Manager</title>
 <meta name="theme-color" content="#2c5282">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="IRB Tracker">
+<meta name="apple-mobile-web-app-title" content="CRA Manager">
 <link rel="apple-touch-icon" href="data:image/png;base64,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">
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAFTklEQVR4nO3dTVLdRhiG0YbyKJUMsoFUZW7G2YdZDwzMemAfGcPcVdmAl+AMXGB+7k9L6lZL33fOAi4q/D5q3Qu2L8rGfP7y9cfoa6Cfp4fbi9HX8NrQizF2Shkbxepf2Og5Ze0YVvtihs8Ua4XQ/YsYPkv0DqHbixs+LfUKofmLGj49tQ7hsuWLGT+9td5Yk5oMnxFanAaLTwDjZ5QW21sUgPEz2tINzg7A+NmKJVucFYDxszVzNzk5AONnq+Zsc1IAxs/WTd1odQDGz15M2WpVAMbP3tRu9mwAxs9e1Wy36a9CwN6cDMDdn707t+GjARg/UZzaskcgUjsYgLs/0RzbtBOA1D4E4O5PVIe27QQgtTcBuPsT3fuNOwFI7SUAd3+yeL11JwCpCYDULkvx+EM+z5t3ApCaAEhNAKQmAFK78AaYzJwApPZp9AX08nh/M/oSVvf47Xu5+vvPbq9/dX3X7bVHCfcIlHH4zx6/fS+llK4RlBIrhFCPQJnH/9pzCN1eP9D3OUwAkf5QWhBBnTAB8FHvCCIIEUCUu1EPPSOI8H0PEQCnOQmOE0ASIjhMAImI4CMBJCOCtwSQkAh+EUBSIvhJAImJQADpZY9AAKSOQACUUvJGIABeZIxAALyRLQIB8EGmCATAQVkiEABHZYhAAJwUPQIBcFbkCARAlagRCIBqESMQAJNEiyDsvww3xb+P/42+hCZ++/2PVb5O73+Bbk1OAGaJchIIgNkiROARKJAojyVrEkAp5Z+rv0ZfAoN4BCI1AZCaAEhNAKQmAFITAKkJgNQEQGp+EFbi/DKcH+hN5wQgNQGQmgBIzXuA4tk5MycAqQmA1ARAagIgNQGQmgBITQCkJgBSEwCpCYDUBEBqAiA1AZCaAEhNAKQmAFITAKkJgNQEQGoCCOjq+m70JeyGAIJ5Hr8I6gggkPejF8F5Agji2NhFcJoAEhDBcQIIoGbgIjhMADtXO+zH+5vOV7JPAtgx419OADtl/G0IYIeMvx0B7Iw3s20JYEemjN/dv44AAjL+egLYCc/9fQhgB4y/HwFsnPH3JYBKIz59Mf7+BFBhxO/YG/86BHDGiN+x91n/egQww9X1XbeR+qx/XQI44dwYR96pjb8NARxRO+6WEXjuX58AjpgyshYRGP8YAjjh8f6menBL3hcY/zgCqNDzNDD+sQRQqUcExj+eACZoGYHP+rdBABO1eF/gs/7tEMBMa3xKZPz9CWCBORF47t8WASzU4yQw/vUIoIEp7wtqXov1CKChpeM1/vUJoLG5Izb+MQTQgTHvhwA6mfK+QDDjCKCzc+M2/rEEsIJjIzf+8T6NvoAsjH2bnACkJgBSEwCpCYDUQgTgL5eMEeH7HiIAmCtMABHuRnsS5fsdJoBS4vyhbF2k7/PF5y9ff4y+iB784Km9SMN/FjYAqBHqEQimEgCpCYDUBEBqAiA1AZDa5dPD7cXoi4ARnh5uL5wApCYAUhMAqQmA1C5L+flmYPSFwJqeN+8EIDUBkNpLAB6DyOL11p0ApPYmAKcA0b3fuBOA1D4E4BQgqkPbdgKQ2sEAnAJEc2zTTgBSOxqAU4AoTm355AkgAvbu3IY9ApHa2QCcAuxVzXarTgARsDe1m61+BBIBezFlq5PeA4iArZu60clvgkXAVs3Z5qxPgUTA1szd5OyPQUXAVizZ4qKfA4iA0ZZucPEPwkTAKC2213S8/rsl1tDyptv0VyGcBvTWemPdBus0oKVeN9fud2whsETvp4rVHlmEwBRrPU6v/swuBE5Z+33k0DetYqCUsR+ebO5TG1HEtrVPCv8HzEHX86tn+0sAAAAASUVORK5CYII=">
 <script>
@@ -18,8 +18,8 @@
     var icon192="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAFTklEQVR4nO3dTVLdRhiG0YbyKJUMsoFUZW7G2YdZDwzMemAfGcPcVdmAl+AMXGB+7k9L6lZL33fOAi4q/D5q3Qu2L8rGfP7y9cfoa6Cfp4fbi9HX8NrQizF2Shkbxepf2Og5Ze0YVvtihs8Ua4XQ/YsYPkv0DqHbixs+LfUKofmLGj49tQ7hsuWLGT+9td5Yk5oMnxFanAaLTwDjZ5QW21sUgPEz2tINzg7A+NmKJVucFYDxszVzNzk5AONnq+Zsc1IAxs/WTd1odQDGz15M2WpVAMbP3tRu9mwAxs9e1Wy36a9CwN6cDMDdn707t+GjARg/UZzaskcgUjsYgLs/0RzbtBOA1D4E4O5PVIe27QQgtTcBuPsT3fuNOwFI7SUAd3+yeL11JwCpCYDULkvx+EM+z5t3ApCaAEhNAKQmAFK78AaYzJwApPZp9AX08nh/M/oSVvf47Xu5+vvPbq9/dX3X7bVHCfcIlHH4zx6/fS+llK4RlBIrhFCPQJnH/9pzCN1eP9D3OUwAkf5QWhBBnTAB8FHvCCIIEUCUu1EPPSOI8H0PEQCnOQmOE0ASIjhMAImI4CMBJCOCtwSQkAh+EUBSIvhJAImJQADpZY9AAKSOQACUUvJGIABeZIxAALyRLQIB8EGmCATAQVkiEABHZYhAAJwUPQIBcFbkCARAlagRCIBqESMQAJNEiyDsvww3xb+P/42+hCZ++/2PVb5O73+Bbk1OAGaJchIIgNkiROARKJAojyVrEkAp5Z+rv0ZfAoN4BCI1AZCaAEhNAKQmAFITAKkJgNQEQGp+EFbi/DKcH+hN5wQgNQGQmgBIzXuA4tk5MycAqQmA1ARAagIgNQGQmgBITQCkJgBSEwCpCYDUBEBqAiA1AZCaAEhNAKQmAFITAKkJgNQEQGoCCOjq+m70JeyGAIJ5Hr8I6gggkPejF8F5Agji2NhFcJoAEhDBcQIIoGbgIjhMADtXO+zH+5vOV7JPAtgx419OADtl/G0IYIeMvx0B7Iw3s20JYEemjN/dv44AAjL+egLYCc/9fQhgB4y/HwFsnPH3JYBKIz59Mf7+BFBhxO/YG/86BHDGiN+x91n/egQww9X1XbeR+qx/XQI44dwYR96pjb8NARxRO+6WEXjuX58AjpgyshYRGP8YAjjh8f6menBL3hcY/zgCqNDzNDD+sQRQqUcExj+eACZoGYHP+rdBABO1eF/gs/7tEMBMa3xKZPz9CWCBORF47t8WASzU4yQw/vUIoIEp7wtqXov1CKChpeM1/vUJoLG5Izb+MQTQgTHvhwA6mfK+QDDjCKCzc+M2/rEEsIJjIzf+8T6NvoAsjH2bnACkJgBSEwCpCYDUQgTgL5eMEeH7HiIAmCtMABHuRnsS5fsdJoBS4vyhbF2k7/PF5y9ff4y+iB784Km9SMN/FjYAqBHqEQimEgCpCYDUBEBqAiA1AZDa5dPD7cXoi4ARnh5uL5wApCYAUhMAqQmA1C5L+flmYPSFwJqeN+8EIDUBkNpLAB6DyOL11p0ApPYmAKcA0b3fuBOA1D4E4BQgqkPbdgKQ2sEAnAJEc2zTTgBSOxqAU4AoTm355AkgAvbu3IY9ApHa2QCcAuxVzXarTgARsDe1m61+BBIBezFlq5PeA4iArZu60clvgkXAVs3Z5qxPgUTA1szd5OyPQUXAVizZ4qKfA4iA0ZZucPEPwkTAKC2213S8/rsl1tDyptv0VyGcBvTWemPdBus0oKVeN9fud2whsETvp4rVHlmEwBRrPU6v/swuBE5Z+33k0DetYqCUsR+ebO5TG1HEtrVPCv8HzEHX86tn+0sAAAAASUVORK5CYII=";
     var icon512="data:image/png;base64,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";
     var manifest={
-      name:"IRB / TMF Document Tracker",
-      short_name:"IRB Tracker",
+      name:"CRA Document Manager",
+      short_name:"CRA Manager",
       description:"임상 문서·Index·Filing 이력 관리 트래커",
       start_url:".",
       scope:".",
@@ -312,6 +312,8 @@ tr:hover td{background:#f7f7f5}
 #appSidebar .idx-add-tab:hover{background:#eef3fa !important}
 .idx-tab-del{margin-left:6px;font-size:10px;color:#b0b0b0;opacity:.6;padding:0 3px;border-radius:4px}
 .idx-tab-del:hover{opacity:1;color:#c0392b;background:#fbe9e7}
+.idx-tab-edit{margin-left:6px;font-size:10px;opacity:.45;padding:0 2px;border-radius:4px}
+.idx-tab-edit:hover{opacity:1;background:#e7eff8}
 .idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:12px;text-align:center}
 .idx-num-wrap{display:flex;align-items:center;gap:2px}
 .idx-num-wrap .idx-num-input{flex:1;min-width:0;padding:4px 2px}
@@ -614,12 +616,12 @@ body.sb-collapsed .sb-hover-zone{display:block}
 </style>
 <div id="authGate" data-mode="login" style="display:none">
   <div class="auth-card">
-    <div class="auth-logo">📋 IRB Tracker Test</div>
+    <div class="auth-logo">📋 CRA Document Manager</div>
     <div class="auth-guide">
       처음이신가요? <b>나만의 이메일</b>로 <b>회원가입</b>하면 바로 써볼 수 있어요 🙂<br>
       실제 메일이 아니어도 돼요 (예: <code>내별명@test.com</code>, <code>cra1@test.com</code>) + <b>비밀번호 6자 이상</b><br>
       <span class="auth-guide-warn">⚠️ 똑같은 이메일을 쓰면 서로 데이터가 섞여요. <b>각자 다른 이메일</b>로 가입해주세요!</span>
-      <span class="auth-guide-privacy">🔒 테스트용이니, 개인정보가 신경 쓰이면 실제 이름·정보 대신 <b>가명·임의값</b>으로 넣어주세요!</span>
+      <span class="auth-guide-privacy">🔒 개인정보가 신경 쓰이면 실제 이름·정보 대신 <b>가명·임의값</b>으로 넣어주세요!</span>
       <span class="auth-guide-fb">💬 써보시고 <b>왼쪽 아래 ‘의견’ 버튼</b>에 좋은 점·불편한 점·추가했으면 하는 기능 <b>뭐든 편하게</b> 남겨주세요! 😊</span>
     </div>
     <div class="auth-title" id="authTitle">로그인</div>
@@ -639,7 +641,7 @@ body.sb-collapsed .sb-hover-zone{display:block}
 <div class="header">
   <div class="header-top">
     <div>
-      <div class="title">📋 IRB Tracker Test</div>
+      <div class="title">📋 CRA Document Manager</div>
       <div class="sub">Protocol별 기관 IRB 현황 관리 · 마지막 저장: <span id="lastSaved">-</span></div>
     </div>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
@@ -1945,10 +1947,29 @@ function delCustomIndex(type){
   if(!curProtocolId) return;
   const pd=protocolData[curProtocolId];
   if(!pd||!pd.customIndexes) return;
-  if(!confirm(`'${type}' Index를 삭제할까요?\n입력한 내용도 함께 사라져요. (백업 복원으로 되돌릴 수 있어요)`)) return;
+  if(!confirm(`'${indexLabel(type)}' Index를 삭제할까요?\n입력한 내용도 함께 사라져요. (백업 복원으로 되돌릴 수 있어요)`)) return;
   pd.customIndexes=pd.customIndexes.filter(t=>t!==type);
   if(pd.indexes){ delete pd.indexes[type+'__CUSTOM__'+type]; }
+  if(pd.indexLabels){ delete pd.indexLabels[type]; }
   if(curIndexType===type){ curView='home'; curIndexType=null; }
+  saveData(); renderTabs(); renderBody();
+}
+// Index 표시 이름 (기본 ISF/PSF/TMF 포함 모두 이름 변경 가능 — 데이터 키는 그대로 유지)
+function indexLabel(type){
+  const pd=curProtocolId?protocolData[curProtocolId]:null;
+  const ov=pd&&pd.indexLabels&&pd.indexLabels[type];
+  if(ov) return ov;
+  const base={ISF:'ISF Index',PSF:'PSF Index',TMF:'TMF Index'};
+  return base[type]||type;
+}
+function renameIndex(type){
+  if(!curProtocolId){ alert('먼저 과제를 선택해주세요.'); return; }
+  const pd=protocolData[curProtocolId];
+  const cur=indexLabel(type);
+  let name=(prompt('Index 이름을 입력하세요',cur)||'').trim().replace(/['"\\]/g,'');
+  if(!name) return;
+  if(!pd.indexLabels) pd.indexLabels={};
+  pd.indexLabels[type]=name;
   saveData(); renderTabs(); renderBody();
 }
 // 인덱스 행 데이터 (없으면 템플릿에서 생성, 기존 입력값은 보존)
@@ -2361,7 +2382,7 @@ function renderTabs(){
     idxTypes.map(t=>{
       const act=(curView==='index'&&curIndexType===t)?' active':'';
       const isCustom=customSet.has(t);
-      return `<div class="tab idx-tab${act}" onclick="switchIndex('${t}')">📑 ${esc(t)}${isCustom?'':' Index'}${isCustom?`<span class="idx-tab-del" title="이 Index 삭제" onclick="event.stopPropagation();delCustomIndex('${t}')">✕</span>`:''}</div>`;
+      return `<div class="tab idx-tab${act}" onclick="switchIndex('${t}')">📑 ${esc(indexLabel(t))}<span class="idx-tab-edit" title="Index 이름 수정" onclick="event.stopPropagation();renameIndex('${t}')">✏️</span>${isCustom?`<span class="idx-tab-del" title="이 Index 삭제" onclick="event.stopPropagation();delCustomIndex('${t}')">✕</span>`:''}</div>`;
     }).join('')+
     `<div class="tab idx-add-tab" onclick="addCustomIndex()" title="새 Index 만들기">+ Index</div>`;
   document.getElementById('tabsWrap').innerHTML=
@@ -2605,21 +2626,22 @@ function renderIndexBody(){
   const done=target.filter(r=>r.status==='ok').length;
   const naCount=rows.filter(r=>!r.h && r.na).length;
   const issue=rows.filter(r=>!r.h && r.status==='issue').length;
-  const fullName={ISF:'ISF Index',PSF:'PSF Index',TMF:'TMF Index'}[type]||(type+' Index');
+  const fullName=indexLabel(type);
 
   let bodyRows='';
+  let curSecCollapsed=false;
   rows.forEach((r,idx)=>{
     if(r.h){
       const open=!indexSecCollapsed[type+r.n];
+      curSecCollapsed=!open; // 이 섹션 이후 항목들은 위치상 이 섹션에 속함
       const secEditable = r.custom || (typeof isAdmin==='function' && isAdmin());
       const ctrls = secEditable ? `<span class="idx-sec-ctrls" onclick="event.stopPropagation()"><button onclick="editIndexSection('${type}',${idx})" title="섹션 제목 수정">✏️</button><button onclick="delIndexSection('${type}',${idx})" title="섹션 삭제">🗑️</button></span>` : '';
       bodyRows+=`<tr class="idx-sec-row" onclick="toggleIndexSec('${type}','${r.n}')">
         <td colspan="9"><span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${ctrls}</td></tr>`;
       return;
     }
-    // 상위 섹션이 접혀 있으면 숨김
-    const secNum=(r.n||'').split('.')[0];
-    if(secNum && indexSecCollapsed[type+secNum]) return;
+    // 위치상 직전 섹션이 접혀 있으면 숨김 (번호 무관 — 커스텀 항목도 포함)
+    if(curSecCollapsed) return;
     const subHtml=r.sub?`<div class="idx-sub">${r.sub.map(s=>'– '+esc(s)).join('<br>')}</div>`:'';
     const naChecked=r.na?'checked':'';
     const editable = r.custom || (typeof isAdmin==='function' && isAdmin());
@@ -4002,7 +4024,7 @@ function buildShell(){
   const ub=document.getElementById('userBar');
   if(!sb || !ptw || !tw) return;
   const logo=document.createElement('div'); logo.className='sb-logo';
-  logo.innerHTML='📋 IRB Tracker <span class="sb-badge2">Test</span><button class="sb-collapse" onclick="toggleSidebar()" title="사이드바 닫기">◀</button>';
+  logo.innerHTML='📋 CRA Document Manager<button class="sb-collapse" onclick="toggleSidebar()" title="사이드바 닫기">◀</button>';
   sb.appendChild(logo);
   const search=document.createElement('div'); search.className='sb-search-wrap';
   search.innerHTML='<input id="sbSearch" class="sb-search" placeholder="🔍 빠른 이동 (홈·기관·Index)" autocomplete="off" oninput="quickSearch(this.value)" onkeydown="quickSearchKey(event)"><div id="sbSearchResults" class="sb-search-results"></div>';
