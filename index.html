@@ -671,7 +671,7 @@ body.sb-collapsed .sb-hover-zone{display:block}
   <span class="protocol-label">Contract No.</span>
   <div id="contractInputWrapper" style="display:none;gap:4px;align-items:center">
     <input class="protocol-select" id="contractInput" placeholder="Contract No. 입력" onchange="setContractNo(this.value)" onkeydown="if(event.key==='Enter')setContractNo(this.value)">
-    <button type="button" onclick="switchBackToContractDropdown()" title="목록에서 선택" style="border:1px solid #dde3ec;background:#fff;border-radius:6px;padding:5px 8px;font-size:11px;color:#787774;cursor:pointer;white-space:nowrap">▼ 목록</button>
+    <button type="button" id="contractListBtn" onclick="switchBackToContractDropdown()" title="목록에서 선택" style="border:1px solid #dde3ec;background:#fff;border-radius:6px;padding:5px 8px;font-size:11px;color:#787774;cursor:pointer;white-space:nowrap">▼ 목록</button>
   </div>
   <select class="protocol-select" id="contractSelect" onchange="onContractSelectChange(this.value)">
     <option value="">직접 입력</option>
@@ -1869,17 +1869,21 @@ function renderProtocolTabs(){
   const contractInputWrapper=document.getElementById('contractInputWrapper');
   const contractInput=document.getElementById('contractInput');
   if(contractSelect && contractInputWrapper){
-    contractSelect.innerHTML='<option value="">＋ 직접 입력</option>'+contractOptions().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-    // 직접입력 모드이거나, 현재 contractNo가 목록에 없는 값이면 입력칸 / 아니면 드롭다운
-    const inList=contractOptions().includes(cur?.contractNo);
-    if(contractManualMode || (cur?.contractNo && !inList)){
+    const opts=contractOptions();
+    const inList=opts.includes(cur?.contractNo);
+    const showInput = contractManualMode || (cur?.contractNo && !inList) || opts.length===0;
+    contractSelect.innerHTML='<option value="__choose__" disabled>— 계약번호 선택 —</option><option value="">＋ 직접 입력</option>'+opts.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    // 목록으로 돌아가기 버튼은 누적된 계약번호가 있을 때만 의미 있음
+    const listBtn=document.getElementById('contractListBtn');
+    if(listBtn) listBtn.style.display = opts.length>0 ? 'inline-block' : 'none';
+    if(showInput){
       contractSelect.style.display='none';
       contractInputWrapper.style.display='flex';
       contractInput.value=cur?.contractNo||'';
     } else {
       contractSelect.style.display='block';
       contractInputWrapper.style.display='none';
-      contractSelect.value=cur?.contractNo||'';
+      contractSelect.value = inList ? cur.contractNo : '__choose__';
     }
   }
   const input=document.getElementById('protocolNameInput');
@@ -1976,9 +1980,7 @@ function setContractNo(val){
 function switchBackToContractDropdown(){
   // 입력칸에서 드롭다운으로 돌아가기
   contractManualMode=false;
-  document.getElementById('contractInputWrapper').style.display='none';
-  document.getElementById('contractSelect').style.display='block';
-  document.getElementById('contractSelect').value='';
+  renderProtocolTabs(); // 드롭다운/입력칸 상태 다시 정리
 }
 
 function normalizeDocNameForCompare(name){
