@@ -352,6 +352,11 @@ tr:hover td{background:#f7f7f5}
 .ih-empty{font-size:12px;color:#999;padding:6px 2px}
 .ih-paste-txt{width:100%;box-sizing:border-box;border:1px solid #dbe6f2;border-radius:8px;padding:10px;font-size:12px;font-family:'Courier New',monospace;resize:vertical;outline:none;margin:10px 0 2px}
 .ih-paste-txt:focus{border-color:#2c5282}
+.ih-replace-chk{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#37352f;margin:8px 0 4px;cursor:pointer}
+.ih-replace-chk input{width:15px;height:15px;accent-color:#c0392b;cursor:pointer}
+.ih-replace-chk span{font-size:11.5px;color:#999}
+.ih-save-btn{background:#0f7b6c;color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer}
+.ih-save-btn:hover{background:#0c6357}
 /* ━━━ Index 뷰 ━━━ */
 .idx-tab{color:#0f7b6c}
 .idx-add-tab{color:#2c5282 !important;border:1px dashed #b9c6d6 !important;font-weight:600}
@@ -1444,15 +1449,47 @@ function normDateStr(s){
   if(!m) return s;
   return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
 }
+// 헤더 줄에서 컬럼 위치 자동 인식 (포털마다 컬럼 순서가 달라도 맞춰 넣기)
+function ihHeaderMap(cells){
+  const map={}; let hits=0;
+  cells.forEach((raw,i)=>{
+    const h=(raw||'').replace(/[▲▼\s]/g,'');
+    let f=null;
+    if(h.includes('접수번호')) f='recvNo';
+    else if(h.includes('접수일')) f='recvDate';
+    else if(h.includes('문서구분')) f='docType';
+    else if(h.includes('패널')) f='panel';
+    else if(h.includes('심의구분')||h==='구분') f='kind';
+    else if(h.includes('심의결과')) f='result';
+    else if(h.includes('심의상태')||h.includes('진행상태')) f='state';
+    else if(h.includes('심의일')) f='reviewDate';
+    else if(h.includes('신청일')) f='_apply';
+    if(f && !(f in map)){ map[f]=i; if(f!=='_apply') hits++; }
+  });
+  return hits>=3 ? {map, len:cells.length} : null;
+}
 function parseIrbHistPaste(text){
   const out=[];
+  let hdr=null; // 헤더가 있으면 컬럼 위치 기준으로 매핑
   (text||'').split(/\r?\n/).forEach(line=>{
     if(!line.trim()) return;
     let cells=line.split('\t').map(c=>c.trim());
     if(cells.length<3) cells=line.trim().split(/\s{2,}/).map(c=>c.trim()); // 탭이 아니면 공백 2칸 이상으로
+    // ① 헤더 줄이면 → 컬럼 지도 기억하고 넘어감
+    if(!hdr){ const h=ihHeaderMap(cells); if(h){ hdr=h; return; } }
+    else { const h2=ihHeaderMap(cells); if(h2) return; } // 중복 헤더 줄 스킵
+    if(['접수번호','문서구분','건수'].includes(cells[0])) return; // 예비 헤더 스킵
+    if(hdr){
+      // ② 헤더 기준 매핑 (앞에 순번 열이 하나 더 붙은 경우 자동 보정)
+      const off=(cells.length-hdr.len===1 && /^\d{1,3}$/.test(cells[0]))?1:0;
+      const g=f=> hdr.map[f]!=null ? (cells[hdr.map[f]+off]||'') : '';
+      if(!g('recvNo') && !g('docType')) return;
+      out.push({recvNo:g('recvNo'), recvDate:normDateStr(g('recvDate')||g('_apply')), docType:g('docType'), panel:g('panel'), kind:g('kind'), reviewDate:normDateStr(g('reviewDate')), result:g('result'), state:g('state')});
+      return;
+    }
+    // ③ 헤더가 없으면 기존 순서 방식
     if(cells.length && /^\d{1,3}$/.test(cells[0]) && cells.length>=8) cells=cells.slice(1); // 맨 앞 순번 제거
     if(cells.length<2) return;
-    if(['접수번호','문서구분','건수'].includes(cells[0])) return; // 헤더 줄 스킵
     const [recvNo='',recvDate='',docType='',panel='',kind='',reviewDate='',result='',state='']=cells;
     out.push({recvNo,recvDate:normDateStr(recvDate),docType,panel,kind,reviewDate:normDateStr(reviewDate),result,state});
   });
@@ -1466,24 +1503,19 @@ function openIrbPaste(code){
   m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeIrbPaste()">
     <div class="snap-modal" style="width:560px">
       <h3>📋 심의 이력 붙여넣기</h3>
-      <div class="snap-desc">IRB 포털의 심의이력 표를 <b>마우스로 드래그해서 복사(Ctrl+C)</b>한 뒤, 아래에 <b>붙여넣기(Ctrl+V)</b> 해주세요.<br>순번·헤더 줄은 자동으로 정리돼요.</div>
-      <textarea id="ihPasteTxt" class="ih-paste-txt" placeholder="예)\n1\t2023-0213-017\t2026-06-26\t계획변경심의의뢰서\t제3위원회\t신속\t\t\t심의중\n2\t2023-0213-016\t2026-03-06\t..." rows="8"></textarea>
-      <div class="csv-choice-btns">
-        <button class="csv-choice add" onclick="applyIrbPaste('append')">
-          <div class="csv-choice-t">➕ 기존에 이어서 추가</div>
-          <div class="csv-choice-s">기존 이력은 그대로 두고 뒤에 붙여요</div>
-        </button>
-        <button class="csv-choice over" onclick="applyIrbPaste('replace')">
-          <div class="csv-choice-t">🔴 기존 지우고 새로 넣기</div>
-          <div class="csv-choice-s">이 기관의 이력을 전부 교체해요 (최신 상태로 갱신할 때)</div>
-        </button>
+      <div class="snap-desc">IRB 포털의 심의이력 표를 <b>제목 줄(접수번호·문서구분...)까지 포함해서</b> 드래그 복사(Ctrl+C)한 뒤, 아래에 <b>붙여넣기(Ctrl+V)</b> 해주세요.<br>💡 제목 줄이 있으면 포털마다 컬럼 순서가 달라도 <b>자동으로 맞춰</b> 넣어드려요!</div>
+      <textarea id="ihPasteTxt" class="ih-paste-txt" placeholder="접수번호\t접수일\t문서구분\t...\n2023-0213-017\t2026-06-26\t계획변경심의의뢰서\t..." rows="8"></textarea>
+      <label class="ih-replace-chk"><input type="checkbox" id="ihReplaceChk"> 기존 이력을 지우고 새로 넣기 <span>(체크 안 하면 기존 뒤에 이어붙어요)</span></label>
+      <div class="snap-acts">
+        <button class="ih-save-btn" onclick="applyIrbPasteSave()">💾 저장</button>
+        <button class="snap-cancel" onclick="closeIrbPaste()">취소</button>
       </div>
-      <div class="snap-acts"><button class="snap-cancel" onclick="closeIrbPaste()">취소</button></div>
     </div>
   </div>`;
   setTimeout(()=>{ const t=document.getElementById('ihPasteTxt'); if(t) t.focus(); },50);
 }
 function closeIrbPaste(){ const m=document.getElementById('irbPasteModal'); if(m) m.innerHTML=''; pendingIrbPaste=null; }
+function applyIrbPasteSave(){ const mode=document.getElementById('ihReplaceChk')?.checked?'replace':'append'; applyIrbPaste(mode); }
 function applyIrbPaste(mode){
   const code=pendingIrbPaste; if(!code) return;
   const txt=document.getElementById('ihPasteTxt')?.value||'';
