@@ -333,12 +333,17 @@ tr:hover td{background:#f7f7f5}
 .ih-pend-cnt{color:#b8860b}
 .ih-body{padding:10px 12px;border-top:1px solid #e8eef5}
 .ih-btns{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ih-clear{border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.ih-clear:hover{background:#fdf2f1}
 .ih-scroll{overflow-x:auto}
-.ih-table{border-collapse:collapse;font-size:12px;white-space:nowrap}
-.ih-table th{background:#eef4fb;color:#2c5282;font-weight:700;font-size:11px;padding:6px 8px;border:1px solid #dbe6f2;text-align:center}
-.ih-table td{padding:3px 5px;border:1px solid #e8eef5;text-align:center}
-.ih-idx{font-size:11px;color:#999;min-width:22px}
-.ih-in{border:1px solid transparent;border-radius:4px;padding:4px 5px;font-size:12px;background:transparent;color:#37352f;outline:none;text-align:center}
+.ih-table{border-collapse:collapse;font-size:12px;white-space:nowrap;table-layout:fixed}
+.ih-table th{background:#eef4fb;color:#2c5282;font-weight:700;font-size:11px;padding:6px 8px;border:1px solid #dbe6f2;text-align:center;position:relative;cursor:pointer;user-select:none;overflow:hidden}
+.ih-table th:hover{background:#e2ecf8}
+.ih-rsz{position:absolute;right:-3px;top:0;width:7px;height:100%;cursor:col-resize;z-index:2}
+.ih-rsz:hover{background:rgba(44,82,130,.25)}
+.ih-table td{padding:3px 5px;border:1px solid #e8eef5;text-align:center;overflow:hidden}
+.ih-idx{font-size:11px;color:#999}
+.ih-in{width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:4px;padding:4px 5px;font-size:12px;background:transparent;color:#37352f;outline:none;text-align:center}
 .ih-in:hover{border-color:#dbe6f2;background:#fff}
 .ih-in:focus{border-color:#2c5282;background:#fff}
 .ih-pending td{background:#fff8e1}
@@ -1393,8 +1398,44 @@ function getIrbHistory(code){ const site=sites.find(s=>s.code===code); if(!site)
 function toggleIrbHist(code){ irbHistOpen[code]=!irbHistOpen[code]; renderBody(); }
 function setIrbHistField(code,i,f,v){ const arr=getIrbHistory(code); if(!arr[i]) return; if(f==='recvDate'||f==='reviewDate') v=normDateStr(v); arr[i][f]=v; saveData(); if(f==='recvDate'||f==='reviewDate') renderBody(); }
 function delIrbHistRow(code,i){ const arr=getIrbHistory(code); if(!arr[i]) return; if(!confirm('이 심의 이력을 삭제할까요?')) return; arr.splice(i,1); saveData(); renderBody(); }
+function clearIrbHist(code){
+  const arr=getIrbHistory(code);
+  if(!arr.length){ alert('삭제할 이력이 없어요.'); return; }
+  if(!confirm(`이 기관의 심의 이력 ${arr.length}건을 모두 삭제할까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  arr.length=0; saveData(); renderBody();
+  showToastNow('✓ 심의 이력을 모두 삭제했어요');
+}
 function addIrbHistRow(code){ getIrbHistory(code).push({recvNo:'',recvDate:'',docType:'',panel:'',kind:'',reviewDate:'',result:'',state:''}); saveData(); renderBody(); }
-function sortIrbHist(code,dir){ const arr=getIrbHistory(code); arr.forEach(r=>{ r.recvDate=normDateStr(r.recvDate); r.reviewDate=normDateStr(r.reviewDate); }); arr.sort((a,b)=>{ const x=a.recvDate||'', y=b.recvDate||''; return dir==='asc' ? x.localeCompare(y) : y.localeCompare(x); }); saveData(); renderBody(); }
+function sortIrbHist(code,dir){ ihSortKey='recvDate'; ihSortDir=dir; const arr=getIrbHistory(code); arr.forEach(r=>{ r.recvDate=normDateStr(r.recvDate); r.reviewDate=normDateStr(r.reviewDate); }); arr.sort((a,b)=>{ const x=a.recvDate||'', y=b.recvDate||''; return dir==='asc' ? x.localeCompare(y) : y.localeCompare(x); }); saveData(); renderBody(); }
+// ── 심의 이력: 컬럼 너비 조절 + 컬럼별 앞뒤 정렬 ──
+const IH_COLS=[['recvNo','접수번호'],['recvDate','접수일'],['docType','문서구분'],['panel','심의패널'],['kind','구분'],['reviewDate','심의일'],['result','심의결과'],['state','심의상태']];
+const IH_COL_DEFAULT=[105,85,185,75,50,85,70,70];
+let ihColW=(function(){ try{ const v=JSON.parse(localStorage.getItem('ihColW_v1')); if(Array.isArray(v)&&v.length===8) return v.map(Number); }catch(e){} return IH_COL_DEFAULT.slice(); })();
+function saveIhColW(){ try{ localStorage.setItem('ihColW_v1', JSON.stringify(ihColW)); }catch(e){} }
+function ihTableWidth(){ return 28+30+ihColW.reduce((a,b)=>a+b,0); }
+let ihSortKey='', ihSortDir='asc';
+function sortIrbHistBy(code,key){
+  if(ihSortKey===key){ ihSortDir=ihSortDir==='asc'?'desc':'asc'; } else { ihSortKey=key; ihSortDir='asc'; }
+  const arr=getIrbHistory(code);
+  arr.forEach(r=>{ r.recvDate=normDateStr(r.recvDate); r.reviewDate=normDateStr(r.reviewDate); });
+  arr.sort((a,b)=>{ const c=String(a[key]||'').localeCompare(String(b[key]||''),'ko',{numeric:true}); return ihSortDir==='asc'?c:-c; });
+  saveData(); renderBody();
+}
+function setupIhResizers(){
+  document.querySelectorAll('.ih-table').forEach(table=>{
+    table.querySelectorAll('.ih-rsz').forEach(h=>{
+      h.onclick=e=>e.stopPropagation();
+      h.onpointerdown=e=>{
+        e.preventDefault(); e.stopPropagation();
+        const ci=+h.dataset.ci, startX=e.clientX, startW=ihColW[ci];
+        const col=table.querySelectorAll('colgroup col')[ci+1];
+        const move=ev=>{ ihColW[ci]=Math.max(42,startW+(ev.clientX-startX)); if(col) col.style.width=ihColW[ci]+'px'; table.style.width=ihTableWidth()+'px'; };
+        const up=()=>{ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); saveIhColW(); };
+        document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+      };
+    });
+  });
+}
 // 날짜 자동 변환: "2023.03.31" "2023. 03. 31." "2023/3/31" "2023년 3월 31일" → "2023-03-31"
 function normDateStr(s){
   s=(s||'').trim();
@@ -1467,12 +1508,13 @@ function renderIrbHistory(code){
     <span class="ih-cnt">${arr.length}건${pending?` · <b class="ih-pend-cnt">심의중 ${pending}</b>`:''}</span>
   </div>`;
   if(!open) return `<div class="irb-hist">${head}</div>`;
-  const cell=(i,f,v,w)=>`<td><input class="ih-in" style="width:${w}px" value="${esc(v||'')}" onchange="setIrbHistField('${code}',${i},'${f}',this.value)"></td>`;
+  const cell=(i,f,v)=>`<td><input class="ih-in" value="${esc(v||'')}" onchange="setIrbHistField('${code}',${i},'${f}',this.value)"></td>`;
   const rows=arr.map((r,i)=>`<tr class="${(r.state||'').includes('심의중')?'ih-pending':''}">
     <td class="ih-idx">${i+1}</td>
-    ${cell(i,'recvNo',r.recvNo,105)}${cell(i,'recvDate',r.recvDate,85)}${cell(i,'docType',r.docType,185)}${cell(i,'panel',r.panel,75)}${cell(i,'kind',r.kind,50)}${cell(i,'reviewDate',r.reviewDate,85)}${cell(i,'result',r.result,70)}${cell(i,'state',r.state,70)}
+    ${IH_COLS.map(([f])=>cell(i,f,r[f])).join('')}
     <td><button class="ih-del" onclick="delIrbHistRow('${code}',${i})" title="삭제">✕</button></td>
   </tr>`).join('');
+  const ths=IH_COLS.map(([k,label],ci)=>`<th onclick="sortIrbHistBy('${code}','${k}')" title="클릭해서 정렬 (다시 클릭하면 반대로)">${label}${ihSortKey===k?(ihSortDir==='asc'?' ▲':' ▼'):''}<span class="ih-rsz" data-ci="${ci}"></span></th>`).join('');
   return `<div class="irb-hist">${head}
     <div class="ih-body">
       <div class="ih-btns">
@@ -1480,9 +1522,11 @@ function renderIrbHistory(code){
         <button class="btn" onclick="addIrbHistRow('${code}')">+ 행 추가</button>
         <button class="btn" onclick="sortIrbHist('${code}','desc')" title="접수일 최신이 위로">↓ 최신순</button>
         <button class="btn" onclick="sortIrbHist('${code}','asc')" title="접수일 오래된 것이 위로">↑ 오래된순</button>
+        <button class="ih-clear" onclick="clearIrbHist('${code}')" title="이 기관의 심의 이력 전체 삭제">🗑️ 전체 삭제</button>
       </div>
-      ${arr.length?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table">
-        <thead><tr><th></th><th>접수번호</th><th>접수일</th><th>문서구분</th><th>심의패널</th><th>구분</th><th>심의일</th><th>심의결과</th><th>심의상태</th><th></th></tr></thead>
+      ${arr.length?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table" style="width:${ihTableWidth()}px">
+        <colgroup><col style="width:28px">${ihColW.map(w=>`<col style="width:${w}px">`).join('')}<col style="width:30px"></colgroup>
+        <thead><tr><th></th>${ths}<th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`:`<div class="ih-empty">아직 이력이 없어요. <b>📋 표 붙여넣기</b>로 포털 심의이력을 한 번에 넣을 수 있어요!</div>`}
     </div>
@@ -2464,6 +2508,7 @@ function renderBody(){
   wrap.querySelectorAll('textarea').forEach(autoGrow);
   setupSecResizers();
   setupDocTopScroll();
+  setupIhResizers();
 }
 let _docTopScrollResizeBound=false;
 function setupDocTopScroll(){
