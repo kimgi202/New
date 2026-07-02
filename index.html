@@ -258,6 +258,7 @@ tr:hover td{background:#f7f7f5}
 .sec-dragging{opacity:.95;box-shadow:0 10px 26px rgba(15,123,108,.2);border-radius:8px;position:relative;z-index:20;background:#fff}
 /* ━━━ 첨부파일 ━━━ */
 .att-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;border-bottom:1px solid #f0f0ef;background:#fbfdfc}
+.sec-actions-row{display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid #f0f0ef;background:#fff}
 .att-bar .att-label{font-size:11px;color:#787774;font-weight:600;margin-right:2px}
 .att-empty{font-size:11px;color:#bbb}
 .att-chip{display:inline-flex;align-items:center;gap:5px;background:#eef5f3;border:1px solid #dcebe7;border-radius:12px;padding:3px 5px 3px 9px;font-size:11px;max-width:300px}
@@ -2839,12 +2840,14 @@ function renderSection(code, sec){
       <span class="chevron${isOpen?' open':''}">▶</span>
       <span class="sec-title">${sec.title}</span>
       <span class="sec-badge ${bc}">${done}/${tot}</span>
-      <button class="sec-add-btn" onclick="event.stopPropagation();startAddDoc('${code}','${sec.id}')">+ 문서 추가</button>
-      <button class="ver-toggle-btn" onclick="event.stopPropagation();toggleVerCols()" title="버전·Effective Date 칸 ${showVerCols?'숨기기':'펼치기'}">${showVerCols?'⊟ 버전·Eff':'⊞ 버전·Eff'}</button>
       <button class="sec-del-btn" onclick="event.stopPropagation();delSection('${code}','${sec.id}')" title="섹션 삭제">✕</button>
     </div>
     ${isOpen?renderSectionMeta(code,sec):''}
     ${isOpen?renderSecAttachments(code,sec):''}
+    ${isOpen?`<div class="sec-actions-row">
+      <button class="sec-add-btn" onclick="startAddDoc('${code}','${sec.id}')">+ 문서 추가</button>
+      <button class="ver-toggle-btn" onclick="toggleVerCols()" title="버전·Effective Date 칸 ${showVerCols?'숨기기':'펼치기'}">${showVerCols?'⊟ 버전·Eff':'⊞ 버전·Eff'}</button>
+    </div>`:''}
     ${isOpen?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}" style="width:${secTableWidth()}px">
       ${secColgroup()}
       <thead><tr>
