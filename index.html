@@ -600,6 +600,15 @@ body.sb-collapsed .sb-hover-zone{display:block}
 .snap-empty{text-align:center;color:#9aa3b2;font-size:13px;padding:30px 0}
 .snap-acts{display:flex;justify-content:flex-end}
 .snap-cancel{background:#fff;color:#787774;border:1px solid #e0e0dd;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer}
+.csv-choice-btns{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.csv-choice{text-align:left;border-radius:10px;padding:12px 14px;cursor:pointer;background:#fff;transition:all .12s}
+.csv-choice.add{border:1px solid #b9d4c9}
+.csv-choice.add:hover{background:#f1faf6;border-color:#0f7b6c}
+.csv-choice.over{border:1px solid #f0c4c0}
+.csv-choice.over:hover{background:#fdf2f1;border-color:#c0392b}
+.csv-choice-t{font-size:14px;font-weight:700;color:#37352f;margin-bottom:3px}
+.csv-choice.over .csv-choice-t{color:#c0392b}
+.csv-choice-s{font-size:12px;color:#787774;line-height:1.4}
 #appSidebar .admin-fb:hover{background:#f2ebfa !important;color:#684b96 !important}
 .fbi-list{max-height:50vh;overflow-y:auto;margin:6px 0 4px}
 .fbi-item{border:1px solid #ececf0;border-radius:9px;padding:10px 12px;margin-bottom:8px;background:#fbfbfd}
@@ -2525,16 +2534,54 @@ function importIndexCSV(type){
         }
         if(!newRows.length){ alert('불러올 항목이 없어요.\nCSV 형식을 확인해주세요 (No, Title, NA, Status, Location/FileName, PrevFiling, ThisFiling, Note).'); return; }
         const itemN=newRows.filter(r=>!r.h).length, secN=newRows.filter(r=>r.h).length;
-        if(!confirm(`항목 ${itemN}개${secN?` · 섹션 ${secN}개`:''}를 현재 Index 끝에 추가할까요?\n(기존 항목은 그대로 두고 뒤에 붙어요. ⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
-        const arr=getIndexRows(type);
-        newRows.forEach(nr=>arr.push(nr));
-        saveData(); renderBody();
-        showToastNow(`✓ ${itemN}개 항목을 불러왔어요`);
+        const existN=getIndexRows(type).length;
+        pendingCsvImport={type, rows:newRows, itemN, secN, existN};
+        openCsvImportModal();
       }catch(err){ alert('CSV 불러오기 실패: '+err.message); }
     };
     reader.readAsText(file,'utf-8');
   };
   inp.click();
+}
+// ── CSV 불러오기: 덮어쓰기 / 추가 / 취소 선택 팝업 ──
+let pendingCsvImport=null;
+function openCsvImportModal(){
+  const p=pendingCsvImport; if(!p) return;
+  let m=document.getElementById('csvImportModal');
+  if(!m){ m=document.createElement('div'); m.id='csvImportModal'; document.body.appendChild(m); }
+  const cntTxt=`항목 ${p.itemN}개${p.secN?` · 섹션 ${p.secN}개`:''}`;
+  m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeCsvImportModal()">
+    <div class="snap-modal" style="width:420px">
+      <h3>📥 CSV 불러오기</h3>
+      <div class="snap-desc">불러올 데이터: <b>${cntTxt}</b><br>현재 Index에는 이미 <b>${p.existN}개</b> 줄이 있어요. 어떻게 할까요?</div>
+      <div class="csv-choice-btns">
+        <button class="csv-choice add" onclick="applyCsvImport('append')">
+          <div class="csv-choice-t">➕ 기존에 이어서 추가</div>
+          <div class="csv-choice-s">기존 ${p.existN}개는 그대로 두고 뒤에 ${p.itemN}개를 붙여요</div>
+        </button>
+        <button class="csv-choice over" onclick="applyCsvImport('replace')">
+          <div class="csv-choice-t">🔴 기존 지우고 새로 넣기</div>
+          <div class="csv-choice-s">기존 ${p.existN}개를 모두 지우고 새 데이터로 교체해요</div>
+        </button>
+      </div>
+      <div class="snap-acts"><button class="snap-cancel" onclick="closeCsvImportModal()">취소</button></div>
+    </div>
+  </div>`;
+}
+function closeCsvImportModal(){ const m=document.getElementById('csvImportModal'); if(m) m.innerHTML=''; pendingCsvImport=null; }
+function applyCsvImport(mode){
+  const p=pendingCsvImport; if(!p) return;
+  if(mode==='replace'){
+    if(!confirm(`정말 기존 ${p.existN}개를 모두 지우고 새로 넣을까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+    setIndexRowsArray(p.type, p.rows.slice());
+  } else {
+    const arr=getIndexRows(p.type);
+    p.rows.forEach(nr=>arr.push(nr));
+  }
+  const itemN=p.itemN;
+  closeCsvImportModal();
+  saveData(); renderBody();
+  showToastNow(`✓ ${itemN}개 항목을 ${mode==='replace'?'새로 불러왔어요':'추가했어요'}`);
 }
 function exportIndexCSV(type){
   const rows=getIndexRows(type);
