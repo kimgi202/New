@@ -1391,10 +1391,18 @@ function renderInterimReportable(code,sec,meta){
 const irbHistOpen={};
 function getIrbHistory(code){ const site=sites.find(s=>s.code===code); if(!site) return []; if(!site.irbHistory) site.irbHistory=[]; return site.irbHistory; }
 function toggleIrbHist(code){ irbHistOpen[code]=!irbHistOpen[code]; renderBody(); }
-function setIrbHistField(code,i,f,v){ const arr=getIrbHistory(code); if(!arr[i]) return; arr[i][f]=v; saveData(); }
+function setIrbHistField(code,i,f,v){ const arr=getIrbHistory(code); if(!arr[i]) return; if(f==='recvDate'||f==='reviewDate') v=normDateStr(v); arr[i][f]=v; saveData(); if(f==='recvDate'||f==='reviewDate') renderBody(); }
 function delIrbHistRow(code,i){ const arr=getIrbHistory(code); if(!arr[i]) return; if(!confirm('이 심의 이력을 삭제할까요?')) return; arr.splice(i,1); saveData(); renderBody(); }
 function addIrbHistRow(code){ getIrbHistory(code).push({recvNo:'',recvDate:'',docType:'',panel:'',kind:'',reviewDate:'',result:'',state:''}); saveData(); renderBody(); }
-function sortIrbHist(code){ const arr=getIrbHistory(code); arr.sort((a,b)=>(b.recvDate||'').localeCompare(a.recvDate||'')); saveData(); renderBody(); }
+function sortIrbHist(code,dir){ const arr=getIrbHistory(code); arr.forEach(r=>{ r.recvDate=normDateStr(r.recvDate); r.reviewDate=normDateStr(r.reviewDate); }); arr.sort((a,b)=>{ const x=a.recvDate||'', y=b.recvDate||''; return dir==='asc' ? x.localeCompare(y) : y.localeCompare(x); }); saveData(); renderBody(); }
+// 날짜 자동 변환: "2023.03.31" "2023. 03. 31." "2023/3/31" "2023년 3월 31일" → "2023-03-31"
+function normDateStr(s){
+  s=(s||'').trim();
+  if(!s) return s;
+  const m=s.match(/^(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})[.일\s]*$/);
+  if(!m) return s;
+  return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+}
 function parseIrbHistPaste(text){
   const out=[];
   (text||'').split(/\r?\n/).forEach(line=>{
@@ -1405,7 +1413,7 @@ function parseIrbHistPaste(text){
     if(cells.length<2) return;
     if(['접수번호','문서구분','건수'].includes(cells[0])) return; // 헤더 줄 스킵
     const [recvNo='',recvDate='',docType='',panel='',kind='',reviewDate='',result='',state='']=cells;
-    out.push({recvNo,recvDate,docType,panel,kind,reviewDate,result,state});
+    out.push({recvNo,recvDate:normDateStr(recvDate),docType,panel,kind,reviewDate:normDateStr(reviewDate),result,state});
   });
   return out;
 }
@@ -1470,9 +1478,10 @@ function renderIrbHistory(code){
       <div class="ih-btns">
         <button class="btn" onclick="openIrbPaste('${code}')">📋 표 붙여넣기</button>
         <button class="btn" onclick="addIrbHistRow('${code}')">+ 행 추가</button>
-        <button class="btn" onclick="sortIrbHist('${code}')" title="접수일 최신순 정렬">↕ 최신순 정렬</button>
+        <button class="btn" onclick="sortIrbHist('${code}','desc')" title="접수일 최신이 위로">↓ 최신순</button>
+        <button class="btn" onclick="sortIrbHist('${code}','asc')" title="접수일 오래된 것이 위로">↑ 오래된순</button>
       </div>
-      ${arr.length?`<div class="ih-scroll"><table class="ih-table">
+      ${arr.length?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table">
         <thead><tr><th></th><th>접수번호</th><th>접수일</th><th>문서구분</th><th>심의패널</th><th>구분</th><th>심의일</th><th>심의결과</th><th>심의상태</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`:`<div class="ih-empty">아직 이력이 없어요. <b>📋 표 붙여넣기</b>로 포털 심의이력을 한 번에 넣을 수 있어요!</div>`}
@@ -2463,7 +2472,7 @@ function setupDocTopScroll(){
   document.querySelectorAll('.doc-topscroll').forEach(top=>{
     const inner=top.querySelector('.doc-topscroll-inner');
     const wrap=top.nextElementSibling; // .table-wrap
-    const table=wrap&&wrap.querySelector('.doc-table');
+    const table=wrap&&wrap.querySelector('.doc-table, .ih-table');
     if(!inner||!wrap||!table) return;
     const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
     setW();
@@ -2481,7 +2490,7 @@ function setupDocTopScroll(){
         t.style.top=h;
         const inner=t.querySelector('.doc-topscroll-inner');
         const wrap=t.nextElementSibling;
-        const table=wrap&&wrap.querySelector('.doc-table');
+        const table=wrap&&wrap.querySelector('.doc-table, .ih-table');
         if(inner&&table) inner.style.width=table.scrollWidth+'px';
       });
     });
