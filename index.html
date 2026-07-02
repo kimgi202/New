@@ -309,6 +309,21 @@ tr:hover td{background:#f7f7f5}
 .irb-link-btn.empty{background:#fff;color:#0f7b6c;border:1px dashed #0f7b6c}
 .irb-link-btn.empty:hover{background:#f0faf8}
 .contract-field input.irb-url{min-width:240px;font-family:'Courier New',monospace;font-size:11px}
+.irb-portal-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#eef4fb;border:1px solid #c5d9f0;border-radius:10px;padding:9px 12px;margin-bottom:10px}
+.ipb-title{font-size:12px;font-weight:700;color:#2c5282;white-space:nowrap}
+.ipb-url{flex:1;min-width:200px;font-size:12px;border:1px solid #c5d9f0;border-radius:6px;padding:5px 8px;background:#fff;color:#37352f;outline:none;font-family:'Courier New',monospace}
+.ipb-url:focus{border-color:#2c5282}
+.ipb-go{font-size:12px;font-weight:700;color:#fff;background:#2c5282;border-radius:6px;padding:6px 10px;text-decoration:none;white-space:nowrap}
+.ipb-go:hover{background:#1f3d63}
+.ipb-chk{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#2c5282;white-space:nowrap;cursor:pointer}
+.ipb-chk input{width:14px;height:14px;accent-color:#2c5282;cursor:pointer}
+.ipb-lbl{font-size:11px;color:#5a6b7d;font-weight:600;white-space:nowrap}
+.ipb-cred{width:110px;font-size:12px;border:1px solid #c5d9f0;border-radius:6px;padding:5px 8px;background:#fff;color:#37352f;outline:none}
+.ipb-cred:focus{border-color:#2c5282}
+.ipb-suggest{border:1px dashed #b8860b;background:#fffaf0;color:#8a6508;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.ipb-suggest:hover{background:#fef3e2}
+.meta-report{background:#f0f7f4;border-color:#bfe0d3}
+.meta-report>span{color:#0f7b6c;font-weight:700}
 /* ━━━ Index 뷰 ━━━ */
 .idx-tab{color:#0f7b6c}
 .idx-add-tab{color:#2c5282 !important;border:1px dashed #b9c6d6 !important;font-weight:600}
@@ -1304,6 +1319,50 @@ function updateCalc(id){
 }
 const contractListCollapsed={};
 function toggleContractList(code){ contractListCollapsed[code]=!contractListCollapsed[code]; renderBody(); }
+// ── IRB 포털 바 (계약 관리 위 상단) : 링크·R-bay·CRA ID/PW 메모 ──
+function extUrl(u){ u=(u||'').trim(); if(!u) return ''; return /^https?:\/\//i.test(u)?u:'https://'+u; }
+function renderIrbPortalBar(code){
+  const c=getSiteContract(code);
+  const url=(c.irbUrl||'').trim();
+  return `<div class="irb-portal-bar">
+    <span class="ipb-title">🔗 IRB 포털</span>
+    <input class="ipb-url" placeholder="포털 링크 (예: irb.hospital.or.kr)" value="${esc(c.irbUrl||'')}" onchange="setSiteContract('${code}','irbUrl',this.value)">
+    ${url?`<a class="ipb-go" href="${esc(extUrl(url))}" target="_blank" rel="noopener" title="새 탭에서 열기">↗ 바로가기</a>`:''}
+    <label class="ipb-chk" title="R-bay 사용 기관 여부"><input type="checkbox" ${c.rbay?'checked':''} onchange="setSiteContract('${code}','rbay',this.checked)">R-bay</label>
+    <span class="ipb-lbl">CRA ID</span>
+    <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.craId||'')}" onchange="setSiteContract('${code}','craId',this.value)">
+    <span class="ipb-lbl">PW</span>
+    <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.craPw||'')}" onchange="setSiteContract('${code}','craPw',this.value)">
+  </div>`;
+}
+// ── 중간보고 보고 가능일 (IRB 승인 종료일 2개월 전 권장) ──
+function interimSuggestDate(code,sec){
+  let end=(sec.meta&&sec.meta.approvalEndDate)||'';
+  if(!end){ let best=''; (sections[code]||[]).forEach(s=>{ const e=s.meta&&s.meta.approvalEndDate; if(e&&e>best) best=e; }); end=best; }
+  if(!end) return '';
+  const d=new Date(end+'T00:00:00'); if(isNaN(d)) return '';
+  d.setMonth(d.getMonth()-2);
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+function renderInterimReportable(code,sec,meta){
+  const rep=meta.reportableDate||'';
+  const sug=interimSuggestDate(code,sec);
+  let badge='';
+  if(rep){
+    const t=new Date(); t.setHours(0,0,0,0);
+    const r=new Date(rep+'T00:00:00');
+    if(!isNaN(r)){
+      const diff=Math.ceil((r-t)/86400000);
+      badge = diff<=0 ? '<span class="deadline-done">✓ 보고 가능</span>' : `<span class="deadline-warn">가능일까지 D-${diff}</span>`;
+    }
+  }
+  return `<div class="meta-field meta-report"><span>📤 보고 가능일</span><div style="display:flex;gap:6px;align-items:center">
+    <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${rep}" onchange="setSecMeta('${code}','${sec.id}','reportableDate',this.value)" style="width:130px">
+    ${!rep&&sug?`<button class="ipb-suggest" onclick="setSecMeta('${code}','${sec.id}','reportableDate','${sug}')" title="IRB 승인 종료일 2개월 전 날짜예요">💡 ${sug} 적용</button>`:''}
+    ${badge}
+  </div></div>`;
+}
 function renderContractList(code){
   const arr=getSiteContracts(code);
   const c=getSiteContract(code); // 초기 계약에 표시할 공통 계약정보(IRB/Contract No./의뢰사/PI/비고)
@@ -1328,10 +1387,6 @@ function renderContractList(code){
       </div>`;
     // 초기 계약: 계약정보 필드 포함 / 변경계약: 변경 사유
     const extra = isInit ? `
-      <div class="contract-field wide">
-        <label>🔗 IRB 포털 링크</label>
-        <input class="irb-url" placeholder="예: irb.hospital.or.kr" value="${esc(c.irbUrl||'')}" onchange="setSiteContract('${code}','irbUrl',this.value)">
-      </div>
       <div class="contract-field">
         <label>IRB No.</label>
         <input placeholder="예: 2024-08-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
@@ -1368,7 +1423,7 @@ function renderContractList(code){
   }).join('');
   const body = arr.length ? cards
     : '<div style="font-size:12px;color:#999;padding:2px 0 8px">아직 등록된 계약이 없어요. 아래 버튼을 누르면 초기 계약부터 차례로 추가돼요.</div>';
-  return `<div class="contract-list">
+  return `${renderIrbPortalBar(code)}<div class="contract-list">
     <div class="contract-list-head" onclick="toggleContractList('${code}')">
       <span class="clh-chev${open?' open':''}">▶</span>
       <span class="clh-title">📑 계약 관리 <span class="clh-sub">· VAT·간접비 입력 시 총 연구비 자동 계산</span></span>
@@ -2796,6 +2851,7 @@ function renderSectionMeta(code,sec){
       <span style="color:#999">~</span>
       <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.approvalEndDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalEndDate',this.value)" style="width:120px">
     </div></div>
+    ${sec.type==='interim'?renderInterimReportable(code,sec,meta):''}
     ${renderResubmits(code,sec)}
   </div>`;
 }
