@@ -206,6 +206,7 @@ tr:hover td{background:#f7f7f5}
 .deadline-safe{background:#e6f4ea;color:#0d652d;padding:4px 6px;border-radius:4px;font-size:11px;text-align:center;font-weight:500}
 .deadline-warn{background:#fef3e2;color:#b8860b;padding:4px 6px;border-radius:4px;font-size:11px;text-align:center;font-weight:500}
 .deadline-over{background:#fce8e8;color:#c80e0e;padding:4px 6px;border-radius:4px;font-size:11px;text-align:center;font-weight:500}
+.deadline-done{background:#e2f0e6;color:#0f7b3f;padding:4px 6px;border-radius:4px;font-size:11px;text-align:center;font-weight:600}
 .row-checkbox{width:24px;text-align:center;cursor:pointer}.row-checkbox input{width:16px;height:16px;cursor:pointer}
 .row-selected{background:#e0f5f0 !important}
 .bulk-del-th{border:none;background:transparent;color:inherit;font-size:13px;cursor:pointer;padding:2px 5px;border-radius:5px;font-weight:600}
@@ -2192,7 +2193,7 @@ function renderHomeBody(){
       if(dl){
         const rows=sec.rows||[];
         const allDone=rows.length>0 && rows.every(r=>r.status==='ok');
-        if(!allDone){
+        if(!allDone && !sec.meta.craSubmitDate){
           const d=calcDday(dl);
           if(d.days!==null) deadlines.push({code:s.code, name:sec.title||'섹션', dday:d, days:d.days});
         }
@@ -2775,11 +2776,12 @@ function setSecMeta(code,secId,field,val){
 }
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
-  const dl=meta.craDeadline?calcDday(meta.craDeadline):null;
+  const dl = meta.craSubmitDate ? {cls:'deadline-done',txt:'✓ 완료'} : (meta.craDeadline?calcDday(meta.craDeadline):null);
   return `<div class="sec-meta">
     <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||'')}" placeholder="예: 2024-08-001" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
     <div class="meta-field"><span>CRA 제출기한</span><div style="display:flex;gap:8px;align-items:center"><input type="date" value="${meta.craDeadline||''}" onchange="setSecMeta('${code}','${sec.id}','craDeadline',this.value)" style="width:140px">${dl&&dl.txt?`<span class="${dl.cls}">${dl.txt}</span>`:''}</div></div>
-    <div class="meta-field"><span>제출일</span><div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:#666;min-width:60px">CRA</span><input type="date" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:120px"><span style="font-size:12px;color:#666;min-width:50px">PI</span><input type="date" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:120px"></div></div>
+    <div class="meta-field"><span>CRA 제출일</span><input type="date" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:150px"></div>
+    <div class="meta-field"><span>PI 제출일</span><input type="date" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>접수일</span><input type="date" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
     <div class="meta-field"><span>IRB 승인일</span><input type="date" value="${meta.approvalDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalDate',this.value)"></div>
     <div class="meta-field"><span>통지일</span><input type="date" value="${meta.noticeDate||''}" onchange="setSecMeta('${code}','${sec.id}','noticeDate',this.value)"></div>
