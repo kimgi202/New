@@ -324,6 +324,28 @@ tr:hover td{background:#f7f7f5}
 .ipb-suggest:hover{background:#fef3e2}
 .meta-report{background:#f0f7f4;border-color:#bfe0d3}
 .meta-report>span{color:#0f7b6c;font-weight:700}
+.irb-hist{border:1px solid #d8e3ef;border-radius:10px;background:#fff;margin-bottom:10px;overflow:hidden}
+.ih-head{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none;background:#f7fafc}
+.ih-head:hover{background:#eef4fb}
+.ih-title{font-size:12.5px;font-weight:700;color:#2c5282}
+.ih-cnt{font-size:11.5px;color:#787774}
+.ih-pend-cnt{color:#b8860b}
+.ih-body{padding:10px 12px;border-top:1px solid #e8eef5}
+.ih-btns{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ih-scroll{overflow-x:auto}
+.ih-table{border-collapse:collapse;font-size:12px;white-space:nowrap}
+.ih-table th{background:#eef4fb;color:#2c5282;font-weight:700;font-size:11px;padding:6px 8px;border:1px solid #dbe6f2;text-align:center}
+.ih-table td{padding:3px 5px;border:1px solid #e8eef5;text-align:center}
+.ih-idx{font-size:11px;color:#999;min-width:22px}
+.ih-in{border:1px solid transparent;border-radius:4px;padding:4px 5px;font-size:12px;background:transparent;color:#37352f;outline:none;text-align:center}
+.ih-in:hover{border-color:#dbe6f2;background:#fff}
+.ih-in:focus{border-color:#2c5282;background:#fff}
+.ih-pending td{background:#fff8e1}
+.ih-del{border:none;background:none;color:#c0392b;cursor:pointer;font-size:13px;padding:2px 6px;opacity:.55}
+.ih-del:hover{opacity:1}
+.ih-empty{font-size:12px;color:#999;padding:6px 2px}
+.ih-paste-txt{width:100%;box-sizing:border-box;border:1px solid #dbe6f2;border-radius:8px;padding:10px;font-size:12px;font-family:'Courier New',monospace;resize:vertical;outline:none;margin:10px 0 2px}
+.ih-paste-txt:focus{border-color:#2c5282}
 /* ━━━ Index 뷰 ━━━ */
 .idx-tab{color:#0f7b6c}
 .idx-add-tab{color:#2c5282 !important;border:1px dashed #b9c6d6 !important;font-weight:600}
@@ -932,6 +954,7 @@ let protocols=[], protocolData={};
 let curProtocolId=null;
 let sites=[], sections={};
 let curSite=null, addingDoc=null, showSecForm=false, searchTerm='';
+let addDtypeVal='doc'; // 문서 추가 시 선택한 유형 기억 (재렌더링에도 유지)
 let curView='home', curIndexType=null; // 'home' | 'site' | 'index'
 const collapsed={};
 const indexSecCollapsed={};
@@ -1363,6 +1386,98 @@ function renderInterimReportable(code,sec,meta){
     ${badge}
   </div></div>`;
 }
+// ── IRB 심의 이력 (포털 표 붙여넣기 대응) ──
+const irbHistOpen={};
+function getIrbHistory(code){ const site=sites.find(s=>s.code===code); if(!site) return []; if(!site.irbHistory) site.irbHistory=[]; return site.irbHistory; }
+function toggleIrbHist(code){ irbHistOpen[code]=!irbHistOpen[code]; renderBody(); }
+function setIrbHistField(code,i,f,v){ const arr=getIrbHistory(code); if(!arr[i]) return; arr[i][f]=v; saveData(); }
+function delIrbHistRow(code,i){ const arr=getIrbHistory(code); if(!arr[i]) return; if(!confirm('이 심의 이력을 삭제할까요?')) return; arr.splice(i,1); saveData(); renderBody(); }
+function addIrbHistRow(code){ getIrbHistory(code).push({recvNo:'',recvDate:'',docType:'',panel:'',kind:'',reviewDate:'',result:'',state:''}); saveData(); renderBody(); }
+function sortIrbHist(code){ const arr=getIrbHistory(code); arr.sort((a,b)=>(b.recvDate||'').localeCompare(a.recvDate||'')); saveData(); renderBody(); }
+function parseIrbHistPaste(text){
+  const out=[];
+  (text||'').split(/\r?\n/).forEach(line=>{
+    if(!line.trim()) return;
+    let cells=line.split('\t').map(c=>c.trim());
+    if(cells.length<3) cells=line.trim().split(/\s{2,}/).map(c=>c.trim()); // 탭이 아니면 공백 2칸 이상으로
+    if(cells.length && /^\d{1,3}$/.test(cells[0]) && cells.length>=8) cells=cells.slice(1); // 맨 앞 순번 제거
+    if(cells.length<2) return;
+    if(['접수번호','문서구분','건수'].includes(cells[0])) return; // 헤더 줄 스킵
+    const [recvNo='',recvDate='',docType='',panel='',kind='',reviewDate='',result='',state='']=cells;
+    out.push({recvNo,recvDate,docType,panel,kind,reviewDate,result,state});
+  });
+  return out;
+}
+let pendingIrbPaste=null;
+function openIrbPaste(code){
+  pendingIrbPaste=code;
+  let m=document.getElementById('irbPasteModal');
+  if(!m){ m=document.createElement('div'); m.id='irbPasteModal'; document.body.appendChild(m); }
+  m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeIrbPaste()">
+    <div class="snap-modal" style="width:560px">
+      <h3>📋 심의 이력 붙여넣기</h3>
+      <div class="snap-desc">IRB 포털의 심의이력 표를 <b>마우스로 드래그해서 복사(Ctrl+C)</b>한 뒤, 아래에 <b>붙여넣기(Ctrl+V)</b> 해주세요.<br>순번·헤더 줄은 자동으로 정리돼요.</div>
+      <textarea id="ihPasteTxt" class="ih-paste-txt" placeholder="예)\n1\t2023-0213-017\t2026-06-26\t계획변경심의의뢰서\t제3위원회\t신속\t\t\t심의중\n2\t2023-0213-016\t2026-03-06\t..." rows="8"></textarea>
+      <div class="csv-choice-btns">
+        <button class="csv-choice add" onclick="applyIrbPaste('append')">
+          <div class="csv-choice-t">➕ 기존에 이어서 추가</div>
+          <div class="csv-choice-s">기존 이력은 그대로 두고 뒤에 붙여요</div>
+        </button>
+        <button class="csv-choice over" onclick="applyIrbPaste('replace')">
+          <div class="csv-choice-t">🔴 기존 지우고 새로 넣기</div>
+          <div class="csv-choice-s">이 기관의 이력을 전부 교체해요 (최신 상태로 갱신할 때)</div>
+        </button>
+      </div>
+      <div class="snap-acts"><button class="snap-cancel" onclick="closeIrbPaste()">취소</button></div>
+    </div>
+  </div>`;
+  setTimeout(()=>{ const t=document.getElementById('ihPasteTxt'); if(t) t.focus(); },50);
+}
+function closeIrbPaste(){ const m=document.getElementById('irbPasteModal'); if(m) m.innerHTML=''; pendingIrbPaste=null; }
+function applyIrbPaste(mode){
+  const code=pendingIrbPaste; if(!code) return;
+  const txt=document.getElementById('ihPasteTxt')?.value||'';
+  const rows=parseIrbHistPaste(txt);
+  if(!rows.length){ alert('붙여넣은 내용에서 이력을 찾지 못했어요.\n포털 표를 드래그 복사해서 그대로 붙여넣어 주세요.'); return; }
+  const arr=getIrbHistory(code);
+  if(mode==='replace'){
+    if(arr.length && !confirm(`기존 ${arr.length}건을 지우고 새로 ${rows.length}건을 넣을까요?`)) return;
+    arr.length=0;
+  }
+  rows.forEach(r=>arr.push(r));
+  closeIrbPaste(); saveData(); irbHistOpen[code]=true; renderBody();
+  showToastNow(`✓ 심의 이력 ${rows.length}건을 불러왔어요`);
+}
+function renderIrbHistory(code){
+  const arr=getIrbHistory(code);
+  const open=!!irbHistOpen[code];
+  const pending=arr.filter(r=>(r.state||'').includes('심의중')).length;
+  const head=`<div class="ih-head" onclick="toggleIrbHist('${code}')">
+    <span class="contract-panel-chevron${open?' open':''}">▶</span>
+    <span class="ih-title">📜 IRB 심의 이력</span>
+    <span class="ih-cnt">${arr.length}건${pending?` · <b class="ih-pend-cnt">심의중 ${pending}</b>`:''}</span>
+  </div>`;
+  if(!open) return `<div class="irb-hist">${head}</div>`;
+  const cell=(i,f,v,w)=>`<td><input class="ih-in" style="width:${w}px" value="${esc(v||'')}" onchange="setIrbHistField('${code}',${i},'${f}',this.value)"></td>`;
+  const rows=arr.map((r,i)=>`<tr class="${(r.state||'').includes('심의중')?'ih-pending':''}">
+    <td class="ih-idx">${i+1}</td>
+    ${cell(i,'recvNo',r.recvNo,105)}${cell(i,'recvDate',r.recvDate,85)}${cell(i,'docType',r.docType,185)}${cell(i,'panel',r.panel,75)}${cell(i,'kind',r.kind,50)}${cell(i,'reviewDate',r.reviewDate,85)}${cell(i,'result',r.result,70)}${cell(i,'state',r.state,70)}
+    <td><button class="ih-del" onclick="delIrbHistRow('${code}',${i})" title="삭제">✕</button></td>
+  </tr>`).join('');
+  return `<div class="irb-hist">${head}
+    <div class="ih-body">
+      <div class="ih-btns">
+        <button class="btn" onclick="openIrbPaste('${code}')">📋 표 붙여넣기</button>
+        <button class="btn" onclick="addIrbHistRow('${code}')">+ 행 추가</button>
+        <button class="btn" onclick="sortIrbHist('${code}')" title="접수일 최신순 정렬">↕ 최신순 정렬</button>
+      </div>
+      ${arr.length?`<div class="ih-scroll"><table class="ih-table">
+        <thead><tr><th></th><th>접수번호</th><th>접수일</th><th>문서구분</th><th>심의패널</th><th>구분</th><th>심의일</th><th>심의결과</th><th>심의상태</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`:`<div class="ih-empty">아직 이력이 없어요. <b>📋 표 붙여넣기</b>로 포털 심의이력을 한 번에 넣을 수 있어요!</div>`}
+    </div>
+  </div>`;
+}
 function renderContractList(code){
   const arr=getSiteContracts(code);
   const c=getSiteContract(code); // 초기 계약에 표시할 공통 계약정보(IRB/Contract No./의뢰사/PI/비고)
@@ -1423,7 +1538,7 @@ function renderContractList(code){
   }).join('');
   const body = arr.length ? cards
     : '<div style="font-size:12px;color:#999;padding:2px 0 8px">아직 등록된 계약이 없어요. 아래 버튼을 누르면 초기 계약부터 차례로 추가돼요.</div>';
-  return `${renderIrbPortalBar(code)}<div class="contract-list">
+  return `${renderIrbPortalBar(code)}${renderIrbHistory(code)}<div class="contract-list">
     <div class="contract-list-head" onclick="toggleContractList('${code}')">
       <span class="clh-chev${open?' open':''}">▶</span>
       <span class="clh-title">📑 계약 관리 <span class="clh-sub">· VAT·간접비 입력 시 총 연구비 자동 계산</span></span>
@@ -2931,15 +3046,8 @@ function rowHtml(code,secId,idx,row,total){
 function addDocRowHtml(){
   return `<tr class="add-row"><td colspan="10">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 2px">
-      <select class="add-doc-sel" id="addDtype">
-        <option value="doc">제출 문서</option>
-        <option value="app">신청서</option>
-        <option value="req">의뢰서</option>
-        <option value="consent">동의서</option>
-        <option value="notice">통지서</option>
-        <option value="eval">평가록</option>
-        <option value="minutes">회의록</option>
-        <option value="custom">기타</option>
+      <select class="add-doc-sel" id="addDtype" onchange="addDtypeVal=this.value">
+        ${[['doc','제출 문서'],['app','신청서'],['req','의뢰서'],['consent','동의서'],['notice','통지서'],['eval','평가록'],['minutes','회의록'],['custom','기타']].map(([v,l])=>`<option value="${v}"${v===addDtypeVal?' selected':''}>${l}</option>`).join('')}
       </select>
       <input class="add-doc-input" id="addDocName" placeholder="문서명 입력 후 Enter" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')confirmAddDoc()" oninput="autoCheckNeedVer()">
       <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
@@ -3321,7 +3429,9 @@ function startAddDoc(code,secId){
 function confirmAddDoc(){
   if(!addingDoc) return;
   const name=document.getElementById('addDocName')?.value.trim();
-  const dtype=document.getElementById('addDtype')?.value||'custom';
+  const selEl=document.getElementById('addDtype');
+  const dtype=(selEl&&selEl.value)||addDtypeVal||'doc';
+  addDtypeVal=dtype; // 다음 추가 때도 같은 유형 유지
   let needVer=!!document.getElementById('addNeedVer')?.checked;
   
   if(!name){alert('문서명을 입력해주세요');return;}
