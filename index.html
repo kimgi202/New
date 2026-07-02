@@ -377,7 +377,10 @@ tr:hover td{background:#f7f7f5}
 tr.idx-dragging{opacity:.5;background:#eef3fa !important}
 tr.idx-drop-before td{box-shadow:inset 0 2px 0 #2c5282}
 tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
-.idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:13px;font-family:inherit;resize:none;overflow:hidden;line-height:1.45;min-height:30px;white-space:pre-wrap;word-break:break-word;display:block;outline:none}
+.idx-title-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:5px 8px;font-size:14px;font-family:inherit;resize:none;overflow:hidden;line-height:1.45;min-height:30px;white-space:pre-wrap;word-break:break-word;display:block;outline:none}
+.idx-title-input[readonly],.idx-loc[readonly],.idx-note[readonly]{border-color:transparent;background:transparent;cursor:pointer;resize:none}
+.idx-title-input[readonly]:hover,.idx-loc[readonly]:hover,.idx-note[readonly]:hover{background:#eef2f7}
+.idx-editing{border-color:#2c5282 !important;background:#fff !important;cursor:text}
 .idx-name{white-space:pre-wrap;word-break:break-word}
 .idx-num-input:focus,.idx-title-input:focus{border-color:#2c5282;outline:none}
 .idx-del-row{display:inline-block;margin-top:6px;border:none;background:transparent;color:#c0392b;font-size:11px;cursor:pointer;opacity:.6;padding:2px 4px}
@@ -423,7 +426,7 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 #2c5282}
 .na-lbl input{width:14px;height:14px;cursor:pointer;flex-shrink:0}
 .idx-na-cell{text-align:center;overflow:hidden}
 .idx-na-cell .na-lbl{white-space:nowrap}
-.idx-loc,.idx-note{width:100%;border:1px solid #e9e9e7;border-radius:4px;padding:4px 6px;font-size:11px;font-family:inherit;outline:none;color:#37352f;resize:vertical;overflow:hidden;line-height:1.45;min-height:24px;white-space:pre-wrap;word-break:break-word;display:block;box-sizing:border-box}
+.idx-loc,.idx-note{width:100%;border:1px solid #e9e9e7;border-radius:4px;padding:4px 6px;font-size:12px;font-family:inherit;outline:none;color:#37352f;resize:vertical;overflow:hidden;line-height:1.45;min-height:24px;white-space:pre-wrap;word-break:break-word;display:block;box-sizing:border-box}
 .idx-loc{min-width:0}
 .idx-note{min-width:0}
 .idx-loc:focus,.idx-note:focus{border-color:#0f7b6c}
@@ -1727,12 +1730,26 @@ if(!window._dtPasteBound){
     const d=extractDate(txt);
     if(d){
       e.preventDefault();
-      if(el.type==='date') el.type='text'; // date 타입은 형식 거부하므로 text로 받고 넣기
+      if(el.type==='date') el.type='text';
       el.value=d;
       el.dispatchEvent(new Event('change',{bubbles:true}));
       setTimeout(()=>{ try{ el.blur(); }catch(_){} },0);
     }
   });
+  // Index 텍스트 칸: 평소엔 매끈한 글씨(readonly), 더블클릭하면 편집 모드
+  const IDX_EDIT_SEL='.idx-title-input,.idx-loc,.idx-note';
+  document.addEventListener('dblclick', function(e){
+    const el=e.target;
+    if(!el.matches || !el.matches(IDX_EDIT_SEL)) return;
+    el.readOnly=false; el.classList.add('idx-editing'); el.focus();
+    const v=el.value; el.value=''; el.value=v; // 커서를 맨 끝으로
+    if(typeof autoGrow==='function') autoGrow(el);
+  });
+  document.addEventListener('blur', function(e){
+    const el=e.target;
+    if(!el.matches || !el.matches(IDX_EDIT_SEL)) return;
+    el.readOnly=true; el.classList.remove('idx-editing');
+  }, true);
 }
 function calcDday(deadline){
   if(!deadline)return{days:null,cls:'',txt:''};
@@ -2023,7 +2040,7 @@ function addIndexRow(type){
   const rows=getIndexRows(type);
   rows.push({n:'', t:'', h:false, sub:null, ref:'', na:false, status:'pend', location:'', note:'', custom:true});
   saveData(); renderBody();
-  setTimeout(()=>{ const els=document.querySelectorAll('.idx-title-input'); const last=els[els.length-1]; if(last) last.focus(); },40);
+  setTimeout(()=>{ const els=document.querySelectorAll('.idx-title-input'); const last=els[els.length-1]; if(last){ last.readOnly=false; last.classList.add('idx-editing'); last.focus(); } },40);
 }
 function setIndexRowMeta(type, idx, field, val){
   const rows=getIndexRows(type); const r=rows[idx];
@@ -2772,6 +2789,7 @@ function renderIndexBody(){
   `;
   // 렌더 직후 위치/비고 textarea 높이를 내용에 맞게 조정
   wrap.querySelectorAll('.idx-loc,.idx-note,.idx-title-input,.flog-content').forEach(autoGrow);
+  wrap.querySelectorAll('.idx-title-input,.idx-loc,.idx-note').forEach(el=>{ if(!el.classList.contains('idx-editing')) el.readOnly=true; });
   setupIdxResizers();
   setupIdxTopScroll();
 }
