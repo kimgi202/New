@@ -1356,7 +1356,7 @@ function renderContractList(code){
     return `<div class="ct-card${isInit?' init':''}">
       <div class="ct-card-head">
         <input type="text" class="ct-name" value="${esc(it.label||'')}" placeholder="계약 명칭" onchange="setContractField('${code}','${it.id}','label',this.value)">
-        <input type="date" class="ct-cdate" value="${esc(it.date||'')}" onchange="setContractField('${code}','${it.id}','date',this.value)" title="계약일">
+        <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="ct-cdate" value="${esc(it.date||'')}" onchange="setContractField('${code}','${it.id}','date',this.value)" title="계약일">
         <button class="ct-del" onclick="deleteContract('${code}','${it.id}')">🗑 삭제</button>
       </div>
       <div class="ct-card-body">
@@ -1441,6 +1441,12 @@ function setField(code,secId,idx,field,val){
 }
 
 // D-day 계산
+// ── 날짜칸: 평소엔 텍스트(YYYY-MM-DD 표시), 클릭하면 네이티브 달력으로 변신 ──
+function dtFocus(el){
+  el.type='date';
+  try{ if(el.showPicker) el.showPicker(); }catch(e){}
+}
+function dtBlur(el){ el.type='text'; }
 function calcDday(deadline){
   if(!deadline)return{days:null,cls:'',txt:''};
   const today=new Date();today.setHours(0,0,0,0);
@@ -1795,7 +1801,7 @@ function filingLogRowHtml(type, idx, r){
     <div class="flog-entry flog-${e.status==='partial'?'partial':'done'}">
       <div class="flog-top">
         <input class="flog-round" value="${esc(e.round||'')}" placeholder="회차" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
-        <input type="date" class="flog-date" value="${esc(e.date||'')}" onchange="setFilingLogField('${type}',${idx},${li},'date',this.value)">
+        <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="flog-date" value="${esc(e.date||'')}" onchange="setFilingLogField('${type}',${idx},${li},'date',this.value)">
         <select class="flog-status" onchange="setFilingLogField('${type}',${idx},${li},'status',this.value)">
           <option value="done"${e.status!=='partial'?' selected':''}>완료</option>
           <option value="partial"${e.status==='partial'?' selected':''}>일부</option>
@@ -2723,7 +2729,7 @@ function renderContractPanel(code){
       </div>
       <div class="contract-field">
         <label>계약일 (시작일)</label>
-        <input type="date" value="${esc(c.contractDate||'')}" onchange="setSiteContract('${code}','contractDate',this.value)" style="min-width:130px">
+        <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(c.contractDate||'')}" onchange="setSiteContract('${code}','contractDate',this.value)" style="min-width:130px">
       </div>
       <div class="contract-field">
         <label>직접비</label>
@@ -2779,16 +2785,16 @@ function renderSectionMeta(code,sec){
   const dl = meta.craSubmitDate ? {cls:'deadline-done',txt:'✓ 완료'} : (meta.craDeadline?calcDday(meta.craDeadline):null);
   return `<div class="sec-meta">
     <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||'')}" placeholder="예: 2024-08-001" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
-    <div class="meta-field"><span>CRA 제출기한</span><div style="display:flex;gap:8px;align-items:center"><input type="date" value="${meta.craDeadline||''}" onchange="setSecMeta('${code}','${sec.id}','craDeadline',this.value)" style="width:140px">${dl&&dl.txt?`<span class="${dl.cls}">${dl.txt}</span>`:''}</div></div>
-    <div class="meta-field"><span>CRA 제출일</span><input type="date" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:150px"></div>
-    <div class="meta-field"><span>PI 제출일</span><input type="date" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:150px"></div>
-    <div class="meta-field"><span>접수일</span><input type="date" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
-    <div class="meta-field"><span>IRB 승인일</span><input type="date" value="${meta.approvalDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalDate',this.value)"></div>
-    <div class="meta-field"><span>통지일</span><input type="date" value="${meta.noticeDate||''}" onchange="setSecMeta('${code}','${sec.id}','noticeDate',this.value)"></div>
+    <div class="meta-field"><span>CRA 제출기한</span><div style="display:flex;gap:8px;align-items:center"><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.craDeadline||''}" onchange="setSecMeta('${code}','${sec.id}','craDeadline',this.value)" style="width:140px">${dl&&dl.txt?`<span class="${dl.cls}">${dl.txt}</span>`:''}</div></div>
+    <div class="meta-field"><span>CRA 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:150px"></div>
+    <div class="meta-field"><span>PI 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:150px"></div>
+    <div class="meta-field"><span>접수일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
+    <div class="meta-field"><span>IRB 승인일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.approvalDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalDate',this.value)"></div>
+    <div class="meta-field"><span>통지일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.noticeDate||''}" onchange="setSecMeta('${code}','${sec.id}','noticeDate',this.value)"></div>
     <div class="meta-field"><span>IRB 승인 기간</span><div style="display:flex;gap:6px;align-items:center">
-      <input type="date" value="${meta.approvalStartDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalStartDate',this.value)" style="width:120px">
+      <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.approvalStartDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalStartDate',this.value)" style="width:120px">
       <span style="color:#999">~</span>
-      <input type="date" value="${meta.approvalEndDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalEndDate',this.value)" style="width:120px">
+      <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.approvalEndDate||''}" onchange="setSecMeta('${code}','${sec.id}','approvalEndDate',this.value)" style="width:120px">
     </div></div>
     ${renderResubmits(code,sec)}
   </div>`;
@@ -2806,9 +2812,9 @@ function renderResubmits(code,sec){
       <span class="rs-label">${reLabel(i)}</span>
       <textarea class="rs-op" rows="1" placeholder="행정검토 의견 / 보완 요청 내용" oninput="autoGrow(this)" onchange="setResubmit('${code}','${sec.id}','${it.id}','opinion',this.value)">${esc(it.opinion||'')}</textarea>
       <span class="rs-sub">CRA 재제출</span>
-      <input type="date" class="rs-date" value="${esc(it.craDate||it.date||'')}" onchange="setResubmit('${code}','${sec.id}','${it.id}','craDate',this.value)" title="CRA 재제출일">
+      <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="rs-date" value="${esc(it.craDate||it.date||'')}" onchange="setResubmit('${code}','${sec.id}','${it.id}','craDate',this.value)" title="CRA 재제출일">
       <span class="rs-sub">PI 재제출</span>
-      <input type="date" class="rs-date" value="${esc(it.piDate||'')}" onchange="setResubmit('${code}','${sec.id}','${it.id}','piDate',this.value)" title="PI 재제출일">
+      <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="rs-date" value="${esc(it.piDate||'')}" onchange="setResubmit('${code}','${sec.id}','${it.id}','piDate',this.value)" title="PI 재제출일">
       <button class="rs-del" onclick="delResubmit('${code}','${sec.id}','${it.id}')" title="삭제">🗑</button>
     </div>`).join('');
   return `<div class="rs-box">
@@ -2858,7 +2864,7 @@ function rowHtml(code,secId,idx,row,total){
       )
       :na()
     }</td>
-    <td>${row.needVer&&!row.name.includes('변경대비표')?`<input type="date" class="date-input" value="${row.effectiveDate||''}" onchange="${setter},'effectiveDate',this.value)">`:na()}</td>
+    <td>${row.needVer&&!row.name.includes('변경대비표')?`<input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="date-input" value="${row.effectiveDate||''}" onchange="${setter},'effectiveDate',this.value)">`:na()}</td>
     <td><select class="sel ${stCls(row.status)}" onchange="onSelChange(this,'${code}','${secId}',${idx})">
       ${stOpts(row.status)}
     </select></td>
