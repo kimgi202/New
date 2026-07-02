@@ -1397,33 +1397,51 @@ function renderInterimReportable(code,sec,meta){
     ${badge}
   </div></div>`;
 }
-// ── IRB 심의 이력 (포털 표 붙여넣기 대응) ──
+// ── IRB 심의 이력 (포털 표를 "그대로" 복제하는 동적 표) ──
 const irbHistOpen={};
-function getIrbHistory(code){ const site=sites.find(s=>s.code===code); if(!site) return []; if(!site.irbHistory) site.irbHistory=[]; return site.irbHistory; }
+const IH_DEFAULT_COLS=['접수번호','접수일','문서구분','심의패널','구분','심의일','심의결과','심의상태'];
+// 컬럼 너비: 컬럼 "이름" 기준으로 기억 (컬럼이 바뀌어도 유지)
+let ihColW=(function(){ try{ const v=JSON.parse(localStorage.getItem('ihColW_v2')); if(v&&typeof v==='object') return v; }catch(e){} return {}; })();
+function saveIhColW(){ try{ localStorage.setItem('ihColW_v2', JSON.stringify(ihColW)); }catch(e){} }
+function ihW(name){ return Math.max(42, ihColW[name]||120); }
+let ihSort={}; // {code:{col:idx, dir:'asc'|'desc'}}
+
+function getIrbHist(code){
+  const site=sites.find(s=>s.code===code); if(!site) return {cols:[],rows:[]};
+  if(!site.irbHist){
+    // 구버전(고정 8필드 객체 배열) → 동적 구조로 1회 변환
+    if(Array.isArray(site.irbHistory) && site.irbHistory.length){
+      const map=[['recvNo','접수번호'],['recvDate','접수일'],['docType','문서구분'],['panel','심의패널'],['kind','구분'],['reviewDate','심의일'],['result','심의결과'],['state','심의상태']];
+      site.irbHist={cols:map.map(m=>m[1]), rows:site.irbHistory.map(o=>map.map(m=>o[m[0]]||''))};
+    } else {
+      site.irbHist={cols:[],rows:[]};
+    }
+  }
+  return site.irbHist;
+}
 function toggleIrbHist(code){ irbHistOpen[code]=!irbHistOpen[code]; renderBody(); }
-function setIrbHistField(code,i,f,v){ const arr=getIrbHistory(code); if(!arr[i]) return; if(f==='recvDate'||f==='reviewDate') v=normDateStr(v); arr[i][f]=v; saveData(); if(f==='recvDate'||f==='reviewDate') renderBody(); }
-function delIrbHistRow(code,i){ const arr=getIrbHistory(code); if(!arr[i]) return; if(!confirm('이 심의 이력을 삭제할까요?')) return; arr.splice(i,1); saveData(); renderBody(); }
+function setIhCell(code,ri,ci,v){ const H=getIrbHist(code); if(!H.rows[ri]) return; v=normDateStr(v); H.rows[ri][ci]=v; saveData(); }
+function delIhRow(code,ri){ const H=getIrbHist(code); if(!H.rows[ri]) return; if(!confirm('이 줄을 삭제할까요?')) return; H.rows.splice(ri,1); saveData(); renderBody(); }
+function addIhRow(code){ const H=getIrbHist(code); if(!H.cols.length) H.cols=IH_DEFAULT_COLS.slice(); H.rows.push(H.cols.map(()=> '')); saveData(); renderBody(); }
 function clearIrbHist(code){
-  const arr=getIrbHistory(code);
-  if(!arr.length){ alert('삭제할 이력이 없어요.'); return; }
-  if(!confirm(`이 기관의 심의 이력 ${arr.length}건을 모두 삭제할까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
-  arr.length=0; saveData(); renderBody();
+  const H=getIrbHist(code);
+  if(!H.rows.length){ alert('삭제할 이력이 없어요.'); return; }
+  if(!confirm(`이 기관의 심의 이력 ${H.rows.length}건을 모두 삭제할까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  H.rows.length=0; H.cols.length=0; saveData(); renderBody();
   showToastNow('✓ 심의 이력을 모두 삭제했어요');
 }
-function addIrbHistRow(code){ getIrbHistory(code).push({recvNo:'',recvDate:'',docType:'',panel:'',kind:'',reviewDate:'',result:'',state:''}); saveData(); renderBody(); }
-function sortIrbHist(code,dir){ ihSortKey='recvDate'; ihSortDir=dir; const arr=getIrbHistory(code); arr.forEach(r=>{ r.recvDate=normDateStr(r.recvDate); r.reviewDate=normDateStr(r.reviewDate); }); arr.sort((a,b)=>{ const x=a.recvDate||'', y=b.recvDate||''; return dir==='asc' ? x.localeCompare(y) : y.localeCompare(x); }); saveData(); renderBody(); }
-// ── 심의 이력: 컬럼 너비 조절 + 컬럼별 앞뒤 정렬 ──
-const IH_COLS=[['recvNo','접수번호'],['recvDate','접수일'],['docType','문서구분'],['panel','심의패널'],['kind','구분'],['reviewDate','심의일'],['result','심의결과'],['state','심의상태']];
-const IH_COL_DEFAULT=[105,85,185,75,50,85,70,70];
-let ihColW=(function(){ try{ const v=JSON.parse(localStorage.getItem('ihColW_v1')); if(Array.isArray(v)&&v.length===8) return v.map(Number); }catch(e){} return IH_COL_DEFAULT.slice(); })();
-function saveIhColW(){ try{ localStorage.setItem('ihColW_v1', JSON.stringify(ihColW)); }catch(e){} }
-function ihTableWidth(){ return 28+30+ihColW.reduce((a,b)=>a+b,0); }
-let ihSortKey='', ihSortDir='asc';
-function sortIrbHistBy(code,key){
-  if(ihSortKey===key){ ihSortDir=ihSortDir==='asc'?'desc':'asc'; } else { ihSortKey=key; ihSortDir='asc'; }
-  const arr=getIrbHistory(code);
-  arr.forEach(r=>{ r.recvDate=normDateStr(r.recvDate); r.reviewDate=normDateStr(r.reviewDate); });
-  arr.sort((a,b)=>{ const c=String(a[key]||'').localeCompare(String(b[key]||''),'ko',{numeric:true}); return ihSortDir==='asc'?c:-c; });
+function sortIhBy(code,ci){
+  const H=getIrbHist(code); const s=ihSort[code]||{col:-1,dir:'asc'};
+  if(s.col===ci){ s.dir = s.dir==='asc'?'desc':'asc'; } else { s.col=ci; s.dir='asc'; }
+  ihSort[code]=s;
+  H.rows.sort((a,b)=>{ const c=String(a[ci]||'').localeCompare(String(b[ci]||''),'ko',{numeric:true}); return s.dir==='asc'?c:-c; });
+  saveData(); renderBody();
+}
+function sortIrbHist(code,dir){ // 접수일(또는 첫 날짜류 컬럼) 기준 단축 정렬
+  const H=getIrbHist(code);
+  let ci=H.cols.findIndex(c=>/접수일/.test(c)); if(ci<0) ci=H.cols.findIndex(c=>/일$|일자|날짜/.test(c)); if(ci<0) ci=0;
+  ihSort[code]={col:ci,dir};
+  H.rows.sort((a,b)=>{ const x=String(a[ci]||''), y=String(b[ci]||''); return dir==='asc'?x.localeCompare(y):y.localeCompare(x); });
   saveData(); renderBody();
 }
 function setupIhResizers(){
@@ -1432,9 +1450,9 @@ function setupIhResizers(){
       h.onclick=e=>e.stopPropagation();
       h.onpointerdown=e=>{
         e.preventDefault(); e.stopPropagation();
-        const ci=+h.dataset.ci, startX=e.clientX, startW=ihColW[ci];
+        const name=h.dataset.col, ci=+h.dataset.ci, startX=e.clientX, startW=ihW(name);
         const col=table.querySelectorAll('colgroup col')[ci+1];
-        const move=ev=>{ ihColW[ci]=Math.max(42,startW+(ev.clientX-startX)); if(col) col.style.width=ihColW[ci]+'px'; table.style.width=ihTableWidth()+'px'; };
+        const move=ev=>{ ihColW[name]=Math.max(42,startW+(ev.clientX-startX)); if(col) col.style.width=ihColW[name]+'px'; };
         const up=()=>{ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); saveIhColW(); };
         document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
       };
@@ -1443,57 +1461,38 @@ function setupIhResizers(){
 }
 // 날짜 자동 변환: "2023.03.31" "2023. 03. 31." "2023/3/31" "2023년 3월 31일" → "2023-03-31"
 function normDateStr(s){
-  s=(s||'').trim();
-  if(!s) return s;
+  s=(s||'').trim(); if(!s) return s;
   const m=s.match(/^(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})[.일\s]*$/);
   if(!m) return s;
   return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
 }
-// 헤더 줄에서 컬럼 위치 자동 인식 (포털마다 컬럼 순서가 달라도 맞춰 넣기)
-function ihHeaderMap(cells){
-  const map={}; let hits=0;
-  cells.forEach((raw,i)=>{
-    const h=(raw||'').replace(/[▲▼\s]/g,'');
-    let f=null;
-    if(h.includes('접수번호')) f='recvNo';
-    else if(h.includes('접수일')) f='recvDate';
-    else if(h.includes('문서구분')) f='docType';
-    else if(h.includes('패널')) f='panel';
-    else if(h.includes('심의구분')||h==='구분') f='kind';
-    else if(h.includes('심의결과')) f='result';
-    else if(h.includes('심의상태')||h.includes('진행상태')) f='state';
-    else if(h.includes('심의일')) f='reviewDate';
-    else if(h.includes('신청일')) f='_apply';
-    if(f && !(f in map)){ map[f]=i; if(f!=='_apply') hits++; }
-  });
-  return hits>=3 ? {map, len:cells.length} : null;
+// 붙여넣은 표를 "있는 그대로" 파싱: 제목 줄 = 컬럼, 나머지 = 데이터
+function splitCells(l){ let c=l.split('\t'); if(c.length<2) c=l.trim().split(/\s{2,}/); return c.map(x=>x.trim()); }
+function looksLikeHeader(cells){
+  const hasTitleWord=cells.some(x=>/접수|심의|구분|유형|신청|결과|상태|통보|번호|일자|패널|비고|날짜|위원/.test(x));
+  const hasData=cells.some(x=>/^\d{4}[-.\/]\d/.test(x)); // 날짜/접수번호처럼 숫자로 시작
+  return hasTitleWord && !hasData;
 }
 function parseIrbHistPaste(text){
-  const out=[];
-  let hdr=null; // 헤더가 있으면 컬럼 위치 기준으로 매핑
-  (text||'').split(/\r?\n/).forEach(line=>{
-    if(!line.trim()) return;
-    let cells=line.split('\t').map(c=>c.trim());
-    if(cells.length<3) cells=line.trim().split(/\s{2,}/).map(c=>c.trim()); // 탭이 아니면 공백 2칸 이상으로
-    // ① 헤더 줄이면 → 컬럼 지도 기억하고 넘어감
-    if(!hdr){ const h=ihHeaderMap(cells); if(h){ hdr=h; return; } }
-    else { const h2=ihHeaderMap(cells); if(h2) return; } // 중복 헤더 줄 스킵
-    if(['접수번호','문서구분','건수'].includes(cells[0])) return; // 예비 헤더 스킵
-    if(hdr){
-      // ② 헤더 기준 매핑 (앞에 순번 열이 하나 더 붙은 경우 자동 보정)
-      const off=(cells.length-hdr.len===1 && /^\d{1,3}$/.test(cells[0]))?1:0;
-      const g=f=> hdr.map[f]!=null ? (cells[hdr.map[f]+off]||'') : '';
-      if(!g('recvNo') && !g('docType')) return;
-      out.push({recvNo:g('recvNo'), recvDate:normDateStr(g('recvDate')||g('_apply')), docType:g('docType'), panel:g('panel'), kind:g('kind'), reviewDate:normDateStr(g('reviewDate')), result:g('result'), state:g('state')});
-      return;
-    }
-    // ③ 헤더가 없으면 기존 순서 방식
-    if(cells.length && /^\d{1,3}$/.test(cells[0]) && cells.length>=8) cells=cells.slice(1); // 맨 앞 순번 제거
-    if(cells.length<2) return;
-    const [recvNo='',recvDate='',docType='',panel='',kind='',reviewDate='',result='',state='']=cells;
-    out.push({recvNo,recvDate:normDateStr(recvDate),docType,panel,kind,reviewDate:normDateStr(reviewDate),result,state});
-  });
-  return out;
+  const lines=(text||'').split(/\r?\n/).filter(l=>l.trim()!=='');
+  if(!lines.length) return null;
+  let cols=null, start=0;
+  const first=splitCells(lines[0]);
+  if(looksLikeHeader(first)){ cols=first.map(x=>x.replace(/[▲▼]/g,'').trim()); start=1; }
+  let rows=[];
+  for(let i=start;i<lines.length;i++){
+    const cells=splitCells(lines[i]);
+    if(cols && looksLikeHeader(cells)) continue; // 중간에 낀 제목 줄 스킵
+    rows.push(cells);
+  }
+  if(!cols){ cols=IH_DEFAULT_COLS.slice(); }
+  // 앞에 순번(1,2,3) 열이 더 붙었으면 제거
+  rows=rows.map(c=> (c.length===cols.length+1 && /^\d{1,3}$/.test(c[0])) ? c.slice(1) : c);
+  // 날짜류 셀 정규화 + 컬럼 수 맞추기 + 빈 줄 제거
+  rows=rows.map(r=>r.map(v=>normDateStr(v)))
+           .map(r=>{ const rr=r.slice(0,cols.length); while(rr.length<cols.length) rr.push(''); return rr; })
+           .filter(r=>r.some(x=>x&&x.trim()));
+  return {cols, rows};
 }
 let pendingIrbPaste=null;
 function openIrbPaste(code){
@@ -1503,9 +1502,9 @@ function openIrbPaste(code){
   m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeIrbPaste()">
     <div class="snap-modal" style="width:560px">
       <h3>📋 심의 이력 붙여넣기</h3>
-      <div class="snap-desc">IRB 포털의 심의이력 표를 <b>제목 줄(접수번호·문서구분...)까지 포함해서</b> 드래그 복사(Ctrl+C)한 뒤, 아래에 <b>붙여넣기(Ctrl+V)</b> 해주세요.<br>💡 제목 줄이 있으면 포털마다 컬럼 순서가 달라도 <b>자동으로 맞춰</b> 넣어드려요!</div>
-      <textarea id="ihPasteTxt" class="ih-paste-txt" placeholder="접수번호\t접수일\t문서구분\t...\n2023-0213-017\t2026-06-26\t계획변경심의의뢰서\t..." rows="8"></textarea>
-      <label class="ih-replace-chk"><input type="checkbox" id="ihReplaceChk"> 기존 이력을 지우고 새로 넣기 <span>(체크 안 하면 기존 뒤에 이어붙어요)</span></label>
+      <div class="snap-desc"><b>제목 줄부터 마지막 행까지</b> 드래그해서 복사(Ctrl+C)한 뒤 아래에 붙여넣기(Ctrl+V) 하세요.<br>💡 붙여넣은 <b>표의 제목과 칸이 그대로</b> 만들어져요 — 필요 없는 칸은 안 생기고, 있는 칸은 다 담겨요!</div>
+      <textarea id="ihPasteTxt" class="ih-paste-txt" placeholder="접수번호  심의유형  신청일  접수일  심의일  진행상태  심의결과  결과통보일\n2025-1118  변경  2025-03-11  2025-03-12  ..." rows="8"></textarea>
+      <label class="ih-replace-chk"><input type="checkbox" id="ihReplaceChk" checked> 기존 이력을 지우고 새로 넣기 <span>(체크 해제 시 뒤에 이어붙임)</span></label>
       <div class="snap-acts">
         <button class="ih-save-btn" onclick="applyIrbPasteSave()">💾 저장</button>
         <button class="snap-cancel" onclick="closeIrbPaste()">취소</button>
@@ -1515,52 +1514,56 @@ function openIrbPaste(code){
   setTimeout(()=>{ const t=document.getElementById('ihPasteTxt'); if(t) t.focus(); },50);
 }
 function closeIrbPaste(){ const m=document.getElementById('irbPasteModal'); if(m) m.innerHTML=''; pendingIrbPaste=null; }
-function applyIrbPasteSave(){ const mode=document.getElementById('ihReplaceChk')?.checked?'replace':'append'; applyIrbPaste(mode); }
+function applyIrbPasteSave(){ const replace=document.getElementById('ihReplaceChk')?.checked; applyIrbPaste(replace?'replace':'append'); }
 function applyIrbPaste(mode){
   const code=pendingIrbPaste; if(!code) return;
   const txt=document.getElementById('ihPasteTxt')?.value||'';
-  const rows=parseIrbHistPaste(txt);
-  if(!rows.length){ alert('붙여넣은 내용에서 이력을 찾지 못했어요.\n포털 표를 드래그 복사해서 그대로 붙여넣어 주세요.'); return; }
-  const arr=getIrbHistory(code);
-  if(mode==='replace'){
-    if(arr.length && !confirm(`기존 ${arr.length}건을 지우고 새로 ${rows.length}건을 넣을까요?`)) return;
-    arr.length=0;
+  const parsed=parseIrbHistPaste(txt);
+  if(!parsed||!parsed.rows.length){ alert('붙여넣은 내용에서 표를 찾지 못했어요.\n제목 줄부터 함께 드래그해서 복사·붙여넣기 해주세요.'); return; }
+  const H=getIrbHist(code);
+  if(mode==='replace' || !H.cols.length){
+    H.cols=parsed.cols.slice(); H.rows=parsed.rows.map(r=>r.slice());
+  } else {
+    // 이어붙이기: 기존 컬럼 수에 맞춰 채워 넣음
+    parsed.rows.forEach(r=>{ const rr=r.slice(0,H.cols.length); while(rr.length<H.cols.length) rr.push(''); H.rows.push(rr); });
   }
-  rows.forEach(r=>arr.push(r));
   closeIrbPaste(); saveData(); irbHistOpen[code]=true; renderBody();
-  showToastNow(`✓ 심의 이력 ${rows.length}건을 불러왔어요`);
+  showToastNow(`✓ 심의 이력 ${parsed.rows.length}건을 불러왔어요`);
 }
 function renderIrbHistory(code){
-  const arr=getIrbHistory(code);
+  const H=getIrbHist(code);
   const open=!!irbHistOpen[code];
-  const pending=arr.filter(r=>(r.state||'').includes('심의중')).length;
+  const stateIdx=H.cols.findIndex(c=>/상태/.test(c));
+  const pending = stateIdx>=0 ? H.rows.filter(r=>(r[stateIdx]||'').includes('심의중')).length : 0;
   const head=`<div class="ih-head" onclick="toggleIrbHist('${code}')">
     <span class="contract-panel-chevron${open?' open':''}">▶</span>
     <span class="ih-title">📜 IRB 심의 이력</span>
-    <span class="ih-cnt">${arr.length}건${pending?` · <b class="ih-pend-cnt">심의중 ${pending}</b>`:''}</span>
+    <span class="ih-cnt">${H.rows.length}건${pending?` · <b class="ih-pend-cnt">심의중 ${pending}</b>`:''}</span>
   </div>`;
   if(!open) return `<div class="irb-hist">${head}</div>`;
-  const cell=(i,f,v)=>`<td><input class="ih-in" value="${esc(v||'')}" onchange="setIrbHistField('${code}',${i},'${f}',this.value)"></td>`;
-  const rows=arr.map((r,i)=>`<tr class="${(r.state||'').includes('심의중')?'ih-pending':''}">
-    <td class="ih-idx">${i+1}</td>
-    ${IH_COLS.map(([f])=>cell(i,f,r[f])).join('')}
-    <td><button class="ih-del" onclick="delIrbHistRow('${code}',${i})" title="삭제">✕</button></td>
+  const s=ihSort[code]||{col:-1,dir:'asc'};
+  const tableW = 28 + 30 + H.cols.reduce((a,c)=>a+ihW(c),0);
+  const ths=H.cols.map((c,ci)=>`<th onclick="sortIhBy('${code}',${ci})" title="클릭 정렬 (오른쪽 끝 드래그=너비 조절)">${esc(c)}${s.col===ci?(s.dir==='asc'?' ▲':' ▼'):''}<span class="ih-rsz" data-ci="${ci}" data-col="${esc(c)}"></span></th>`).join('');
+  const colg=`<colgroup><col style="width:28px">${H.cols.map(c=>`<col style="width:${ihW(c)}px">`).join('')}<col style="width:30px"></colgroup>`;
+  const body=H.rows.map((r,ri)=>`<tr class="${stateIdx>=0&&(r[stateIdx]||'').includes('심의중')?'ih-pending':''}">
+    <td class="ih-idx">${ri+1}</td>
+    ${H.cols.map((c,ci)=>`<td><input class="ih-in" value="${esc(r[ci]||'')}" onchange="setIhCell('${code}',${ri},${ci},this.value)"></td>`).join('')}
+    <td><button class="ih-del" onclick="delIhRow('${code}',${ri})" title="삭제">✕</button></td>
   </tr>`).join('');
-  const ths=IH_COLS.map(([k,label],ci)=>`<th onclick="sortIrbHistBy('${code}','${k}')" title="클릭해서 정렬 (다시 클릭하면 반대로)">${label}${ihSortKey===k?(ihSortDir==='asc'?' ▲':' ▼'):''}<span class="ih-rsz" data-ci="${ci}"></span></th>`).join('');
   return `<div class="irb-hist">${head}
     <div class="ih-body">
       <div class="ih-btns">
         <button class="btn" onclick="openIrbPaste('${code}')">📋 표 붙여넣기</button>
-        <button class="btn" onclick="addIrbHistRow('${code}')">+ 행 추가</button>
+        <button class="btn" onclick="addIhRow('${code}')">+ 행 추가</button>
         <button class="btn" onclick="sortIrbHist('${code}','desc')" title="접수일 최신이 위로">↓ 최신순</button>
         <button class="btn" onclick="sortIrbHist('${code}','asc')" title="접수일 오래된 것이 위로">↑ 오래된순</button>
         <button class="ih-clear" onclick="clearIrbHist('${code}')" title="이 기관의 심의 이력 전체 삭제">🗑️ 전체 삭제</button>
       </div>
-      ${arr.length?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table" style="width:${ihTableWidth()}px">
-        <colgroup><col style="width:28px">${ihColW.map(w=>`<col style="width:${w}px">`).join('')}<col style="width:30px"></colgroup>
+      ${H.rows.length?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table" style="width:${tableW}px">
+        ${colg}
         <thead><tr><th></th>${ths}<th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>`:`<div class="ih-empty">아직 이력이 없어요. <b>📋 표 붙여넣기</b>로 포털 심의이력을 한 번에 넣을 수 있어요!</div>`}
+        <tbody>${body}</tbody>
+      </table></div>`:`<div class="ih-empty">아직 이력이 없어요. <b>📋 표 붙여넣기</b>로 포털 심의이력을 통째로 넣을 수 있어요!</div>`}
     </div>
   </div>`;
 }
