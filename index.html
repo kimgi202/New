@@ -196,7 +196,9 @@ tr:hover td{background:#f7f7f5}
 .rs-add{margin-top:2px}
 .meta-field{display:flex;align-items:center;gap:5px;font-size:11px;color:#787774;background:#fafafa;border:1px solid #e9e9e7;border-radius:6px;padding:5px 7px}
 .meta-field input{font-size:12px;border:1px solid #e9e9e7;border-radius:4px;padding:3px 5px;background:#fff;color:#37352f;outline:none;width:116px}
-.meta-field input:focus{border-color:#0f7b6c}
+.meta-field:focus{border-color:#0f7b6c}
+.meta-irbno{background:#eef4fb;border-color:#c5d9f0}
+.meta-irbno span{color:#2c5282;font-weight:700}
 .linked-dates{display:flex;gap:6px;align-items:center;white-space:nowrap;font-size:11px}
 .linked-date{background:#f7f7f5;border:1px solid #e9e9e7;border-radius:5px;padding:3px 6px;color:#555}
 .linked-date b{color:#0f7b6c;font-weight:600}
@@ -240,7 +242,7 @@ tr:hover td{background:#f7f7f5}
 .ct-card-head .ct-name:focus{border-color:#0f7b6c;background:#fff}
 .ct-card-head .ct-cdate{border:1px solid #e9e9e7;border-radius:6px;padding:7px 9px;font-size:12px;font-family:inherit;color:#37352f;outline:none}
 .ct-card-head .ct-cdate:focus{border-color:#0f7b6c}
-.ct-card-body{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.ct-card-body{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-start}
 .ct-amount-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .ct-pct{width:60px!important;min-width:60px!important;text-align:right}
 .ct-calc{font-size:11px;color:#0f7b6c;font-weight:700;min-height:14px;margin-top:2px}
@@ -790,6 +792,31 @@ function getInitialDocsForCurrentProtocol(){
 // ── 섹션 템플릿 ─────────────────────────────────────────────────
 const TMPL = {
   initial: { emoji:'🗂️', name:'초기심의', docs:[]},
+  newplan: { emoji:'🆕', name:'신규계획', docs:[
+    {name:'신규계획 신청서', dtype:'app',     needVer:false},
+    {name:'신규계획 의뢰서', dtype:'req',     needVer:false},
+    {name:'연구계획서',      dtype:'doc',     needVer:true},
+    {name:'동의서',          dtype:'consent', needVer:true},
+    {name:'신규계획 승인서', dtype:'doc',     needVer:false},
+  ]},
+  correction: { emoji:'🛠️', name:'시정보고', docs:[
+    {name:'시정보고 신청서', dtype:'app', needVer:false},
+    {name:'시정보고 의뢰서', dtype:'req', needVer:false},
+    {name:'시정보고서 본문', dtype:'doc', needVer:false},
+    {name:'시정보고 접수증', dtype:'doc', needVer:false},
+  ]},
+  supplement: { emoji:'📎', name:'보완보고', docs:[
+    {name:'보완보고 신청서', dtype:'app', needVer:false},
+    {name:'보완보고 의뢰서', dtype:'req', needVer:false},
+    {name:'보완자료',        dtype:'doc', needVer:false},
+    {name:'보완보고 접수증', dtype:'doc', needVer:false},
+  ]},
+  reply: { emoji:'💬', name:'답변보고', docs:[
+    {name:'답변보고 신청서', dtype:'app', needVer:false},
+    {name:'답변보고 의뢰서', dtype:'req', needVer:false},
+    {name:'답변서 본문',     dtype:'doc', needVer:false},
+    {name:'답변보고 접수증', dtype:'doc', needVer:false},
+  ]},
   change: { emoji:'🔄', name:'변경보고', docs:[
     {name:'변경보고 신청서',   dtype:'app',     needVer:false},
     {name:'변경보고 의뢰서',   dtype:'req',     needVer:false},
@@ -799,11 +826,29 @@ const TMPL = {
     {name:'첨부문서 (변경)',   dtype:'doc',     needVer:true},
     {name:'변경보고 승인서',   dtype:'doc',     needVer:false},
   ]},
+  fundchange: { emoji:'💰', name:'연구비 변경보고', docs:[
+    {name:'연구비 변경보고 신청서', dtype:'app', needVer:false},
+    {name:'연구비 변경보고 의뢰서', dtype:'req', needVer:false},
+    {name:'변경 연구비 내역서',     dtype:'doc', needVer:false},
+    {name:'연구비 변경 승인서',     dtype:'doc', needVer:false},
+  ]},
   interim: { emoji:'📊', name:'중간보고', docs:[
     {name:'중간보고서 신청서', dtype:'app', needVer:false},
     {name:'중간보고서 의뢰서', dtype:'req', needVer:false},
     {name:'중간보고서 본문',   dtype:'doc', needVer:false},
     {name:'중간보고 접수증',   dtype:'doc', needVer:false},
+  ]},
+  unexpected: { emoji:'🚨', name:'예상하지 못한 문제 보고', docs:[
+    {name:'예상하지 못한 문제 보고 신청서', dtype:'app', needVer:false},
+    {name:'예상하지 못한 문제 보고 의뢰서', dtype:'req', needVer:false},
+    {name:'문제 보고서 본문',               dtype:'doc', needVer:false},
+    {name:'예상하지 못한 문제 보고 접수증', dtype:'doc', needVer:false},
+  ]},
+  suspend: { emoji:'⏸️', name:'중지보고', docs:[
+    {name:'중지보고 신청서', dtype:'app', needVer:false},
+    {name:'중지보고 의뢰서', dtype:'req', needVer:false},
+    {name:'중지보고서 본문', dtype:'doc', needVer:false},
+    {name:'중지보고 접수증', dtype:'doc', needVer:false},
   ]},
   close: { emoji:'🔚', name:'종료보고', docs:[
     {name:'종료보고 신청서',   dtype:'app', needVer:false},
@@ -1227,17 +1272,17 @@ function deleteContract(code,id){
 }
 function ctNum(s){ const n=parseFloat(String(s==null?'':s).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
 function ctWon(n){ return Math.round(n).toLocaleString('ko-KR'); }
-// 연구비 = 계약금액 + 간접비(N%) + VAT 10%[(계약금액+간접비)의 10%]  → 자동 계산 문구 생성
+// 총 연구비 = 직접비 + 간접비(N%) + VAT 10%[(직접비+간접비)의 10%]  → 자동 계산 문구 생성
 function ctCalcText(base, vat, indirectPct){
   if(!(base>0)) return '';
   const indAmt = base*(ctNum(indirectPct)/100);
-  const vatAmt = vat ? (base+indAmt)*0.1 : 0;   // VAT = (계약금액+간접비)×10%
+  const vatAmt = vat ? (base+indAmt)*0.1 : 0;   // VAT = (직접비+간접비)×10%
   const total = base + indAmt + vatAmt;
-  let parts=[];
+  let parts=['직접비 '+ctWon(base)];
   if(ctNum(indirectPct)>0) parts.push('간접비 '+ctWon(indAmt));
   if(vat) parts.push('VAT '+ctWon(vatAmt));
-  const detail = parts.length? ' ('+parts.join(' + ')+')' : '';
-  return '연구비 ₩'+ctWon(total)+detail;
+  const detail = ' ('+parts.join(' + ')+')';
+  return '총 연구비 ₩'+ctWon(total)+detail;
 }
 function updateCalc(id){
   const amt=document.getElementById('amt_'+id);
@@ -1258,7 +1303,7 @@ function renderContractList(code){
     const calc=ctCalcText(ctNum(it.amount), it.vat, it.indirect);
     const amountBlock=`
       <div class="contract-field" style="flex:1;min-width:200px">
-        <label>계약 금액</label>
+        <label>직접비</label>
         <div class="ct-amount-row">
           <input type="text" id="amt_${it.id}" value="${esc(it.amount||'')}" placeholder="예: 3,000,000" oninput="updateCalc('${it.id}')" onchange="setContractField('${code}','${it.id}','amount',this.value)" style="min-width:130px">
           <label class="ct-chk"><input type="checkbox" id="vat_${it.id}" ${it.vat?'checked':''} onchange="setContractField('${code}','${it.id}','vat',this.checked);updateCalc('${it.id}')">VAT 10%</label>
@@ -1316,7 +1361,7 @@ function renderContractList(code){
   return `<div class="contract-list">
     <div class="contract-list-head" onclick="toggleContractList('${code}')">
       <span class="clh-chev${open?' open':''}">▶</span>
-      <span class="clh-title">📑 계약 관리 <span class="clh-sub">· VAT·간접비 입력 시 연구비 자동 계산</span></span>
+      <span class="clh-title">📑 계약 관리 <span class="clh-sub">· VAT·간접비 입력 시 총 연구비 자동 계산</span></span>
       ${arr.length?`<span style="font-size:11px;color:#787774">${arr.length}건</span>`:''}
     </div>
     ${open?`<div class="contract-list-body">
@@ -2633,7 +2678,7 @@ function renderContractPanel(code){
         <input type="date" value="${esc(c.contractDate||'')}" onchange="setSiteContract('${code}','contractDate',this.value)" style="min-width:130px">
       </div>
       <div class="contract-field">
-        <label>계약 금액</label>
+        <label>직접비</label>
         <input placeholder="예: 3,500,000원" value="${esc(c.amount||'')}" onchange="setSiteContract('${code}','amount',this.value)" style="min-width:130px">
       </div>
       <div class="contract-field">
@@ -2685,6 +2730,7 @@ function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
   const dl=meta.craDeadline?calcDday(meta.craDeadline):null;
   return `<div class="sec-meta">
+    <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||'')}" placeholder="예: 2024-08-001" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
     <div class="meta-field"><span>CRA 제출기한</span><div style="display:flex;gap:8px;align-items:center"><input type="date" value="${meta.craDeadline||''}" onchange="setSecMeta('${code}','${sec.id}','craDeadline',this.value)" style="width:140px">${dl&&dl.txt?`<span class="${dl.cls}">${dl.txt}</span>`:''}</div></div>
     <div class="meta-field"><span>제출일</span><div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:#666;min-width:60px">CRA</span><input type="date" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:120px"><span style="font-size:12px;color:#666;min-width:50px">PI</span><input type="date" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:120px"></div></div>
     <div class="meta-field"><span>접수일</span><input type="date" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
@@ -2799,8 +2845,15 @@ function renderSecForm(){
     <div class="sec-form-title">섹션 추가</div>
     <div class="sec-type-btns">
       <button class="sec-type-btn" onclick="doAddSection('initial')">🗂️ 초기심의</button>
+      <button class="sec-type-btn" onclick="doAddSection('newplan')">🆕 신규계획</button>
+      <button class="sec-type-btn" onclick="doAddSection('correction')">🛠️ 시정보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('supplement')">📎 보완보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('reply')">💬 답변보고</button>
       <button class="sec-type-btn" onclick="doAddSection('change')">🔄 변경보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('fundchange')">💰 연구비 변경보고</button>
       <button class="sec-type-btn" onclick="doAddSection('interim')">📊 중간보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('unexpected')">🚨 예상하지 못한 문제 보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('suspend')">⏸️ 중지보고</button>
       <button class="sec-type-btn" onclick="doAddSection('close')">🔚 종료보고</button>
       <button class="sec-type-btn" onclick="doAddSection('result')">📑 결과보고</button>
       <button class="sec-type-btn" onclick="doAddSection('violation')">⚠️ 위반보고</button>
