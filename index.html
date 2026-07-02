@@ -1706,6 +1706,34 @@ function dtFocus(el){
   try{ if(el.showPicker) el.showPicker(); }catch(e){}
 }
 function dtBlur(el){ el.type='text'; }
+// 텍스트로 복사한 날짜를 붙여넣기 지원: "2025.04.06" "2025년 4월 6일" "2025-04-06 승인" 등에서 날짜 추출
+function extractDate(s){
+  s=(s||'').trim(); if(!s) return '';
+  const n=normDateStr(s);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(n)) return n;
+  const m=s.match(/(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})/);
+  if(m) return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  return '';
+}
+// 날짜칸 전역 붙여넣기 처리 (14개 칸 + 앞으로 추가될 칸까지 자동 적용)
+if(!window._dtPasteBound){
+  window._dtPasteBound=true;
+  document.addEventListener('paste', function(e){
+    const el=e.target;
+    if(!el || el.tagName!=='INPUT') return;
+    const isDateField = (el.getAttribute('onfocus')||'').includes('dtFocus') || el.placeholder==='YYYY-MM-DD';
+    if(!isDateField) return;
+    const txt=((e.clipboardData||window.clipboardData)?.getData('text')||'');
+    const d=extractDate(txt);
+    if(d){
+      e.preventDefault();
+      if(el.type==='date') el.type='text'; // date 타입은 형식 거부하므로 text로 받고 넣기
+      el.value=d;
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+      setTimeout(()=>{ try{ el.blur(); }catch(_){} },0);
+    }
+  });
+}
 function calcDday(deadline){
   if(!deadline)return{days:null,cls:'',txt:''};
   const today=new Date();today.setHours(0,0,0,0);
