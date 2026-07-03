@@ -59,6 +59,13 @@
 [data-theme="white"]{--accent:#868e96;--accent-d:#6c757d}
 
 *{box-sizing:border-box;margin:0;padding:0}
+.title-mascot{display:inline-block;vertical-align:-7px;margin-right:4px;animation:mascotBob 2.6s ease-in-out infinite}
+@keyframes mascotBob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-3px) rotate(2deg)}}
+.m-blink{transform-box:fill-box;transform-origin:center;animation:mascotBlink 3.6s ease-in-out infinite}
+@keyframes mascotBlink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(.12)}}
+.m-star{transform-box:fill-box;transform-origin:center;animation:mascotTwinkle 1.7s ease-in-out infinite}
+.m-star.s2{animation-delay:.4s}.m-star.s3{animation-delay:.8s}
+@keyframes mascotTwinkle{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
 .theme-picker{padding:10px 14px;border-top:1px solid #ececeb;margin-top:4px}
 .theme-picker-lbl{font-size:11px;color:#787774;font-weight:600;margin-bottom:7px}
 .theme-swatches{display:flex;gap:7px;flex-wrap:wrap}
@@ -358,6 +365,10 @@ tr:hover td{background:var(--bg)}
 .ih-clear{border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer}
 .ih-clear:hover{background:#fdf2f1}
 .ih-scroll{overflow-x:auto}
+.ih-topscroll{overflow-x:auto;overflow-y:hidden;height:13px;background:var(--accent-xl);border:1px solid #dbe6f2;border-bottom:none;border-radius:6px 6px 0 0}
+.ih-topscroll::-webkit-scrollbar{height:10px}
+.ih-topscroll::-webkit-scrollbar-thumb{background:#c2cdda;border-radius:6px}
+.ih-topscroll::-webkit-scrollbar-thumb:hover{background:#aab6c6}
 .ih-table{border-collapse:collapse;font-size:12px;white-space:nowrap;table-layout:fixed}
 .ih-table th{background:var(--accent-xl);color:var(--accent);font-weight:700;font-size:11px;padding:6px 8px;border:1px solid #dbe6f2;text-align:center;position:relative;cursor:pointer;user-select:none;overflow:hidden}
 .ih-table th:hover{background:#e2ecf8}
@@ -505,7 +516,7 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 </style>
 <style id="warm-theme">
 /* 💼 단정한 비즈니스 테마 — 중성 그레이 배경 + 흰 카드 (포인트색은 기존 초록 유지) */
-body{background:#eceff3 !important;color:#2b3340}
+body{background:var(--bg) !important;color:#2b3340}
 .header{background:#fff !important;border-bottom:1px solid #e4e8ee !important;box-shadow:0 1px 3px rgba(30,50,80,.04)}
 .title{color:#1f2a3a;letter-spacing:-.2px}
 .sub{color:#7b8597}
@@ -738,7 +749,7 @@ body.sb-collapsed .sb-hover-zone{display:block}
 <div class="header">
   <div class="header-top">
     <div>
-      <div class="title">📋 CRA Document Manager</div>
+      <div class="title"><svg class="title-mascot" width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><path d="M11 8 h14 l6 6 v16 a2 2 0 0 1-2 2 H11 a2 2 0 0 1-2-2 V10 a2 2 0 0 1 2-2 z" fill="var(--accent)"/><path d="M25 8 v6 h6 z" fill="var(--accent-d)"/><g class="m-blink"><circle cx="16" cy="19" r="2.2" fill="#fff"/><circle cx="16" cy="19.3" r="1" fill="#1f2340"/></g><g class="m-blink"><circle cx="24" cy="19" r="2.2" fill="#fff"/><circle cx="24" cy="19.3" r="1" fill="#1f2340"/></g><path d="M17 24 q3 2.6 6 0" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/><path class="m-star s1" d="M4 9 l.9 2.2 2.2.9 -2.2.9 -.9 2.2 -.9-2.2 -2.2-.9 2.2-.9 z" fill="#f6c945"/><path class="m-star s2" d="M35 6 l.8 1.9 1.9.8 -1.9.8 -.8 1.9 -.8-1.9 -1.9-.8 1.9-.8 z" fill="#f6c945"/><path class="m-star s3" d="M34 29 l.8 1.9 1.9.8 -1.9.8 -.8 1.9 -.8-1.9 -1.9-.8 1.9-.8 z" fill="#f6c945"/></svg>CRA Document Manager</div>
       <div class="sub">Protocol별 기관 IRB 현황 관리 · 마지막 저장: <span id="lastSaved">-</span></div>
     </div>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
@@ -1484,7 +1495,21 @@ function setupIhResizers(){
     });
   });
 }
-// 날짜 자동 변환: "2023.03.31" "2023. 03. 31." "2023/3/31" "2023년 3월 31일" → "2023-03-31"
+// 심의이력 상단 가로 스크롤바 ↔ 표 동기화 (표 바로 위에 위치)
+function setupIhTopScroll(){
+  document.querySelectorAll('.ih-topscroll').forEach(top=>{
+    const inner=top.querySelector('.ih-topscroll-inner');
+    const wrap=top.nextElementSibling; // .ih-scroll
+    const table=wrap&&wrap.querySelector('.ih-table');
+    if(!inner||!wrap||!table) return;
+    const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
+    setW();
+    let lock=false;
+    top.addEventListener('scroll',()=>{ if(lock)return; lock=true; wrap.scrollLeft=top.scrollLeft; lock=false; });
+    wrap.addEventListener('scroll',()=>{ if(lock)return; lock=true; top.scrollLeft=wrap.scrollLeft; lock=false; });
+    if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
+  });
+}
 function normDateStr(s){
   s=(s||'').trim(); if(!s) return s;
   const m=s.match(/^(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})[.일\s]*$/);
@@ -1584,7 +1609,7 @@ function renderIrbHistory(code){
         <button class="btn" onclick="sortIrbHist('${code}','asc')" title="접수일 오래된 것이 위로">↑ 오래된순</button>
         <button class="ih-clear" onclick="clearIrbHist('${code}')" title="이 기관의 심의 이력 전체 삭제">🗑️ 전체 삭제</button>
       </div>
-      ${H.rows.length?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table" style="width:${tableW}px">
+      ${H.rows.length?`<div class="ih-topscroll"><div class="ih-topscroll-inner" style="height:1px"></div></div><div class="ih-scroll"><table class="ih-table" style="width:${tableW}px">
         ${colg}
         <thead><tr><th></th>${ths}<th></th></tr></thead>
         <tbody>${body}</tbody>
@@ -2666,6 +2691,7 @@ function renderBody(){
   setupSecResizers();
   setupDocTopScroll();
   setupIhResizers();
+  setupIhTopScroll();
 }
 let _docTopScrollResizeBound=false;
 function setupDocTopScroll(){
