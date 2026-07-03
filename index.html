@@ -465,6 +465,12 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-ref{display:inline-block;margin-left:6px;font-size:10px;color:#b8860b;background:#fef7e8;border-radius:4px;padding:1px 6px;font-weight:500;white-space:normal}
 .idx-sub{font-size:10.5px;color:#999;margin-top:2px;line-height:1.45;white-space:normal}
 .na-lbl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#787774;cursor:pointer;white-space:nowrap}
+.na-sel{border:1px solid #dde3ec;border-radius:5px;padding:3px 4px;font-size:11px;color:#37352f;background:#fff;outline:none;cursor:pointer;max-width:100%}
+.na-sel:focus{border-color:var(--accent)}
+.thisfiling-wrap{display:flex;gap:5px;align-items:flex-start}
+.thisfiling-wrap .idx-note{flex:1}
+.idx-effdate{width:95px;flex-shrink:0;border:1px solid #e9e9e7;border-radius:4px;padding:4px 5px;font-size:12px;font-family:inherit;color:#37352f;outline:none;box-sizing:border-box}
+.idx-effdate:focus{border-color:var(--accent)}
 .na-lbl input{width:14px;height:14px;cursor:pointer;flex-shrink:0}
 .idx-na-cell{text-align:center;overflow:hidden}
 .idx-na-cell .na-lbl{white-space:nowrap}
@@ -2111,6 +2117,15 @@ function setIndexField(indexType, idx, field, val){
   saveData();
   if(field==='na'||field==='status') renderBody();
 }
+// 원본/사본/N/A 구분 (기존 N/A 체크 기능 흡수 — N/A 선택 시 흐리게+진행률 제외 유지)
+function setIndexNaType(indexType, idx, val){
+  const rows=getIndexRows(indexType);
+  const row=rows[idx];
+  if(!row) return;
+  row.naType=val;
+  row.na=(val==='NA'); // 기존 로직 호환
+  saveData(); renderBody();
+}
 // 사용자가 직접 Index 항목 추가/편집/삭제 (방식 A)
 function addIndexRow(type){
   const rows=getIndexRows(type);
@@ -2813,11 +2828,11 @@ function renderIndexBody(){
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
       ${numCell}
       ${titleCell}
-      <td class="idx-na-cell"><label class="na-lbl"><input type="checkbox" ${naChecked} onchange="setIndexField('${type}',${idx},'na',this.checked)">N/A</label></td>
+      <td class="idx-na-cell"><select class="na-sel" onchange="setIndexNaType('${type}',${idx},this.value)" title="원본/사본/해당없음 구분"><option value=""${(!r.naType&&!r.na)?' selected':''}>–</option><option value="원본"${r.naType==='원본'?' selected':''}>원본</option><option value="사본"${r.naType==='사본'?' selected':''}>사본</option><option value="NA"${(r.naType==='NA'||(r.na&&!r.naType))?' selected':''}>N/A</option></select></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><textarea class="idx-loc" rows="1" placeholder="위치 / 파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea></td>
       <td><div class="prevfiling-wrap"><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea><button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
-      <td><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea></td>
+      <td><div class="thisfiling-wrap"><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea><input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
       <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
     </tr>`;
     if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
@@ -2853,7 +2868,7 @@ function renderIndexBody(){
         <th>✓</th>
         <th>No.<span class="col-rsz" data-ci="1"></span></th>
         <th>Title of the documents<span class="col-rsz" data-ci="2"></span></th>
-        <th>N/A<span class="col-rsz" data-ci="3"></span></th>
+        <th title="원본/사본/해당없음(N/A) 구분">원본/사본<span class="col-rsz" data-ci="3"></span></th>
         <th>상태<span class="col-rsz" data-ci="4"></span></th>
         <th>위치 / 파일명<span class="col-rsz" data-ci="5"></span></th>
         <th title="지난 모니터링 방문까지 Filing 완료한 항목">이전 Filing<span class="col-rsz" data-ci="6"></span></th>
@@ -2949,17 +2964,24 @@ function importIndexCSV(type){
           const na=String(r[2]||'').trim(), status=String(r[3]||'').trim();
           const loc=String(r[4]||'').trim(), prev=String(r[5]||'').trim();
           const thisF=String(r[6]||'').trim(), note=String(r[7]||'').trim();
+          const effDate=String(r[8]||'').trim();
+          // 원본/사본/N/A 구분 (NA 컬럼이 '원본'·'사본'·'NA' 텍스트를 담음)
+          let naType='';
+          if(na==='원본'||na==='사본') naType=na;
+          else if(na.toUpperCase()==='NA') naType='NA';
           if(!title && !no) continue;
-          const otherEmpty=![na,status,loc,prev,thisF,note].some(c=>c);
+          const otherEmpty=![na,status,loc,prev,thisF,note,effDate].some(c=>c);
           const isHeader=otherEmpty && /^\d+$/.test(no) && !!title;
           if(isHeader){
             newRows.push({n:no, t:title, h:true, custom:true});
           } else {
             newRows.push({
               n:no, t:title,
-              na:na.toUpperCase()==='NA',
+              na:naType==='NA',
+              naType:naType,
               status:stMap[status]||'pend',
               location:loc, prevFiling:prev, thisFiling:thisF, note:note,
+              effDate:effDate,
               custom:true
             });
           }
@@ -3021,12 +3043,13 @@ function exportIndexCSV(type){
   let csv='\uFEFF';
   csv+=`Protocol,${(cur?.protocolNo||cur?.name||'').replace(/,/g,' ')}\n`;
   csv+=`Index,${type}\n\n`;
-  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note\n';
+  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note,EffDate\n';
   const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
   rows.forEach(r=>{
-    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,\n`; return; }
+    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,,\n`; return; }
     const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
-    csv+=`${r.n},${q(r.t)},${r.na?'NA':''},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)}\n`;
+    const naOut=r.naType||(r.na?'NA':'');
+    csv+=`${r.n},${q(r.t)},${naOut},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)},${q(r.effDate)}\n`;
   });
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');
