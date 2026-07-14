@@ -111,7 +111,8 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .sec-del-btn:hover{color:#a33}
 .chevron{color:#999;font-size:11px;transition:transform .2s;display:inline-block}
 .chevron.open{transform:rotate(90deg)}
-.table-wrap{overflow-x:auto;width:100%;scrollbar-width:none}
+.table-wrap{overflow-x:auto;overflow-y:auto;max-height:70vh;width:100%;scrollbar-width:thin}
+.doc-table thead th{position:sticky;top:0;z-index:20;background:#f6f9f8}
 .table-wrap::-webkit-scrollbar{display:none}
 .doc-topscroll{position:sticky;z-index:55;overflow-x:auto;overflow-y:hidden;height:14px;background:#eef1f5;border:1px solid #e4e8ee;border-bottom:none;border-radius:6px 6px 0 0;margin-top:4px}
 .doc-topscroll::-webkit-scrollbar{height:11px}
@@ -441,14 +442,14 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-sec-ctrls button{border:none;background:transparent;cursor:pointer;font-size:13px;padding:1px 5px;border-radius:5px;opacity:.55}
 .idx-sec-ctrls button:hover{opacity:1;background:rgba(0,0,0,.06)}
 .idx-empty-hint{color:#9aa3b2;font-size:13px;text-align:center;padding:24px 0 4px}
-.index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto;scrollbar-width:none}
+.index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto;overflow-y:auto;max-height:70vh;scrollbar-width:thin}
 .index-table-wrap::-webkit-scrollbar{display:none}
 .idx-topscroll{position:sticky;z-index:60;overflow-x:auto;overflow-y:hidden;height:14px;background:#eef1f5;border:1px solid #e4e8ee;border-bottom:none;border-radius:6px 6px 0 0}
 .idx-topscroll::-webkit-scrollbar{height:11px}
 .idx-topscroll::-webkit-scrollbar-thumb{background:#c2cdda;border-radius:6px}
 .idx-topscroll::-webkit-scrollbar-thumb:hover{background:#aab6c6}
 .index-table{border-collapse:collapse;font-size:12px;table-layout:fixed}
-.index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap;position:relative}
+.index-table th{padding:8px 8px;text-align:left;font-weight:600;color:#787774;border-bottom:1.5px solid #e9e9e7;font-size:10.5px;background:#f6f9f8;white-space:nowrap;position:sticky;top:0;z-index:20}
 .col-rsz{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:8;touch-action:none;user-select:none}
 .col-rsz::after{content:"";position:absolute;top:20%;right:4px;width:2px;height:60%;background:#d5d8dc;border-radius:1px}
 .col-rsz:hover::after,.col-rsz.dragging::after{background:var(--accent);width:2px;height:100%;top:0}
@@ -914,17 +915,18 @@ const TMPL = {
     {name:'시정보고서 본문', dtype:'doc', needVer:false},
     {name:'시정보고 접수증', dtype:'doc', needVer:false},
   ]},
-  supplement: { emoji:'📎', name:'보완보고', docs:[
-    {name:'보완보고 신청서', dtype:'app', needVer:false},
-    {name:'보완보고 의뢰서', dtype:'req', needVer:false},
+  supplement: { emoji:'📝', name:'보완답변', docs:[
+    {name:'보완답변 신청서', dtype:'app', needVer:false},
+    {name:'보완답변 의뢰서', dtype:'req', needVer:false},
     {name:'보완자료',        dtype:'doc', needVer:false},
-    {name:'보완보고 접수증', dtype:'doc', needVer:false},
-  ]},
-  reply: { emoji:'💬', name:'답변보고', docs:[
-    {name:'답변보고 신청서', dtype:'app', needVer:false},
-    {name:'답변보고 의뢰서', dtype:'req', needVer:false},
     {name:'답변서 본문',     dtype:'doc', needVer:false},
-    {name:'답변보고 접수증', dtype:'doc', needVer:false},
+    {name:'보완답변 접수증', dtype:'doc', needVer:false},
+  ]},
+  reply: { emoji:'📝', name:'보완답변', docs:[
+    {name:'보완답변 신청서', dtype:'app', needVer:false},
+    {name:'보완답변 의뢰서', dtype:'req', needVer:false},
+    {name:'답변서 본문',     dtype:'doc', needVer:false},
+    {name:'보완답변 접수증', dtype:'doc', needVer:false},
   ]},
   change: { emoji:'🔄', name:'변경보고', docs:[
     {name:'변경보고 신청서',   dtype:'app',     needVer:false},
@@ -3346,8 +3348,7 @@ function renderSecForm(){
       <button class="sec-type-btn" onclick="doAddSection('initial')">🗂️ 초기심의</button>
       <button class="sec-type-btn" onclick="doAddSection('newplan')">🆕 신규계획</button>
       <button class="sec-type-btn" onclick="doAddSection('correction')">🛠️ 시정보고</button>
-      <button class="sec-type-btn" onclick="doAddSection('supplement')">📎 보완보고</button>
-      <button class="sec-type-btn" onclick="doAddSection('reply')">💬 답변보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('supplement')">📝 보완답변</button>
       <button class="sec-type-btn" onclick="doAddSection('change')">🔄 변경보고</button>
       <button class="sec-type-btn" onclick="doAddSection('fundchange')">💰 연구비 변경보고</button>
       <button class="sec-type-btn" onclick="doAddSection('interim')">📊 중간보고</button>
