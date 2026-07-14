@@ -151,6 +151,7 @@ tr:hover td{background:var(--bg)}
 .dt-app{background:#e6f0fc;color:#1a4b8b}
 .dt-req{background:#fef3e2;color:#7a4b00}
 .dt-doc{background:#f0f0ef;color:#555}
+.dt-receipt{background:#e8f5e9;color:#2e7d32}
 .dt-consent{background:#fce8f8;color:#7a1a6e}
 .dt-custom{background:#e8fce8;color:#1a6b1a}
 .dt-notice{background:#fde8f0;color:#9b1c4d}
@@ -856,7 +857,7 @@ function contractOptions(){
 
 function pmsInitialDocs(){
   return [
-    {name:'초기심의 신청서', dtype:'app', needVer:false},
+    {name:'초기심의 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'연구계획서', dtype:'doc', needVer:true},
     {name:'제품설명서', dtype:'doc', needVer:true},
     {name:'첨부문서', dtype:'doc', needVer:true},
@@ -869,7 +870,7 @@ function pmsInitialDocs(){
 
 function clinicalInitialDocs(){
   return [
-    {name:'초기심의 신청서', dtype:'app', needVer:false},
+    {name:'초기심의 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'Protocol', dtype:'doc', needVer:true},
     {name:'IB', dtype:'doc', needVer:true},
     {name:'ICF', dtype:'consent', needVer:true},
@@ -903,34 +904,29 @@ function getInitialDocsForCurrentProtocol(){
 const TMPL = {
   initial: { emoji:'🗂️', name:'초기심의', docs:[]},
   newplan: { emoji:'🆕', name:'신규계획', docs:[
-    {name:'신규계획 신청서', dtype:'app',     needVer:false},
-    {name:'신규계획 의뢰서', dtype:'req',     needVer:false},
+    {name:'신규계획 신청서(의뢰서)', dtype:'app',     needVer:false},
     {name:'연구계획서',      dtype:'doc',     needVer:true},
     {name:'동의서',          dtype:'consent', needVer:true},
     {name:'신규계획 승인서', dtype:'doc',     needVer:false},
   ]},
   correction: { emoji:'🛠️', name:'시정보고', docs:[
-    {name:'시정보고 신청서', dtype:'app', needVer:false},
-    {name:'시정보고 의뢰서', dtype:'req', needVer:false},
+    {name:'시정보고 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'시정보고서 본문', dtype:'doc', needVer:false},
-    {name:'시정보고 접수증', dtype:'doc', needVer:false},
+    {name:'시정보고 접수증', dtype:'receipt', needVer:false},
   ]},
   supplement: { emoji:'📝', name:'보완답변', docs:[
-    {name:'보완답변 신청서', dtype:'app', needVer:false},
-    {name:'보완답변 의뢰서', dtype:'req', needVer:false},
+    {name:'보완답변 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'보완자료',        dtype:'doc', needVer:false},
     {name:'답변서 본문',     dtype:'doc', needVer:false},
-    {name:'보완답변 접수증', dtype:'doc', needVer:false},
+    {name:'보완답변 접수증', dtype:'receipt', needVer:false},
   ]},
   reply: { emoji:'📝', name:'보완답변', docs:[
-    {name:'보완답변 신청서', dtype:'app', needVer:false},
-    {name:'보완답변 의뢰서', dtype:'req', needVer:false},
+    {name:'보완답변 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'답변서 본문',     dtype:'doc', needVer:false},
-    {name:'보완답변 접수증', dtype:'doc', needVer:false},
+    {name:'보완답변 접수증', dtype:'receipt', needVer:false},
   ]},
   change: { emoji:'🔄', name:'변경보고', docs:[
-    {name:'변경보고 신청서',   dtype:'app',     needVer:false},
-    {name:'변경보고 의뢰서',   dtype:'req',     needVer:false},
+    {name:'변경보고 신청서(의뢰서)',   dtype:'app',     needVer:false},
     {name:'연구계획서 (변경)', dtype:'doc',     needVer:true},
     {name:'동의서 (변경)',     dtype:'consent', needVer:true},
     {name:'제품설명서 (변경)', dtype:'doc',     needVer:true},
@@ -938,52 +934,44 @@ const TMPL = {
     {name:'변경보고 승인서',   dtype:'doc',     needVer:false},
   ]},
   fundchange: { emoji:'💰', name:'연구비 변경보고', docs:[
-    {name:'연구비 변경보고 신청서', dtype:'app', needVer:false},
-    {name:'연구비 변경보고 의뢰서', dtype:'req', needVer:false},
+    {name:'연구비 변경보고 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'변경 연구비 내역서',     dtype:'doc', needVer:false},
     {name:'연구비 변경 승인서',     dtype:'doc', needVer:false},
   ]},
   interim: { emoji:'📊', name:'중간보고', docs:[
-    {name:'중간보고서 신청서', dtype:'app', needVer:false},
-    {name:'중간보고서 의뢰서', dtype:'req', needVer:false},
+    {name:'중간보고서 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'중간보고서 본문',   dtype:'doc', needVer:false},
-    {name:'중간보고 접수증',   dtype:'doc', needVer:false},
+    {name:'중간보고 접수증',   dtype:'receipt', needVer:false},
   ]},
   unexpected: { emoji:'🚨', name:'예상하지 못한 문제 보고', docs:[
-    {name:'예상하지 못한 문제 보고 신청서', dtype:'app', needVer:false},
-    {name:'예상하지 못한 문제 보고 의뢰서', dtype:'req', needVer:false},
+    {name:'예상하지 못한 문제 보고 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'문제 보고서 본문',               dtype:'doc', needVer:false},
-    {name:'예상하지 못한 문제 보고 접수증', dtype:'doc', needVer:false},
+    {name:'예상하지 못한 문제 보고 접수증', dtype:'receipt', needVer:false},
   ]},
   suspend: { emoji:'⏸️', name:'중지보고', docs:[
-    {name:'중지보고 신청서', dtype:'app', needVer:false},
-    {name:'중지보고 의뢰서', dtype:'req', needVer:false},
+    {name:'중지보고 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'중지보고서 본문', dtype:'doc', needVer:false},
-    {name:'중지보고 접수증', dtype:'doc', needVer:false},
+    {name:'중지보고 접수증', dtype:'receipt', needVer:false},
   ]},
   close: { emoji:'🔚', name:'종료보고', docs:[
-    {name:'종료보고 신청서',   dtype:'app', needVer:false},
-    {name:'종료보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'종료보고 신청서(의뢰서)',   dtype:'app', needVer:false},
     {name:'종료보고서 본문',   dtype:'doc', needVer:false},
-    {name:'종료보고 접수증',   dtype:'doc', needVer:false},
+    {name:'종료보고 접수증',   dtype:'receipt', needVer:false},
   ]},
   result: { emoji:'📑', name:'결과보고', docs:[
-    {name:'결과보고 신청서',   dtype:'app', needVer:false},
-    {name:'결과보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'결과보고 신청서(의뢰서)',   dtype:'app', needVer:false},
     {name:'결과보고서 본문',   dtype:'doc', needVer:false},
-    {name:'결과보고 접수증',   dtype:'doc', needVer:false},
+    {name:'결과보고 접수증',   dtype:'receipt', needVer:false},
   ]},
   violation: { emoji:'⚠️', name:'위반보고', docs:[
-    {name:'위반보고 신청서',   dtype:'app', needVer:false},
-    {name:'위반보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'위반보고 신청서(의뢰서)',   dtype:'app', needVer:false},
     {name:'위반보고서 본문',   dtype:'doc', needVer:false},
-    {name:'위반보고 접수증',   dtype:'doc', needVer:false},
+    {name:'위반보고 접수증',   dtype:'receipt', needVer:false},
   ]},
   problem: { emoji:'🚨', name:'문제보고', docs:[
-    {name:'문제보고 신청서',   dtype:'app', needVer:false},
-    {name:'문제보고 의뢰서',   dtype:'req', needVer:false},
+    {name:'문제보고 신청서(의뢰서)',   dtype:'app', needVer:false},
     {name:'문제보고서 본문',   dtype:'doc', needVer:false},
-    {name:'문제보고 접수증',   dtype:'doc', needVer:false},
+    {name:'문제보고 접수증',   dtype:'receipt', needVer:false},
   ]},
   consent: { emoji:'✍️', name:'동의서 관리', docs:[
     {name:'재동의 면제 승인서',      dtype:'consent', needVer:false},
@@ -1001,8 +989,9 @@ const STATUSES = [
 ];
 
 const DTYPE_INFO = {
-  app:    {label:'신청서',   cls:'dt-app'},
-  req:    {label:'의뢰서',   cls:'dt-req'},
+  app:    {label:'신청서(의뢰서)', cls:'dt-app'},
+  req:    {label:'신청서(의뢰서)', cls:'dt-app'},
+  receipt:{label:'접수증',   cls:'dt-receipt'},
   doc:    {label:'제출 문서', cls:'dt-doc'},
   consent:{label:'동의서',   cls:'dt-consent'},
   notice: {label:'통지서',   cls:'dt-notice'},
@@ -3329,7 +3318,7 @@ function addDocRowHtml(){
   return `<tr class="add-row"><td colspan="10">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 2px">
       <select class="add-doc-sel" id="addDtype" onchange="addDtypeVal=this.value">
-        ${[['doc','제출 문서'],['app','신청서'],['req','의뢰서'],['consent','동의서'],['notice','통지서'],['eval','평가록'],['minutes','회의록'],['custom','기타']].map(([v,l])=>`<option value="${v}"${v===addDtypeVal?' selected':''}>${l}</option>`).join('')}
+        ${[['doc','제출 문서'],['app','신청서(의뢰서)'],['receipt','접수증'],['consent','동의서'],['notice','통지서'],['eval','평가록'],['minutes','회의록'],['custom','기타']].map(([v,l])=>`<option value="${v}"${v===addDtypeVal?' selected':''}>${l}</option>`).join('')}
       </select>
       <input class="add-doc-input" id="addDocName" placeholder="문서명 입력 후 Enter" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')confirmAddDoc()" oninput="autoCheckNeedVer()">
       <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
