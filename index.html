@@ -348,6 +348,7 @@ tr:hover td{background:var(--bg)}
 .contract-field input.irb-url{min-width:240px;font-family:'Courier New',monospace;font-size:11px}
 .irb-portal-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--accent-xl);border:1px solid #c5d9f0;border-radius:10px;padding:9px 12px;margin-bottom:10px}
 .ipb-title{font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap}
+.ctc-portal-bar{background:#fff;border-style:dashed}
 .ipb-url{flex:1;min-width:200px;font-size:12px;border:1px solid #c5d9f0;border-radius:6px;padding:5px 8px;background:#fff;color:#37352f;outline:none;font-family:'Courier New',monospace}
 .ipb-url:focus{border-color:var(--accent)}
 .ipb-go{font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:6px;padding:6px 10px;text-decoration:none;white-space:nowrap}
@@ -1341,7 +1342,7 @@ function setSiteContract(code,field,val){
   if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:'',irbUrl:''};
   site.contract[field]=val;
   saveData();
-  if(field==='irbUrl') renderBody();
+  if(field==='irbUrl'||field==='ctcUrl'||field==='pharmUrl') renderBody();
 }
 
 // ── 계약 관리 (초기/변경 계약 이력 + 연구비 자동계산) ──────────
@@ -1409,6 +1410,37 @@ function renderIrbPortalBar(code){
     <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.craId||'')}" onchange="setSiteContract('${code}','craId',this.value)">
     <span class="ipb-lbl">PW</span>
     <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.craPw||'')}" onchange="setSiteContract('${code}','craPw',this.value)">
+  </div>
+  ${renderCtcPortalBar(code)}${renderPharmPortalBar(code)}`;
+}
+// ── 약국 포털 바 (임상시험 과제일 때만 표시) ──
+function renderPharmPortalBar(code){
+  const cur=getCurProtocol?.();
+  if(studyCategory(cur?.studyType)!=='임상시험') return ''; // PMS 등에는 약국 포털 불필요
+  const c=getSiteContract(code);
+  const url=(c.pharmUrl||'').trim();
+  return `<div class="irb-portal-bar ctc-portal-bar">
+    <span class="ipb-title">💊 약국 포털</span>
+    <input class="ipb-url" placeholder="약국(약제부) 포털 링크" value="${esc(c.pharmUrl||'')}" onchange="setSiteContract('${code}','pharmUrl',this.value)">
+    ${url?`<a class="ipb-go" href="${esc(extUrl(url))}" target="_blank" rel="noopener" title="새 탭에서 열기">↗ 바로가기</a>`:''}
+    <span class="ipb-lbl">CRA ID</span>
+    <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.pharmId||'')}" onchange="setSiteContract('${code}','pharmId',this.value)">
+    <span class="ipb-lbl">PW</span>
+    <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.pharmPw||'')}" onchange="setSiteContract('${code}','pharmPw',this.value)">
+  </div>`;
+}
+// ── 임상시험센터(CTC) 포털 바 ──
+function renderCtcPortalBar(code){
+  const c=getSiteContract(code);
+  const url=(c.ctcUrl||'').trim();
+  return `<div class="irb-portal-bar ctc-portal-bar">
+    <span class="ipb-title">🏥 CTC 포털</span>
+    <input class="ipb-url" placeholder="임상시험센터 포털 링크 (예: ctc.hospital.or.kr)" value="${esc(c.ctcUrl||'')}" onchange="setSiteContract('${code}','ctcUrl',this.value)">
+    ${url?`<a class="ipb-go" href="${esc(extUrl(url))}" target="_blank" rel="noopener" title="새 탭에서 열기">↗ 바로가기</a>`:''}
+    <span class="ipb-lbl">CRA ID</span>
+    <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.ctcId||'')}" onchange="setSiteContract('${code}','ctcId',this.value)">
+    <span class="ipb-lbl">PW</span>
+    <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.ctcPw||'')}" onchange="setSiteContract('${code}','ctcPw',this.value)">
   </div>`;
 }
 // ── 중간보고 보고 가능일 (IRB 승인 종료일 2개월 전 권장) ──
