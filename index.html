@@ -2994,13 +2994,27 @@ function importIndexCSV(type){
           const loc=String(r[4]||'').trim(), prev=String(r[5]||'').trim();
           const thisF=String(r[6]||'').trim(), note=String(r[7]||'').trim();
           const effDate=String(r[8]||'').trim();
+          // 회차별 Filing 이력 (10번째 컬럼, JSON 배열 문자열) — 없으면 빈 배열
+          const filingLogRaw=String(r[9]||'').trim();
+          let filingLog=[];
+          if(filingLogRaw){
+            try{
+              const parsed=JSON.parse(filingLogRaw);
+              if(Array.isArray(parsed)){
+                filingLog=parsed.filter(e=>e && typeof e==='object').map(e=>({
+                  round:String(e.round||''), date:String(e.date||''),
+                  content:String(e.content||''), status:(e.status==='partial'?'partial':'done')
+                }));
+              }
+            }catch(e){ /* 형식이 잘못되면 조용히 무시 — 나머지 필드는 정상 반영 */ }
+          }
           // 원본/사본/N/A 구분 (NA 컬럼이 '원본'·'사본'·'NA' 텍스트를 담음)
           let naType='';
           if(na==='원본'||na==='사본') naType=na;
           else if(na.toUpperCase()==='NA') naType='NA';
           if(!title && !no) continue;
           const otherEmpty=![na,status,loc,prev,thisF,note,effDate].some(c=>c);
-          const isHeader=otherEmpty && /^\d+$/.test(no) && !!title;
+          const isHeader=otherEmpty && /^\d+$/.test(no) && !!title && !filingLog.length;
           if(isHeader){
             newRows.push({n:no, t:title, h:true, custom:true});
           } else {
@@ -3011,11 +3025,12 @@ function importIndexCSV(type){
               status:stMap[status]||'pend',
               location:loc, prevFiling:prev, thisFiling:thisF, note:note,
               effDate:effDate,
+              filingLog:filingLog,
               custom:true
             });
           }
         }
-        if(!newRows.length){ alert('불러올 항목이 없어요.\nCSV 형식을 확인해주세요 (No, Title, NA, Status, Location/FileName, PrevFiling, ThisFiling, Note).'); return; }
+        if(!newRows.length){ alert('불러올 항목이 없어요.\nCSV 형식을 확인해주세요 (No, Title, NA, Status, Location/FileName, PrevFiling, ThisFiling, Note, EffDate, FilingLog).'); return; }
         const itemN=newRows.filter(r=>!r.h).length, secN=newRows.filter(r=>r.h).length;
         const existN=getIndexRows(type).length;
         pendingCsvImport={type, rows:newRows, itemN, secN, existN};
@@ -3072,13 +3087,14 @@ function exportIndexCSV(type){
   let csv='\uFEFF';
   csv+=`Protocol,${(cur?.protocolNo||cur?.name||'').replace(/,/g,' ')}\n`;
   csv+=`Index,${type}\n\n`;
-  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note,EffDate\n';
+  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note,EffDate,FilingLog\n';
   const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
   rows.forEach(r=>{
-    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,,\n`; return; }
+    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,,,\n`; return; }
     const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
     const naOut=r.naType||(r.na?'NA':'');
-    csv+=`${r.n},${q(r.t)},${naOut},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)},${q(r.effDate)}\n`;
+    const flogOut=(r.filingLog&&r.filingLog.length)?q(JSON.stringify(r.filingLog)):'';
+    csv+=`${r.n},${q(r.t)},${naOut},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)},${q(r.effDate)},${flogOut}\n`;
   });
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');
