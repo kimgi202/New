@@ -121,6 +121,9 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .doc-table{table-layout:fixed}
 .doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7),.doc-table.hide-vercols th:nth-child(8),.doc-table.hide-vercols td:nth-child(8){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0}
 .doc-table.hide-vercols th:nth-child(7)>*,.doc-table.hide-vercols td:nth-child(7)>*,.doc-table.hide-vercols th:nth-child(8)>*,.doc-table.hide-vercols td:nth-child(8)>*{display:none}
+.index-table.hide-filing th:nth-child(7),.index-table.hide-filing td:nth-child(7),.index-table.hide-filing th:nth-child(8),.index-table.hide-filing td:nth-child(8){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0;width:0}
+.index-table.hide-filing th:nth-child(7)>*,.index-table.hide-filing td:nth-child(7)>*,.index-table.hide-filing th:nth-child(8)>*,.index-table.hide-filing td:nth-child(8)>*{display:none}
+.index-table.hide-filing colgroup col:nth-child(7),.index-table.hide-filing colgroup col:nth-child(8){width:0 !important}
 .ver-toggle-btn{margin-left:6px;border:1px solid #d6deea;background:#fff;color:var(--accent);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap}
 .ver-toggle-btn:hover{background:var(--accent-xl)}
 .doc-table th{position:relative}
@@ -461,6 +464,7 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-sec-row td{padding:7px 10px;color:var(--accent);font-size:12.5px;border-bottom:1px solid #dcebe7}
 .idx-row:hover td{background:#f7faf9}
 .idx-row.idx-na{opacity:.5}
+.index-table.hide-na .idx-row.idx-na{display:none}
 .idx-row.idx-done{background:#f3faf6}
 .idx-chk{text-align:center}.idx-chk input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 .idx-num{font-family:'Courier New',monospace;color:#999;font-size:11px;white-space:nowrap;vertical-align:top;padding-top:7px}
@@ -2879,13 +2883,15 @@ function renderIndexBody(){
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexSection('${type}')">+ 섹션 추가</button>
         <button class="idx-bulkdel-btn" onclick="toggleIdxSelMode('${type}')" title="항목을 체크해서 여러 개 삭제">✕ 선택 삭제</button>
         <button class="idx-clear-btn" onclick="clearIndex('${type}')" title="이 Index의 모든 항목 삭제">🗑️ 전체 비우기</button>
+        <button class="btn" onclick="toggleFilingCols()" title="이전·이번 Filing 칸 ${showFilingCols?'숨기기':'펼치기'}">${showFilingCols?'⊟ Filing 칸':'⊞ Filing 칸'}</button>
+        ${naCount>0?`<button class="btn" onclick="toggleNaRows()" title="N/A 항목 ${showNaRows?'숨기기':'보기'}">${showNaRows?'⊟ N/A 숨기기':'⊞ N/A 보기'} (${naCount})</button>`:''}
         <button class="btn" onclick="importIndexCSV('${type}')" title="CSV 파일을 불러와 현재 Index에 추가">📤 CSV 불러오기</button>
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
         `}
       </div>
     </div>
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
-    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table" style="width:${idxColW.reduce((a,b)=>a+b,0)}px">
+    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showNaRows?'':' hide-na'}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
       <thead><tr>
         <th>✓</th>
@@ -3086,6 +3092,10 @@ let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v2
 function saveSecColW(){ try{ localStorage.setItem('secColW_v2', JSON.stringify(secColW)); }catch(e){} }
 // 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
 let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
+let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols')==='1'; }catch(e){ return false; } })();
+let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'; }catch(e){ return false; } })();
+function toggleNaRows(){ showNaRows=!showNaRows; try{ localStorage.setItem('showNaRows', showNaRows?'1':'0'); }catch(e){} renderBody(); }
+function toggleFilingCols(){ showFilingCols=!showFilingCols; try{ localStorage.setItem('showFilingCols', showFilingCols?'1':'0'); }catch(e){} renderBody(); }
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
 // 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 문서명·TMF·서버 칸에 자동 분배
 function secDisplayWidths(){
