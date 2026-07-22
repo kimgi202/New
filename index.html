@@ -2710,10 +2710,12 @@ function renderHomeBody(){
 }
 
 function renderBody(){
-  if(curView==='home'){ renderHomeBody(); return; }
-  if(curView==='index'){ renderIndexBody(); return; }
+  const _scrollY=window.scrollY;
+  const _restoreScroll=()=>{ window.scrollTo(0,_scrollY); };
+  if(curView==='home'){ renderHomeBody(); _restoreScroll(); return; }
+  if(curView==='index'){ renderIndexBody(); _restoreScroll(); return; }
   const wrap=document.getElementById('bodyWrap');
-  if(!curSite){wrap.innerHTML='<div class="empty">현재 Protocol에 기관을 추가해주세요</div>';return;}
+  if(!curSite){wrap.innerHTML='<div class="empty">현재 Protocol에 기관을 추가해주세요</div>';_restoreScroll();return;}
   const site=sites.find(s=>s.code===curSite);
   const secs=sections[curSite]||[];
   let tot=0,ok=0,iss=0;
@@ -2750,6 +2752,7 @@ function renderBody(){
   setupDocTopScroll();
   setupIhResizers();
   setupIhTopScroll();
+  _restoreScroll();
 }
 let _docTopScrollResizeBound=false;
 function setupDocTopScroll(){
