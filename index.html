@@ -1862,10 +1862,34 @@ function setTheme(name){
 // 페이지 로드 즉시 저장된 테마 적용 (깜빡임 방지)
 (function(){ try{ const t=localStorage.getItem('appTheme'); if(t) document.documentElement.setAttribute('data-theme',t); }catch(e){} })();
 function dtFocus(el){
+  el.dataset.dtOrig=el.value; // 포커스 시점 값 기억 (blur 때 변경 여부 비교)
+  el.dataset.dtLive='1';      // "입력 중" 표시 — 이 동안엔 change 이벤트를 삼켜서 재렌더 방지
   el.type='date';
   try{ if(el.showPicker) el.showPicker(); }catch(e){}
 }
-function dtBlur(el){ el.type='text'; }
+function dtBlur(el){
+  el.type='text';
+  const changed = el.dataset.dtOrig!==el.value;
+  delete el.dataset.dtLive; delete el.dataset.dtOrig;
+  if(changed){
+    // 입력이 끝난 시점(blur)에 딱 한 번만 저장 이벤트 발생
+    const ev=new Event('change',{bubbles:true}); ev._dtCommit=true;
+    el.dispatchEvent(ev);
+  }
+}
+// 날짜 입력 중(type=date)에 브라우저가 키 입력마다 쏘는 change를 가로채서 무시
+// → 일(day)에 "11" 입력 시 "1"만 쳐도 저장·재렌더로 입력이 끊기던 문제 해결
+if(!window._dtLiveGuardBound){
+  window._dtLiveGuardBound=true;
+  document.addEventListener('change', function(e){
+    const el=e.target;
+    if(el&&el.dataset&&el.dataset.dtLive==='1'&&!e._dtCommit) e.stopPropagation();
+  }, true);
+  // Enter로 입력 완료(=blur → 저장)
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Enter'&&e.target&&e.target.dataset&&e.target.dataset.dtLive==='1'){ e.preventDefault(); e.target.blur(); }
+  });
+}
 // 텍스트로 복사한 날짜를 붙여넣기 지원: "2025.04.06" "2025년 4월 6일" "2025-04-06 승인" 등에서 날짜 추출
 function extractDate(s){
   s=(s||'').trim(); if(!s) return '';
@@ -1889,7 +1913,9 @@ if(!window._dtPasteBound){
       e.preventDefault();
       if(el.type==='date') el.type='text';
       el.value=d;
-      el.dispatchEvent(new Event('change',{bubbles:true}));
+      el.dataset.dtOrig=d; // blur 시 중복 저장 방지
+      const ev=new Event('change',{bubbles:true}); ev._dtCommit=true;
+      el.dispatchEvent(ev);
       setTimeout(()=>{ try{ el.blur(); }catch(_){} },0);
     }
   });
