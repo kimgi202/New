@@ -382,7 +382,9 @@ tr:hover td{background:var(--bg)}
 .ih-topscroll::-webkit-scrollbar-thumb:hover{background:#aab6c6}
 .ih-table{border-collapse:collapse;font-size:12px;white-space:nowrap;table-layout:fixed}
 .ih-table th{background:var(--accent-xl);color:var(--accent);font-weight:700;font-size:11px;padding:6px 8px;border:1px solid #dbe6f2;text-align:center;position:relative;cursor:pointer;user-select:none;overflow:hidden}
-.ih-th-txt{cursor:pointer}
+.ih-th-txt{cursor:grab}
+.ih-th-txt:active{cursor:grabbing}
+.ih-table th.ih-drop-target{background:var(--accent) !important;color:#fff;box-shadow:inset 3px 0 0 #fff}
 .ih-col-del{position:absolute;top:2px;right:9px;border:none;background:none;color:#c0392b;font-size:11px;cursor:pointer;opacity:0;padding:0 3px;line-height:1}
 .ih-table th:hover .ih-col-del{opacity:.7}
 .ih-col-del:hover{opacity:1 !important}
@@ -1508,6 +1510,51 @@ function delIhCol(code,ci){
   saveData(); renderBody();
 }
 function addIhRow(code){ const H=getIrbHist(code); if(!H.cols.length) H.cols=IH_DEFAULT_COLS.slice(); H.rows.push(H.cols.map(()=> '')); saveData(); renderBody(); }
+function addIhCol(code){
+  const H=getIrbHist(code);
+  const name=prompt('추가할 열 이름을 입력하세요','비고');
+  if(name===null) return; // 취소
+  let nm=(name||'').trim(); if(!nm) nm='열'+(H.cols.length+1);
+  if(H.cols.includes(nm)){ alert(`'${nm}' 열이 이미 있어요. 다른 이름으로 추가해 주세요.`); return; }
+  H.cols.push(nm);
+  H.rows.forEach(r=>r.push(''));
+  saveData(); irbHistOpen[code]=true; renderBody();
+  showToastNow(`✓ '${nm}' 열을 추가했어요`);
+}
+function moveIhCol(code,from,to){
+  const H=getIrbHist(code);
+  if(from===to||from<0||to<0||from>=H.cols.length||to>=H.cols.length) return;
+  const mv=arr=>{ const [x]=arr.splice(from,1); arr.splice(to,0,x); };
+  mv(H.cols); H.rows.forEach(mv);
+  // 정렬 표시(▲▼)가 붙어 있던 열도 같이 따라가도록 인덱스 보정
+  const s=ihSort[code];
+  if(s&&s.col>=0){
+    if(s.col===from) s.col=to;
+    else if(from<s.col&&to>=s.col) s.col--;
+    else if(from>s.col&&to<=s.col) s.col++;
+  }
+  saveData(); renderBody();
+}
+// 열 드래그 순서 이동 (제목 텍스트를 잡고 다른 제목 위에 놓기)
+let ihDragCi=null, ihDragCode=null;
+function ihDragStart(e,code,ci){
+  ihDragCode=code; ihDragCi=ci;
+  e.dataTransfer.effectAllowed='move';
+  try{ e.dataTransfer.setData('text/plain',String(ci)); }catch(_){}
+}
+function ihDragOver(e,code){
+  if(ihDragCi===null||ihDragCode!==code) return;
+  e.preventDefault(); e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('ih-drop-target');
+}
+function ihDragLeave(e){ e.currentTarget.classList.remove('ih-drop-target'); }
+function ihDrop(e,code,ci){
+  e.preventDefault(); e.currentTarget.classList.remove('ih-drop-target');
+  if(ihDragCode!==code||ihDragCi===null){ ihDragCi=null; ihDragCode=null; return; }
+  moveIhCol(code,ihDragCi,ci);
+  ihDragCi=null; ihDragCode=null;
+}
+function ihDragEnd(){ ihDragCi=null; ihDragCode=null; document.querySelectorAll('.ih-drop-target').forEach(el=>el.classList.remove('ih-drop-target')); }
 function clearIrbHist(code){
   const H=getIrbHist(code);
   if(!H.rows.length){ alert('삭제할 이력이 없어요.'); return; }
@@ -1642,7 +1689,7 @@ function renderIrbHistory(code){
   if(!open) return `<div class="irb-hist">${head}</div>`;
   const s=ihSort[code]||{col:-1,dir:'asc'};
   const tableW = 28 + 30 + H.cols.reduce((a,c)=>a+ihW(c),0);
-  const ths=H.cols.map((c,ci)=>`<th title="제목 클릭=정렬 · 오른쪽 끝 드래그=너비"><span class="ih-th-txt" onclick="sortIhBy('${code}',${ci})">${esc(c)}${s.col===ci?(s.dir==='asc'?' ▲':' ▼'):''}</span><button class="ih-col-del" onclick="event.stopPropagation();delIhCol('${code}',${ci})" title="이 열 삭제">✕</button><span class="ih-rsz" data-ci="${ci}" data-col="${esc(c)}"></span></th>`).join('');
+  const ths=H.cols.map((c,ci)=>`<th title="제목 클릭=정렬 · 제목 드래그=순서 이동 · 오른쪽 끝 드래그=너비" ondragover="ihDragOver(event,'${code}')" ondragleave="ihDragLeave(event)" ondrop="ihDrop(event,'${code}',${ci})"><span class="ih-th-txt" draggable="true" ondragstart="ihDragStart(event,'${code}',${ci})" ondragend="ihDragEnd()" onclick="sortIhBy('${code}',${ci})">${esc(c)}${s.col===ci?(s.dir==='asc'?' ▲':' ▼'):''}</span><button class="ih-col-del" onclick="event.stopPropagation();delIhCol('${code}',${ci})" title="이 열 삭제">✕</button><span class="ih-rsz" data-ci="${ci}" data-col="${esc(c)}"></span></th>`).join('');
   const colg=`<colgroup><col style="width:28px">${H.cols.map(c=>`<col style="width:${ihW(c)}px">`).join('')}<col style="width:30px"></colgroup>`;
   const body=H.rows.map((r,ri)=>`<tr class="${stateIdx>=0&&(r[stateIdx]||'').includes('심의중')?'ih-pending':''}">
     <td class="ih-idx">${ri+1}</td>
@@ -1654,6 +1701,7 @@ function renderIrbHistory(code){
       <div class="ih-btns">
         <button class="btn" onclick="openIrbPaste('${code}')">📋 표 붙여넣기</button>
         <button class="btn" onclick="addIhRow('${code}')">+ 행 추가</button>
+        <button class="btn" onclick="addIhCol('${code}')" title="표 맨 오른쪽에 새 열을 추가해요 (제목 드래그로 위치 이동 가능)">＋ 열 추가</button>
         <button class="btn" onclick="sortIrbHist('${code}','desc')" title="접수일 최신이 위로">↓ 최신순</button>
         <button class="btn" onclick="sortIrbHist('${code}','asc')" title="접수일 오래된 것이 위로">↑ 오래된순</button>
         <button class="ih-clear" onclick="clearIrbHist('${code}')" title="이 기관의 심의 이력 전체 삭제">🗑️ 전체 삭제</button>
@@ -2710,8 +2758,19 @@ function renderHomeBody(){
 }
 
 function renderBody(){
+  // 재렌더 시 스크롤 위치 보존:
+  // window.scrollY만으로는 부족 — Index 표 등은 내부 스크롤 박스(overflow:auto)라서
+  // innerHTML 교체 시 scrollTop이 0으로 초기화돼 '맨 위로 튕김'이 발생함.
+  // → 내부 스크롤 컨테이너들의 scrollTop/scrollLeft도 함께 기억했다가 복원.
   const _scrollY=window.scrollY;
-  const _restoreScroll=()=>{ window.scrollTo(0,_scrollY); };
+  const _innerSel='.index-table-wrap,.table-wrap,.ih-scroll,.idx-topscroll,.doc-topscroll,.ih-topscroll';
+  const _inner=Array.prototype.map.call(document.querySelectorAll(_innerSel), el=>({top:el.scrollTop,left:el.scrollLeft}));
+  const _restoreScroll=()=>{
+    document.querySelectorAll(_innerSel).forEach((el,i)=>{
+      const p=_inner[i]; if(p){ el.scrollTop=p.top; el.scrollLeft=p.left; }
+    });
+    window.scrollTo(0,_scrollY);
+  };
   if(curView==='home'){ renderHomeBody(); _restoreScroll(); return; }
   if(curView==='index'){ renderIndexBody(); _restoreScroll(); return; }
   const wrap=document.getElementById('bodyWrap');
