@@ -78,7 +78,7 @@
 .theme-sw{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #dcdcda;cursor:pointer;padding:0;transition:transform .1s}
 .theme-sw:hover{transform:scale(1.15)}
 .theme-sw.active{box-shadow:0 0 0 2px var(--accent);transform:scale(1.1)}
-body{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:#37352f;min-height:100vh}
+body{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',-apple-system,'Segoe UI',sans-serif;letter-spacing:-0.02em;background:var(--bg);color:#37352f;min-height:100vh}
 /* 수기 입력 칸(입력창·텍스트영역·선택박스) 글씨체: 맑은 고딕 */
 input:not([type=checkbox]):not([type=radio]),textarea,select{font-family:inherit !important;font-weight:400 !important}
 input::placeholder,textarea::placeholder{opacity:.5}
@@ -416,7 +416,7 @@ tr:hover td{background:var(--bg)}
 .idx-tab-del:hover{opacity:1;color:#c0392b;background:#fbe9e7}
 .idx-tab-edit{margin-left:6px;font-size:10px;opacity:.45;padding:0 2px;border-radius:4px}
 .idx-tab-edit:hover{opacity:1;background:#e7eff8}
-.idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 6px;font-size:12px;text-align:center}
+.idx-num-input{width:100%;box-sizing:border-box;border:1px solid #dde3ec;border-radius:5px;padding:4px 2px;font-size:11px;text-align:center;letter-spacing:0}
 .idx-num-wrap{display:flex;align-items:center;gap:2px}
 .idx-sel{width:14px;height:14px;flex-shrink:0;cursor:pointer;accent-color:#c0392b;margin:0}
 .idx-sel-sec{vertical-align:middle;margin-right:4px}
@@ -2874,9 +2874,22 @@ function setupDocTopScroll(){
 
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
 // ── Index 컬럼 폭 (커서 드래그로 조절, localStorage 저장) ──
-const IDX_COL_DEFAULT=[34,64,280,52,80,210,200,200,180];
-let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v2')); if(Array.isArray(v)&&v.length===9) return v.map(Number);}catch(e){} return IDX_COL_DEFAULT.slice(); })();
-function saveIdxColW(){ try{ localStorage.setItem('idxColW_v2', JSON.stringify(idxColW)); }catch(e){} }
+const IDX_COL_DEFAULT=[34,84,280,52,80,210,200,200,180];
+let idxColW=(function(){
+  try{
+    const v3=JSON.parse(localStorage.getItem('idxColW_v3'));
+    if(Array.isArray(v3)&&v3.length===9) return v3.map(Number);
+    // 기존 폭 이어받되, No. 열은 번호(3.1 등)가 안 잘리게 최소 84px 보장
+    const v2=JSON.parse(localStorage.getItem('idxColW_v2'));
+    if(Array.isArray(v2)&&v2.length===9){
+      const m=v2.map(Number); m[1]=Math.max(m[1]||0,84);
+      try{ localStorage.setItem('idxColW_v3', JSON.stringify(m)); }catch(e){}
+      return m;
+    }
+  }catch(e){}
+  return IDX_COL_DEFAULT.slice();
+})();
+function saveIdxColW(){ try{ localStorage.setItem('idxColW_v3', JSON.stringify(idxColW)); }catch(e){} }
 function setupIdxResizers(){
   const table=document.querySelector('.index-table'); if(!table) return;
   const cols=table.querySelectorAll('colgroup col');
