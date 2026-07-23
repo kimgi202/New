@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CRA Document Manager</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <meta name="theme-color" content="var(--accent)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -77,7 +78,7 @@
 .theme-sw{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #dcdcda;cursor:pointer;padding:0;transition:transform .1s}
 .theme-sw:hover{transform:scale(1.15)}
 .theme-sw.active{box-shadow:0 0 0 2px var(--accent);transform:scale(1.1)}
-body{font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:#37352f;min-height:100vh}
+body{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:#37352f;min-height:100vh}
 /* 수기 입력 칸(입력창·텍스트영역·선택박스) 글씨체: 맑은 고딕 */
 input:not([type=checkbox]):not([type=radio]),textarea,select{font-family:inherit !important;font-weight:400 !important}
 input::placeholder,textarea::placeholder{opacity:.5}
@@ -300,10 +301,10 @@ tr:hover td{background:var(--bg)}
 .sec-actions-row{display:flex;gap:8px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0f0ef;background:#fff}
 .att-bar .att-label{font-size:11px;color:#787774;font-weight:600;margin-right:2px}
 .att-empty{font-size:11px;color:#bbb}
-.att-chip{display:inline-flex;align-items:center;gap:5px;background:#eef5f3;border:1px solid #dcebe7;border-radius:12px;padding:3px 5px 3px 9px;font-size:11px;max-width:300px}
-.att-chip a{color:var(--accent);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;display:inline-block;vertical-align:middle}
+.att-chip{display:inline-flex;align-items:center;gap:5px;background:#eef5f3;border:1px solid #dcebe7;border-radius:12px;padding:3px 5px 3px 9px;font-size:11px;max-width:100%}
+.att-chip a{color:var(--accent);text-decoration:none;white-space:normal;overflow:visible;word-break:break-all;line-height:1.4;display:inline-block;vertical-align:middle}
 .att-chip.link a{color:#2563aa}
-.att-link-text{color:#2563aa;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px;display:inline-block;vertical-align:middle;user-select:none}
+.att-link-text{color:#2563aa;cursor:pointer;white-space:normal;overflow:visible;word-break:break-all;line-height:1.4;display:inline-block;vertical-align:middle;user-select:none}
 .att-link-text:hover{text-decoration:underline}
 .att-edit{font-size:11px;border:1px solid var(--accent);border-radius:5px;padding:3px 7px;min-width:200px;width:230px;font-family:inherit;color:#37352f;outline:none}
 .att-save{border:none;background:var(--accent);color:#fff;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;margin-left:5px}
@@ -3191,23 +3192,29 @@ function exportIndexCSV(type){
   a.click();
 }
 // ── 문서 표 컬럼 폭 (드래그로 조절, 모든 섹션 공통 적용) ──
-// 열 순서: ✕·선택·구분·서버내파일명(구 문서명)·TMF·버전·Eff·서버경로·상태·비고
-const SEC_COL_DEFAULT=[28,30,78,160,330,62,116,260,76,200];
+// 열 순서(9열): ✕·선택·구분·서버내파일명·TMF·버전·Eff·상태·비고
+const SEC_COL_DEFAULT=[28,30,78,160,330,62,116,76,200];
 let secColW=(function(){
   try{
+    const v4=JSON.parse(localStorage.getItem('secColW_v4'));
+    if(Array.isArray(v4)&&v4.length===9) return v4.map(Number);
+    // 구버전 폭 이어받기: v3(10열, 서버경로=7번) 또는 v2(10열, 서버=5번)에서 서버칸만 제거
     const v3=JSON.parse(localStorage.getItem('secColW_v3'));
-    if(Array.isArray(v3)&&v3.length===10) return v3.map(Number);
-    // 구버전(v2) 폭이 있으면 새 열 순서로 재배치해서 이어받기 (서버칸이 5→7번으로 이동)
+    if(Array.isArray(v3)&&v3.length===10){
+      const m=v3.filter((_,i)=>i!==7).map(Number);
+      try{ localStorage.setItem('secColW_v4', JSON.stringify(m)); }catch(e){}
+      return m;
+    }
     const v2=JSON.parse(localStorage.getItem('secColW_v2'));
     if(Array.isArray(v2)&&v2.length===10){
-      const m=[v2[0],v2[1],v2[2],v2[3],v2[4],v2[6],v2[7],v2[5],v2[8],v2[9]].map(Number);
-      try{ localStorage.setItem('secColW_v3', JSON.stringify(m)); }catch(e){}
+      const m=v2.filter((_,i)=>i!==5).map(Number);
+      try{ localStorage.setItem('secColW_v4', JSON.stringify(m)); }catch(e){}
       return m;
     }
   }catch(e){}
   return SEC_COL_DEFAULT.slice();
 })();
-function saveSecColW(){ try{ localStorage.setItem('secColW_v3', JSON.stringify(secColW)); }catch(e){} }
+function saveSecColW(){ try{ localStorage.setItem('secColW_v4', JSON.stringify(secColW)); }catch(e){} }
 // 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
 let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
 let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols')==='1'; }catch(e){ return false; } })();
@@ -3215,13 +3222,13 @@ let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'
 function toggleNaRows(){ showNaRows=!showNaRows; try{ localStorage.setItem('showNaRows', showNaRows?'1':'0'); }catch(e){} renderBody(); }
 function toggleFilingCols(){ showFilingCols=!showFilingCols; try{ localStorage.setItem('showFilingCols', showFilingCols?'1':'0'); }catch(e){} renderBody(); }
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
-// 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 문서·TMF·서버경로·비고 칸에 자동 분배
+// 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 서버내파일명·TMF·비고 칸에 자동 분배
 function secDisplayWidths(){
   const w=secColW.slice();
   if(!showVerCols){
     const freed=(w[5]||0)+(w[6]||0);
-    const share=Math.round(freed/4);
-    w[3]+=share; w[4]+=share; w[7]+=share; w[9]+=(freed-share*3); // 서버내파일명·TMF·서버경로·비고
+    const share=Math.round(freed/3);
+    w[3]+=share; w[4]+=share; w[8]+=(freed-share*2); // 서버내파일명·TMF·비고
     w[5]=0; w[6]=0;
   }
   return w;
@@ -3286,14 +3293,13 @@ function renderSection(code, sec){
         <th title="TMF(Trial Master File)에 보관된 실제 파일명을 적어요.">TMF 파일명<span class="col-rsz" data-ci="4"></span></th>
         <th title="문서 버전. 동의서는 Master_Site, 변경대비표는 v1.0 → v2.0 형태로 적어요.">버전<span class="col-rsz" data-ci="5"></span></th>
         <th title="해당 버전의 효력 발생일(Effective Date).">Effective Date<span class="col-rsz" data-ci="6"></span></th>
-        <th title="사내 서버에 저장한 위치(폴더 경로)를 적어요.">서버 경로<span class="col-rsz" data-ci="7"></span></th>
-        <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="8"></span></th>
-        <th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요.">비고<span class="col-rsz" data-ci="9"></span></th>
+        <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="7"></span></th>
+        <th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요.">비고<span class="col-rsz" data-ci="8"></span></th>
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
         ${isAddingHere?addDocRowHtml():''}
-        ${searchTerm&&!anyMatch?`<tr><td colspan="10" class="no-match">검색 결과 없음</td></tr>`:''}
+        ${searchTerm&&!anyMatch?`<tr><td colspan="9" class="no-match">검색 결과 없음</td></tr>`:''}
       </tbody>
     </table></div>`:''}
   </div>`;
@@ -3465,7 +3471,6 @@ function rowHtml(code,secId,idx,row,total){
       return `<input class="ver-input" style="width:90px" placeholder="v1.0" value="${esc(row.ver||'')}" onchange="${setter},'ver',this.value)">`;
     })()}</td>
     <td>${((row.needVer||row.dtype==='consent'||(row.name||'').includes('동의서'))&&!row.name.includes('변경대비표'))?`<input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="date-input" value="${row.effectiveDate||''}" onchange="${setter},'effectiveDate',this.value)">`:na()}</td>
-    <td><textarea class="tmf-input" rows="1" placeholder="서버 경로" oninput="autoGrow(this)" onchange="${setter},'serverFileName',this.value)">${esc(row.serverFileName||'')}</textarea></td>
     <td><select class="sel ${stCls(row.status)}" onchange="onSelChange(this,'${code}','${secId}',${idx})">
       ${stOpts(row.status)}
     </select></td>
@@ -3474,7 +3479,7 @@ function rowHtml(code,secId,idx,row,total){
 }
 
 function addDocRowHtml(){
-  return `<tr class="add-row"><td colspan="10">
+  return `<tr class="add-row"><td colspan="9">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 2px">
       <select class="add-doc-sel" id="addDtype" onchange="addDtypeVal=this.value;if(this.value==='consent'){const c=document.getElementById('addNeedVer');if(c)c.checked=true;}">
         ${[['doc','제출 문서'],['app','신청서(의뢰서)'],['receipt','접수증'],['consent','동의서'],['notice','통지서'],['eval','평가록'],['minutes','회의록'],['custom','기타']].map(([v,l])=>`<option value="${v}"${v===addDtypeVal?' selected':''}>${l}</option>`).join('')}
