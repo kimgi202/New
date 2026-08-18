@@ -656,6 +656,25 @@ body.sb-collapsed .sb-hover-zone{display:block}
   .sb-user #userBar button{width:auto}
 }
 </style>
+<style id="sb-active-state">
+/* ✅ 사이드바 "선택됨" 표시 강화 (홈 / 기관 / ISF·PSF·TMF·커스텀 Index 공통) */
+#appSidebar .tab.active,
+#appSidebar .protocol-tab.active,
+#appSidebar .tab.active:hover,
+#appSidebar .protocol-tab.active:hover{
+  background:#e6edf7 !important;                                   /* 구형 브라우저 폴백 */
+  background:color-mix(in srgb, var(--accent) 15%, #fff) !important;/* 테마색 연하게 */
+  color:var(--accent-d) !important;
+  font-weight:700 !important;
+  box-shadow:inset 3px 0 0 var(--accent);                          /* 왼쪽 강조 바 */
+}
+/* 선택된 Index 탭은 아이콘·연필도 또렷하게 */
+#appSidebar .tab.idx-tab.active .idx-tab-edit{opacity:.85}
+#appSidebar .tab.idx-tab.active .idx-tab-del{opacity:.85}
+/* 호버는 선택 상태와 헷갈리지 않게 더 옅은 회색으로 유지 */
+#appSidebar .tab:not(.active):hover,
+#appSidebar .protocol-tab:not(.active):hover{background:#eef1f5;box-shadow:none}
+</style>
 </head>
 <body>
 <style>
