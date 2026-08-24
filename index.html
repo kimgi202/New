@@ -4445,5 +4445,254 @@ function quickSearchKey(e){
 buildShell();
 authInit();
 </script>
+<!-- ══════════ 📝 플로팅 메모 (스크롤 따라 항상 따라다님) ══════════ -->
+<style>
+#memoHandle{position:fixed;right:0;top:190px;z-index:9000;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:var(--accent);color:#fff;border:none;border-radius:12px 0 0 12px;padding:12px 7px 13px;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);font-family:inherit;line-height:1.1;transition:background .12s,padding .12s}
+#memoHandle:hover{background:var(--accent-d);padding-right:11px}
+#memoHandle .mh-ico{font-size:15px}
+#memoHandle .mh-label{font-size:10.5px;font-weight:700;writing-mode:vertical-rl;letter-spacing:2px}
+#memoHandle .mh-cnt{background:#fff;color:var(--accent);border-radius:9px;font-size:10px;font-weight:800;padding:1px 5px;min-width:17px;text-align:center}
+#memoPanel{position:fixed;right:14px;top:118px;width:304px;height:430px;z-index:9001;background:#fff;border:1px solid #e3e3e0;
+  border-radius:13px;box-shadow:0 12px 36px rgba(0,0,0,.17);display:flex;flex-direction:column;overflow:hidden;font-family:inherit}
+.memo-head{display:flex;align-items:center;gap:6px;padding:9px 10px 9px 12px;background:var(--accent);color:#fff;cursor:move;user-select:none}
+.memo-head .memo-title{font-size:13px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.memo-hbtn{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:6px;padding:4px 9px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.memo-hbtn:hover{background:rgba(255,255,255,.32)}
+.memo-tabs{display:flex;border-bottom:1px solid #ececea;background:var(--surf)}
+.memo-tab{flex:1;padding:7px 4px;font-size:11.5px;font-weight:600;color:#8a8a86;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit}
+.memo-tab:hover{color:#37352f}
+.memo-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.memo-hint{font-size:10.5px;color:#9b9b97;padding:6px 12px 2px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.memo-list{flex:1;overflow-y:auto;padding:8px 10px 12px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}
+.memo-list::-webkit-scrollbar{width:8px}
+.memo-list::-webkit-scrollbar-thumb{background:#d8d8d4;border-radius:6px}
+.memo-item{border:1px solid rgba(0,0,0,.07);border-radius:9px;padding:6px 7px 7px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.memo-item-top{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.memo-chk{width:13px;height:13px;cursor:pointer;accent-color:var(--accent);flex-shrink:0}
+.memo-date{font-size:10px;color:#8d8d88;flex:1;white-space:nowrap;overflow:hidden}
+.memo-ibtn{background:none;border:none;cursor:pointer;font-size:11px;color:#9a9a95;padding:1px 3px;line-height:1;border-radius:4px}
+.memo-ibtn:hover{background:rgba(0,0,0,.07);color:#37352f}
+.memo-ta{width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;outline:none;font-size:12.5px;line-height:1.55;
+  color:#37352f;min-height:46px;overflow:hidden;padding:0 1px}
+.memo-item.done .memo-ta{text-decoration:line-through;opacity:.5}
+.memo-empty{text-align:center;color:#b3b3ae;font-size:12px;padding:26px 10px;line-height:1.7}
+.memo-foot{border-top:1px solid #f0f0ee;padding:6px 10px;font-size:10.5px;color:#a6a6a1;display:flex;align-items:center;gap:6px}
+.memo-grip{margin-left:auto;cursor:nwse-resize;color:#c3c3be;font-size:12px;padding:0 2px;user-select:none}
+@media(max-width:720px){
+  #memoPanel{left:8px !important;right:8px !important;top:auto !important;bottom:8px !important;width:auto !important;height:56vh !important}
+  #memoHandle{top:auto;bottom:96px}
+}
+@media print{#memoHandle,#memoPanel{display:none !important}}
+</style>
+
+<button id="memoHandle" type="button" title="메모 열기 (Alt+M)">
+  <span class="mh-ico">📝</span><span class="mh-label">메모</span><span class="mh-cnt" id="memoHandleCnt">0</span>
+</button>
+
+<div id="memoPanel" style="display:none">
+  <div class="memo-head" id="memoHead">
+    <span class="memo-title">📝 메모</span>
+    <button class="memo-hbtn" type="button" id="memoAddBtn">+ 추가</button>
+    <button class="memo-hbtn" type="button" id="memoCloseBtn" title="닫기">✕</button>
+  </div>
+  <div class="memo-tabs">
+    <button class="memo-tab" type="button" data-scope="protocol">📌 이 과제</button>
+    <button class="memo-tab" type="button" data-scope="global">🌐 전체 공통</button>
+  </div>
+  <div class="memo-hint" id="memoHint"></div>
+  <div class="memo-list" id="memoList"></div>
+  <div class="memo-foot"><span id="memoFootTxt">자동 저장됨</span><span class="memo-grip" id="memoGrip" title="크기 조절">◢</span></div>
+</div>
+
+<script>
+/* ══════════ 📝 플로팅 메모 ══════════
+   - position:fixed 라서 스크롤해도 잘리지 않고 항상 같은 자리에 떠 있음
+   - '이 과제' 메모는 protocol 객체에, '전체 공통' 메모는 protocolData.__memo__ 에 저장
+     → 기존 saveData()/클라우드 동기화 경로를 그대로 타므로 별도 저장 로직 불필요        */
+(function(){
+  var COLORS=['#fffbc9','#ffe6c7','#dff3d2','#d3ecfb','#fbd7e4','#e8dcfa','#ffffff'];
+  var K={open:'memoOpen',scope:'memoScope',pos:'memoPos',size:'memoSize'};
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  var scope=(lsGet(K.scope)==='global')?'global':'protocol';
+  var saveTimer=null;
+  function $(id){ return document.getElementById(id); }
+
+  /* ── 데이터 접근 ── */
+  function globalBox(){
+    if(typeof protocolData!=='object'||!protocolData) return null;
+    if(!protocolData.__memo__) protocolData.__memo__={sites:[],sections:{},memos:[]};
+    if(!Array.isArray(protocolData.__memo__.memos)) protocolData.__memo__.memos=[];
+    return protocolData.__memo__;
+  }
+  function curP(){ try{ return (typeof getCurProtocol==='function')?getCurProtocol():null; }catch(e){ return null; } }
+  function notes(){
+    if(scope==='global'){ var g=globalBox(); return g?g.memos:[]; }
+    var p=curP(); if(!p) return null;                       // null = 과제 없음
+    if(!Array.isArray(p.memos)) p.memos=[];
+    return p.memos;
+  }
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    var f=$('memoFootTxt'); if(f) f.textContent='입력 중…';
+    saveTimer=setTimeout(function(){
+      try{ if(typeof saveData==='function') saveData(); }catch(e){}
+      var f2=$('memoFootTxt'); if(f2) f2.textContent='✓ 자동 저장됨 · '+fmt(Date.now());
+      badge();
+    },500);
+  }
+  function fmt(ts){
+    var d=new Date(ts||Date.now()), z=function(n){ return (n<10?'0':'')+n; };
+    return z(d.getMonth()+1)+'/'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());
+  }
+  function count(){
+    var t=0, p=curP();
+    if(p&&Array.isArray(p.memos)) t+=p.memos.filter(function(m){ return !m.done; }).length;
+    var g=globalBox(); if(g) t+=g.memos.filter(function(m){ return !m.done; }).length;
+    return t;
+  }
+  function badge(){ var b=$('memoHandleCnt'); if(b) b.textContent=count(); }
+
+  /* ── 그리기 ── */
+  function grow(ta){ ta.style.height='auto'; ta.style.height=Math.min(Math.max(ta.scrollHeight,46),260)+'px'; }
+  function render(force){
+    var list=$('memoList'); if(!list) return;
+    if(!force && list.contains(document.activeElement)) { badge(); return; }   // 타이핑 중엔 다시 그리지 않음
+    var hint=$('memoHint'), p=curP();
+    if(hint) hint.textContent = scope==='global'
+      ? '🌐 모든 과제에서 똑같이 보이는 메모예요'
+      : '📌 '+((p&&(p.protocolNo||p.projectName||p.name))||'과제 없음')+' 에서만 보이는 메모예요';
+    Array.prototype.forEach.call(document.querySelectorAll('.memo-tab'),function(t){
+      t.classList.toggle('active', t.dataset.scope===scope);
+    });
+    var arr=notes();
+    list.innerHTML='';
+    if(arr===null){ list.innerHTML='<div class="memo-empty">먼저 과제(Protocol)를 선택해주세요.<br>또는 <b>🌐 전체 공통</b> 탭을 이용해보세요.</div>'; badge(); return; }
+    if(!arr.length){ list.innerHTML='<div class="memo-empty">아직 메모가 없어요 ✏️<br>위 <b>+ 추가</b>를 눌러 시작해보세요.</div>'; badge(); return; }
+    arr.forEach(function(m,i){
+      var box=document.createElement('div');
+      box.className='memo-item'+(m.done?' done':'');
+      box.style.background=m.color||COLORS[0];
+
+      var top=document.createElement('div'); top.className='memo-item-top';
+      var chk=document.createElement('input'); chk.type='checkbox'; chk.className='memo-chk'; chk.checked=!!m.done; chk.title='완료 표시';
+      chk.onchange=function(){ m.done=chk.checked; m.upd=Date.now(); render(true); scheduleSave(); };
+      var dt=document.createElement('span'); dt.className='memo-date'; dt.textContent=fmt(m.upd||m.ts);
+      var cbtn=document.createElement('button'); cbtn.className='memo-ibtn'; cbtn.type='button'; cbtn.textContent='🎨'; cbtn.title='색상 바꾸기';
+      cbtn.onclick=function(){ var ci=COLORS.indexOf(m.color||COLORS[0]); m.color=COLORS[(ci+1)%COLORS.length]; box.style.background=m.color; scheduleSave(); };
+      var up=document.createElement('button'); up.className='memo-ibtn'; up.type='button'; up.textContent='↑'; up.title='위로';
+      up.onclick=function(){ if(i>0){ arr.splice(i-1,0,arr.splice(i,1)[0]); render(true); scheduleSave(); } };
+      var del=document.createElement('button'); del.className='memo-ibtn'; del.type='button'; del.textContent='✕'; del.title='삭제';
+      del.onclick=function(){
+        if((m.text||'').trim() && !confirm('이 메모를 삭제할까요?')) return;
+        arr.splice(i,1); render(true); scheduleSave();
+      };
+      top.appendChild(chk); top.appendChild(dt); top.appendChild(up); top.appendChild(cbtn); top.appendChild(del);
+
+      var ta=document.createElement('textarea');
+      ta.className='memo-ta'; ta.placeholder='메모를 입력하세요…'; ta.value=m.text||'';
+      ta.oninput=function(){ m.text=ta.value; m.upd=Date.now(); grow(ta); scheduleSave(); };
+      ta.onblur=function(){ dt.textContent=fmt(m.upd||m.ts); };
+
+      box.appendChild(top); box.appendChild(ta);
+      list.appendChild(box);
+      grow(ta);
+    });
+    badge();
+  }
+
+  /* ── 열기/닫기 ── */
+  function setOpen(on){
+    $('memoPanel').style.display = on?'flex':'none';
+    $('memoHandle').style.display = on?'none':'flex';
+    lsSet(K.open, on?'1':'0');
+    if(on) render(true); else badge();
+  }
+  function toggle(){ setOpen($('memoPanel').style.display==='none'); }
+
+  function add(){
+    var arr=notes();
+    if(arr===null){ alert('먼저 과제(Protocol)를 선택하거나 🌐 전체 공통 탭을 이용해주세요.'); return; }
+    arr.unshift({id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5), text:'', color:COLORS[0], ts:Date.now(), upd:Date.now(), done:false});
+    render(true); scheduleSave();
+    var ta=document.querySelector('#memoList .memo-ta'); if(ta) ta.focus();
+  }
+
+  /* ── 위치/크기 기억 ── */
+  function applyPos(){
+    var p=$('memoPanel');
+    try{
+      var pos=JSON.parse(lsGet(K.pos)||'null');
+      if(pos&&typeof pos.top==='number'){
+        p.style.top=Math.max(4,Math.min(pos.top,window.innerHeight-120))+'px';
+        p.style.right=Math.max(4,Math.min(pos.right,window.innerWidth-120))+'px';
+      }
+      var sz=JSON.parse(lsGet(K.size)||'null');
+      if(sz&&sz.w){ p.style.width=sz.w+'px'; p.style.height=sz.h+'px'; }
+    }catch(e){}
+  }
+  function dragMove(e){
+    if(window.innerWidth<=720) return;
+    if(e.target.closest('button')) return;
+    var p=$('memoPanel'), r=p.getBoundingClientRect();
+    var sx=e.clientX, sy=e.clientY, st=r.top, sr=window.innerWidth-r.right;
+    function mv(ev){
+      var top=Math.max(4,Math.min(st+(ev.clientY-sy), window.innerHeight-80));
+      var right=Math.max(4,Math.min(sr-(ev.clientX-sx), window.innerWidth-100));
+      p.style.top=top+'px'; p.style.right=right+'px';
+    }
+    function up(){
+      document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      var rr=p.getBoundingClientRect();
+      lsSet(K.pos, JSON.stringify({top:rr.top, right:window.innerWidth-rr.right}));
+    }
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+    e.preventDefault();
+  }
+  function dragSize(e){
+    var p=$('memoPanel'), r=p.getBoundingClientRect();
+    var sx=e.clientX, sy=e.clientY, sw=r.width, sh=r.height;
+    function mv(ev){
+      p.style.width=Math.max(230,Math.min(sw-(ev.clientX-sx),640))+'px';
+      p.style.height=Math.max(220,Math.min(sh+(ev.clientY-sy),window.innerHeight-40))+'px';
+    }
+    function up(){
+      document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      var rr=p.getBoundingClientRect();
+      lsSet(K.size, JSON.stringify({w:Math.round(rr.width), h:Math.round(rr.height)}));
+    }
+    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+    e.preventDefault();
+  }
+
+  /* ── 연결 ── */
+  $('memoHandle').onclick=toggle;
+  $('memoCloseBtn').onclick=toggle;
+  $('memoAddBtn').onclick=add;
+  $('memoHead').addEventListener('mousedown',dragMove);
+  $('memoGrip').addEventListener('mousedown',dragSize);
+  Array.prototype.forEach.call(document.querySelectorAll('.memo-tab'),function(t){
+    t.onclick=function(){ scope=t.dataset.scope; lsSet(K.scope,scope); render(true); };
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.altKey && (e.key==='m'||e.key==='M')){ e.preventDefault(); toggle(); }
+    if(e.key==='Escape' && $('memoPanel').contains(document.activeElement)) setOpen(false);
+  });
+
+  /* 과제 전환·클라우드 동기화 후 자동 새로고침 */
+  if(typeof window.render==='function'){
+    var _origRender=window.render;
+    window.render=function(){ var r=_origRender.apply(this,arguments); try{ render(false); }catch(e){} return r; };
+  }
+
+  applyPos();
+  setOpen(lsGet(K.open)==='1');
+  badge();
+  window.memoToggle=toggle;   // 필요하면 콘솔/버튼에서 호출 가능
+})();
+</script>
+
 </body>
 </html>
