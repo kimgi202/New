@@ -455,6 +455,53 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-sec-ctrls button{border:none;background:transparent;cursor:pointer;font-size:13px;padding:1px 5px;border-radius:5px;opacity:.55}
 .idx-sec-ctrls button:hover{opacity:1;background:rgba(0,0,0,.06)}
 .idx-empty-hint{color:#9aa3b2;font-size:13px;text-align:center;padding:24px 0 4px}
+/* ── 방문 대조 패널 (지난 방문 ↔ 이번 방문) ── */
+.idx-split{display:flex;gap:12px;align-items:flex-start}
+.idx-split-main{flex:1;min-width:0}
+.idx-visit{width:340px;flex:0 0 340px;position:sticky;top:96px;max-height:calc(100vh - 130px);display:flex;flex-direction:column;
+  background:#fff;border:1px solid #e3ece9;border-radius:11px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.vi-head{background:var(--accent);color:#fff;padding:9px 11px}
+.vi-head-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.vi-head-top b{font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vi-hbtn{background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;font-size:11px;padding:3px 7px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.vi-hbtn:hover{background:rgba(255,255,255,.35)}
+.vi-sel{width:100%;border:none;border-radius:6px;padding:5px 7px;font-size:12px;font-family:inherit;color:#37352f}
+.vi-stats{display:flex;gap:5px;flex-wrap:wrap;padding:7px 10px;background:#f2f8f6;border-bottom:1px solid #e6efec;font-size:11px}
+.vi-stat{padding:2px 7px;border-radius:20px;font-weight:600;background:#fff;border:1px solid #e2e9e6;color:#5f7169}
+.vi-stat.ok{color:#1e6e3e;border-color:#bfe3ce}.vi-stat.part{color:#9a6b00;border-color:#f0dfae}.vi-stat.miss{color:#a52020;border-color:#f0c2c2}
+.vi-tools{display:flex;gap:5px;flex-wrap:wrap;padding:7px 9px;border-bottom:1px solid #f0f0ee}
+.vi-tool{font-size:10.5px;padding:4px 7px;border-radius:6px;border:1px solid #dfe6e4;background:#fff;color:#5f7169;cursor:pointer;font-family:inherit;white-space:nowrap}
+.vi-tool:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-xl)}
+.vi-list{flex:1;overflow-y:auto;padding:8px 9px 12px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin}
+.vi-list::-webkit-scrollbar{width:8px}.vi-list::-webkit-scrollbar-thumb{background:#dcdcd8;border-radius:6px}
+.vi-item{border:1px solid #ececea;border-left:3px solid #dcdcd8;border-radius:8px;padding:6px 7px;background:#fcfcfc}
+.vi-item.st-ok{border-left-color:#2f9e5f;background:#f4fbf7}
+.vi-item.st-part{border-left-color:#e0a500;background:#fffcf2}
+.vi-item.st-miss{border-left-color:#d64545;background:#fdf5f5}
+.vi-top{display:flex;align-items:flex-start;gap:5px}
+.vi-no{font-family:'Courier New',monospace;font-size:10px;color:#9aa3a0;padding-top:2px;white-space:nowrap}
+.vi-txt{flex:1;font-size:12px;font-weight:600;color:#37352f;line-height:1.35;word-break:break-word}
+.vi-del{border:none;background:none;color:#c4c4c0;cursor:pointer;font-size:11px;padding:0 2px;line-height:1.3}
+.vi-del:hover{color:#a33}
+.vi-mid{display:flex;align-items:center;gap:5px;margin:5px 0 4px}
+.vi-sts{display:flex;gap:3px}
+.vi-sts button{border:1px solid #e0e0dd;background:#fff;border-radius:6px;width:26px;height:22px;font-size:11px;cursor:pointer;color:#8d8d88;font-family:inherit;line-height:1}
+.vi-sts button:hover{border-color:var(--accent)}
+.vi-sts button.on[data-st="ok"]{background:#2f9e5f;border-color:#2f9e5f;color:#fff}
+.vi-sts button.on[data-st="part"]{background:#e0a500;border-color:#e0a500;color:#fff}
+.vi-sts button.on[data-st="miss"]{background:#d64545;border-color:#d64545;color:#fff}
+.vi-prev{font-size:10px;color:#8d8d88;background:#f2f2f0;border-radius:5px;padding:2px 6px;white-space:nowrap}
+.vi-prev.p-ok{color:#1e6e3e;background:#e9f6ee}.vi-prev.p-part{color:#9a6b00;background:#fdf5e2}.vi-prev.p-miss{color:#a52020;background:#fbeceb}
+.vi-date{font-size:10px;color:#a8a8a3;margin-left:auto;white-space:nowrap}
+.vi-memo{width:100%;box-sizing:border-box;border:1px solid #ececea;border-radius:6px;padding:4px 6px;font-size:11.5px;outline:none;background:#fff}
+.vi-memo:focus{border-color:var(--accent)}
+.vi-empty{color:#a8a8a3;font-size:11.5px;text-align:center;line-height:1.7;padding:18px 6px}
+.vi-foot{border-top:1px solid #f0f0ee;padding:7px 9px;display:flex;gap:5px}
+.vi-foot button{flex:1;font-size:10.5px;padding:6px;border-radius:7px;border:1px solid var(--accent);background:#fff;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit}
+.vi-foot button:hover{background:var(--accent);color:#fff}
+.idx-pull-btn{display:block;margin-top:4px;font-size:10px;padding:2px 6px;border-radius:5px;border:1px solid #dfe6e4;background:#fff;color:#5f7169;cursor:pointer;font-family:inherit}
+.idx-pull-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-xl)}
+@media(max-width:1100px){.idx-split{flex-direction:column}.idx-visit{width:100%;flex:1 1 auto;position:static;max-height:none}}
 .index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto;overflow-y:auto;max-height:70vh;scrollbar-width:thin}
 .index-table-wrap::-webkit-scrollbar{display:none}
 .idx-topscroll{position:sticky;z-index:60;overflow-x:auto;overflow-y:hidden;height:14px;background:#eef1f5;border:1px solid #e4e8ee;border-bottom:none;border-radius:6px 6px 0 0}
@@ -490,6 +537,8 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-ck-cell{text-align:center;border-left:1px solid #f2f6f5}
 .idx-ck-cell input{width:17px;height:17px;cursor:pointer;accent-color:var(--accent)}
 .idx-row.idx-ck-all td{background:#eefaf4}
+.idx-visit-btn{font-size:11px;padding:5px 11px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap}
+.idx-visit-btn:hover{background:var(--accent-d)}
 .idx-ckcol-btn{font-size:11px;padding:5px 11px;border-radius:6px;border:1px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap}
 .idx-ckcol-btn:hover{background:var(--accent);color:#fff}
 .idx-num{font-family:'Courier New',monospace;color:#999;font-size:11px;white-space:nowrap;vertical-align:top;padding-top:7px}
@@ -2531,6 +2580,238 @@ function clearIdxChecks(type){
   saveData(); renderBody();
 }
 
+/* ══════════ 📋 방문 대조 패널 (지난 방문 ↔ 이번 방문) ══════════
+   저장: protocolData[과제].idxVisits[기관::Index] = {visits:[...], curId}
+   visit = {id, label:'2차 방문', date:'2026-08-25', items:[{id,no,text,st,memo,ts}]}
+   st: '' 미확인 | 'ok' 완료 | 'part' 보완필요 | 'miss' 빠짐                     */
+let showVisitPanel=(function(){ try{ return localStorage.getItem('idxVisitPanel')==='1'; }catch(e){ return false; } })();
+function toggleVisitPanel(){
+  showVisitPanel=!showVisitPanel;
+  try{ localStorage.setItem('idxVisitPanel', showVisitPanel?'1':'0'); }catch(e){}
+  renderBody();
+}
+function visitStore(type){
+  if(!curProtocolId) return null;
+  const pd=protocolData[curProtocolId]; if(!pd) return null;
+  if(!pd.idxVisits) pd.idxVisits={};
+  const k=indexStoreKey(type);
+  if(!pd.idxVisits[k]) pd.idxVisits[k]={visits:[],curId:null};
+  const st=pd.idxVisits[k];
+  if(!Array.isArray(st.visits)) st.visits=[];
+  return st;
+}
+function curVisit(type){
+  const st=visitStore(type); if(!st||!st.visits.length) return null;
+  return st.visits.find(v=>v.id===st.curId) || st.visits[st.visits.length-1];
+}
+function prevVisitOf(type,visit){
+  const st=visitStore(type); if(!st) return null;
+  const i=st.visits.findIndex(v=>v.id===visit.id);
+  return i>0 ? st.visits[i-1] : null;
+}
+function todayStr(){ const d=new Date(),z=n=>(n<10?'0':'')+n; return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+function mdStr(ymd){ return (ymd||'').length>=10 ? ymd.slice(5).replace('-','/') : (ymd||''); }
+const VI_LABEL={ok:'✓ 완료',part:'△ 보완필요',miss:'✕ 빠짐','':'미확인'};
+
+function addVisit(type){
+  const st=visitStore(type);
+  if(!st){ alert('먼저 과제와 기관을 선택해주세요.'); return; }
+  const n=st.visits.length+1;
+  const label=(prompt('새 방문 회차 이름을 입력하세요.\n예) '+n+'차 방문 / 8월 정기 모니터링', n+'차 방문')||'').trim();
+  if(!label) return;
+  const v={id:makeId('vis'), label, date:todayStr(), items:[]};
+  const prev=st.visits[st.visits.length-1];
+  if(prev && prev.items.length){
+    const carry=prev.items.filter(it=>it.st!=='ok');
+    if(carry.length && confirm(`'${prev.label}'에서 아직 못 끝낸 항목 ${carry.length}건을 이번 회차로 이어받을까요?\n(✓ 완료된 항목은 빼고 가져와요)`)){
+      v.items=carry.map(it=>({id:makeId('vi'), no:it.no, text:it.text, st:'', memo:'', ts:null, from:prev.label}));
+    }
+  }
+  st.visits.push(v); st.curId=v.id;
+  saveData(); renderBody();
+}
+function switchVisit(type,id){ const st=visitStore(type); if(!st) return; st.curId=id; saveData(); renderBody(); }
+function renameVisit(type){
+  const v=curVisit(type); if(!v) return;
+  const nt=prompt('회차 이름 수정', v.label); if(nt===null) return;
+  const t=nt.trim(); if(t){ v.label=t; saveData(); renderBody(); }
+}
+function setVisitDate(type,val){ const v=curVisit(type); if(!v) return; v.date=val; saveData(); }
+function delVisit(type){
+  const st=visitStore(type), v=curVisit(type); if(!st||!v) return;
+  if(!confirm(`'${v.label}' 회차를 삭제할까요? (항목 ${v.items.length}건)\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  st.visits=st.visits.filter(x=>x.id!==v.id);
+  st.curId=st.visits.length?st.visits[st.visits.length-1].id:null;
+  saveData(); renderBody();
+}
+function ensureVisit(type){
+  let v=curVisit(type);
+  if(v) return v;
+  const st=visitStore(type); if(!st) return null;
+  v={id:makeId('vis'), label:'1차 방문', date:todayStr(), items:[]};
+  st.visits.push(v); st.curId=v.id;
+  return v;
+}
+function pushVisitItem(v,no,text){
+  if(v.items.some(it=>(it.no||'')===(no||'') && it.text===text)) return false;
+  v.items.push({id:makeId('vi'), no:no||'', text:text||'', st:'', memo:'', ts:null});
+  return true;
+}
+function addRowToVisit(type,idx){
+  const v=ensureVisit(type); if(!v) return;
+  const r=getIndexRows(type)[idx]; if(!r||r.h) return;
+  const added=pushVisitItem(v, r.n, r.t||'');
+  saveData(); renderBody();
+  if(!added) alert('이미 이번 방문 목록에 담겨 있어요.');
+}
+function pullToVisit(type,mode){
+  const v=ensureVisit(type); if(!v) return;
+  const rows=getIndexRows(type);
+  let src=[];
+  if(mode==='undone') src=rows.filter(r=>!r.h && !r.na && r.status!=='ok');
+  else if(mode==='thisfiling') src=rows.filter(r=>!r.h && !r.na && (r.thisFiling||'').trim());
+  else if(mode==='issue') src=rows.filter(r=>!r.h && !r.na && r.status==='issue');
+  if(!src.length){ alert('가져올 항목이 없어요.'); return; }
+  let n=0; src.forEach(r=>{ if(pushVisitItem(v,r.n,r.t||'')) n++; });
+  saveData(); renderBody();
+  if(!n) alert('이미 모두 담겨 있어요.');
+}
+function addVisitItemManual(type){
+  const v=ensureVisit(type); if(!v) return;
+  const t=(prompt('직접 적을 항목을 입력하세요.\n예) PI 서명본 원본 회수 / 위임장 최신본 확인','')||'').trim();
+  if(!t) return;
+  v.items.push({id:makeId('vi'), no:'', text:t, st:'', memo:'', ts:null, manual:true});
+  saveData(); renderBody();
+}
+function setVisitItemSt(type,itemId,st){
+  const v=curVisit(type); if(!v) return;
+  const it=v.items.find(x=>x.id===itemId); if(!it) return;
+  it.st = (it.st===st) ? '' : st;                 // 같은 버튼 다시 누르면 해제
+  it.ts = it.st ? todayStr() : null;              // 체크한 날짜 자동 기록
+  saveData(); renderBody();
+}
+function setVisitItemMemo(type,itemId,val){
+  const v=curVisit(type); if(!v) return;
+  const it=v.items.find(x=>x.id===itemId); if(!it) return;
+  it.memo=val; saveData();                        // 입력 중 포커스 유지를 위해 다시 그리지 않음
+}
+function delVisitItem(type,itemId){
+  const v=curVisit(type); if(!v) return;
+  v.items=v.items.filter(x=>x.id!==itemId);
+  saveData(); renderBody();
+}
+function clearVisitChecks(type){
+  const v=curVisit(type); if(!v||!v.items.length) return;
+  if(!confirm('이번 회차의 체크 표시를 모두 지울까요? (항목은 그대로)')) return;
+  v.items.forEach(it=>{ it.st=''; it.ts=null; });
+  saveData(); renderBody();
+}
+function applyVisitToIndex(type){
+  const v=curVisit(type); if(!v) return;
+  const done=v.items.filter(it=>it.st==='ok');
+  if(!done.length){ alert('✓ 완료로 체크한 항목이 없어요.'); return; }
+  if(!confirm(`✓ 완료 ${done.length}건을 Index 본표의 상태에 '완료'로 반영할까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  const rows=getIndexRows(type);
+  let n=0;
+  done.forEach(it=>{
+    const r=rows.find(x=>!x.h && ((it.no && x.n===it.no) || x.t===it.text));
+    if(r){ r.status='ok'; n++; }
+  });
+  saveData(); renderBody();
+  alert(`${n}건을 Index에 반영했어요.${n<done.length?`\n(${done.length-n}건은 본표에서 같은 항목을 못 찾았어요)`:''}`);
+}
+function visitPanelHtml(type,rows){
+  const st=visitStore(type);
+  if(!st) return '<div class="idx-visit"><div class="vi-empty">과제·기관을 먼저 선택해주세요.</div></div>';
+  const v=curVisit(type);
+  if(!v){
+    return `<div class="idx-visit">
+      <div class="vi-head"><div class="vi-head-top"><b>📋 방문 대조</b><button class="vi-hbtn" onclick="toggleVisitPanel()">✕</button></div></div>
+      <div class="vi-empty">아직 방문 회차가 없어요.<br>회차를 만들면 <b>지난 방문에서 못 끝낸 항목</b>을<br>자동으로 이어받을 수 있어요 🙂</div>
+      <div class="vi-foot"><button onclick="addVisit('${type}')">＋ 첫 회차 만들기</button></div>
+    </div>`;
+  }
+  const prev=prevVisitOf(type,v);
+  const c={ok:0,part:0,miss:0,none:0};
+  v.items.forEach(it=>{ c[it.st||'none']++; });
+  const itemsHtml = v.items.length ? v.items.map(it=>{
+    let pv=null;
+    if(prev) pv=prev.items.find(x=>(it.no && x.no===it.no) || x.text===it.text);
+    const pchip = pv ? `<span class="vi-prev p-${pv.st||'none'}" title="${escAttr(prev.label+' 결과'+(pv.memo?' · '+pv.memo:''))}">지난 ${VI_LABEL[pv.st||'']}</span>`
+                     : (prev?`<span class="vi-prev" title="지난 회차 목록에 없던 항목">지난 —</span>`:'');
+    return `<div class="vi-item st-${it.st||'none'}">
+      <div class="vi-top">${it.no?`<span class="vi-no">${escHtml(it.no)}</span>`:''}<span class="vi-txt">${escHtml(it.text)}</span>
+        <button class="vi-del" onclick="delVisitItem('${type}','${it.id}')" title="목록에서 빼기">🗑</button></div>
+      <div class="vi-mid">
+        <span class="vi-sts">
+          <button data-st="ok" class="${it.st==='ok'?'on':''}" onclick="setVisitItemSt('${type}','${it.id}','ok')" title="완료">✓</button>
+          <button data-st="part" class="${it.st==='part'?'on':''}" onclick="setVisitItemSt('${type}','${it.id}','part')" title="보완 필요">△</button>
+          <button data-st="miss" class="${it.st==='miss'?'on':''}" onclick="setVisitItemSt('${type}','${it.id}','miss')" title="빠짐">✕</button>
+        </span>
+        ${pchip}
+        <span class="vi-date">${it.ts?mdStr(it.ts)+' 체크':''}</span>
+      </div>
+      <input class="vi-memo" placeholder="메모 한 줄 (예: 사본만 있음)" value="${escAttr(it.memo||'')}" onchange="setVisitItemMemo('${type}','${it.id}',this.value)">
+    </div>`;
+  }).join('') : `<div class="vi-empty">담긴 항목이 없어요.<br>아래 버튼으로 Index에서 가져오거나,<br>표의 <b>📋 이번 방문에 담기</b>를 눌러보세요.</div>`;
+
+  return `<div class="idx-visit">
+    <div class="vi-head">
+      <div class="vi-head-top"><b>📋 ${escHtml(v.label)}</b>
+        <button class="vi-hbtn" onclick="renameVisit('${type}')" title="회차 이름 수정">✏️</button>
+        <button class="vi-hbtn" onclick="addVisit('${type}')" title="새 회차 만들기 (지난 미완료 이어받기)">＋회차</button>
+        <button class="vi-hbtn" onclick="delVisit('${type}')" title="이 회차 삭제">🗑</button>
+        <button class="vi-hbtn" onclick="toggleVisitPanel()" title="패널 닫기">✕</button>
+      </div>
+      <div style="display:flex;gap:5px">
+        <select class="vi-sel" onchange="switchVisit('${type}',this.value)" title="회차 선택">
+          ${st.visits.map(x=>`<option value="${x.id}"${x.id===v.id?' selected':''}>${escHtml(x.label)} (${escHtml(mdStr(x.date))})</option>`).join('')}
+        </select>
+        <input type="date" class="vi-sel" style="flex:0 0 132px" value="${escAttr(v.date||'')}" onchange="setVisitDate('${type}',this.value)" title="방문 일자">
+      </div>
+    </div>
+    <div class="vi-stats">
+      <span class="vi-stat">전체 ${v.items.length}</span>
+      <span class="vi-stat ok">✓ ${c.ok}</span>
+      <span class="vi-stat part">△ ${c.part}</span>
+      <span class="vi-stat miss">✕ ${c.miss}</span>
+      <span class="vi-stat">미확인 ${c.none}</span>
+      ${prev?`<span class="vi-stat" title="바로 앞 회차와 비교하고 있어요">↔ ${escHtml(prev.label)}</span>`:''}
+    </div>
+    <div class="vi-tools">
+      <button class="vi-tool" onclick="pullToVisit('${type}','undone')" title="Index에서 상태가 '완료'가 아닌 항목 담기">⬅ 미완료 담기</button>
+      <button class="vi-tool" onclick="pullToVisit('${type}','thisfiling')" title="'이번 Filing' 칸에 적힌 항목 담기">⬅ 이번 Filing</button>
+      <button class="vi-tool" onclick="pullToVisit('${type}','issue')" title="이슈 상태 항목 담기">⬅ 이슈</button>
+      <button class="vi-tool" onclick="addVisitItemManual('${type}')">＋ 직접 추가</button>
+      <button class="vi-tool" onclick="clearVisitChecks('${type}')">↺ 체크 초기화</button>
+    </div>
+    <div class="vi-list">${itemsHtml}</div>
+    <div class="vi-foot">
+      <button onclick="applyVisitToIndex('${type}')" title="✓ 완료 항목을 Index 본표 상태에 반영">✓ Index에 반영</button>
+      <button onclick="exportVisitCSV('${type}')" title="이번 회차 결과를 CSV로 내려받기">📥 회차 CSV</button>
+    </div>
+  </div>`;
+}
+function exportVisitCSV(type){
+  const v=curVisit(type); if(!v){ alert('회차가 없어요.'); return; }
+  const prev=prevVisitOf(type,v);
+  const cur=getCurProtocol();
+  const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
+  let csv='\uFEFF';
+  csv+=`Protocol,${q(cur?.protocolNo||cur?.name||'')}\n`;
+  csv+=`Site,${q(curSiteCode())}\nIndex,${type}\n방문,${q(v.label)},${q(v.date)}\n\n`;
+  csv+='No,항목,이번 결과,체크일,메모,지난 결과\n';
+  v.items.forEach(it=>{
+    const pv=prev?prev.items.find(x=>(it.no&&x.no===it.no)||x.text===it.text):null;
+    csv+=`${q(it.no)},${q(it.text)},${q(VI_LABEL[it.st||''])},${q(it.ts||'')},${q(it.memo)},${q(pv?VI_LABEL[pv.st||'']:'')}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${(cur?.protocolNo||'protocol')}_${curSiteCode()}_${type}_${v.label}.csv`;
+  a.click();
+}
+
 function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
 
 function renderProtocolTabs(){
@@ -3022,7 +3303,7 @@ function renderIndexBody(){
       <td><div class="idx-loc-wrap"><textarea class="idx-loc idx-loc-top" rows="1" placeholder="위치" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea><textarea class="idx-loc idx-loc-bot" rows="1" placeholder="파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'fileName',this.value)">${esc(r.fileName||'')}</textarea></div></td>
       <td><div class="prevfiling-wrap"><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea><button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
       <td><div class="thisfiling-wrap"><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea><input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
-      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
+      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}</td>
       ${ckCells}
     </tr>`;
     if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
@@ -3044,6 +3325,7 @@ function renderIndexBody(){
         ` : `
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexRow('${type}')">+ 항목 추가</button>
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexSection('${type}')">+ 섹션 추가</button>
+        <button class="idx-visit-btn" onclick="toggleVisitPanel()" title="지난 방문 ↔ 이번 방문 대조 체크리스트">${showVisitPanel?'⊟ 방문 대조 닫기':'📋 방문 대조 열기'}</button>
         <button class="idx-ckcol-btn" onclick="addIdxCheckCol('${type}')" title="예: 원본 수령 / PI 서명 / 스캔 완료 — 직접 이름 붙인 체크 칸을 만들어요">☑ 체크 칸 추가</button>
         ${CHK.length?`<button class="idx-ckcol-btn" onclick="clearIdxChecks('${type}')" title="이 Index의 모든 체크 표시를 해제 (칸은 그대로)">↺ 체크 초기화</button>`:''}
         <button class="idx-bulkdel-btn" onclick="toggleIdxSelMode('${type}')" title="항목을 체크해서 여러 개 삭제">✕ 선택 삭제</button>
@@ -3055,6 +3337,7 @@ function renderIndexBody(){
         `}
       </div>
     </div>
+    <div class="idx-split"><div class="idx-split-main">
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
     <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showNaRows?'':' hide-na'}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}${CHK.map(()=>`<col style="width:${IDX_CK_W}px">`).join('')}<col style="width:${IDX_CK_ADD_W}px"></colgroup>
@@ -3083,6 +3366,7 @@ function renderIndexBody(){
     </table></div>
     ${rows.length===0?`<div class="idx-empty-hint">아직 Index 항목이 없어요. 아래 버튼으로 우리 회사 Index 항목을 직접 추가해보세요!</div>`:''}
     <button class="idx-add-btn" onclick="addIndexRow('${type}')">+ 항목 추가</button>
+    </div>${showVisitPanel?visitPanelHtml(type,rows):''}</div>
   `;
   // 렌더 직후 위치/비고 textarea 높이를 내용에 맞게 조정
   wrap.querySelectorAll('.idx-loc,.idx-note,.idx-title-input,.flog-content').forEach(autoGrow);
