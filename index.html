@@ -475,6 +475,23 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .index-table.hide-na .idx-row.idx-na{display:none}
 .idx-row.idx-done{background:#f3faf6}
 .idx-chk{text-align:center}.idx-chk input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+/* ── 사용자가 직접 만드는 체크 칸 (Index) ── */
+.idx-ck-th{background:#f0f7f4 !important;border-left:1px solid #e2ece8}
+.idx-ck-th .ckh{display:flex;flex-direction:column;gap:2px;align-items:center;min-width:0}
+.idx-ck-th .ckh-name{font-size:10.5px;font-weight:700;color:var(--accent);cursor:text;max-width:78px;white-space:normal;word-break:break-word;text-align:center;line-height:1.25}
+.idx-ck-th .ckh-cnt{font-size:9.5px;color:#8a9a95;font-weight:600}
+.idx-ck-th .ckh-btns{display:flex;gap:2px;opacity:0;transition:opacity .12s}
+.idx-ck-th:hover .ckh-btns{opacity:1}
+.idx-ck-th .ckh-btns button{border:none;background:#e3efeb;color:#5e7a72;border-radius:4px;font-size:9.5px;padding:1px 4px;cursor:pointer;line-height:1.3;font-family:inherit}
+.idx-ck-th .ckh-btns button:hover{background:var(--accent);color:#fff}
+.idx-ck-add{background:#f0f7f4 !important;text-align:center;border-left:1px solid #e2ece8}
+.idx-ck-add button{border:1px dashed var(--accent);background:#fff;color:var(--accent);border-radius:6px;font-size:10px;font-weight:700;padding:3px 5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.idx-ck-add button:hover{background:var(--accent);color:#fff}
+.idx-ck-cell{text-align:center;border-left:1px solid #f2f6f5}
+.idx-ck-cell input{width:17px;height:17px;cursor:pointer;accent-color:var(--accent)}
+.idx-row.idx-ck-all td{background:#eefaf4}
+.idx-ckcol-btn{font-size:11px;padding:5px 11px;border-radius:6px;border:1px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap}
+.idx-ckcol-btn:hover{background:var(--accent);color:#fff}
 .idx-num{font-family:'Courier New',monospace;color:#999;font-size:11px;white-space:nowrap;vertical-align:top;padding-top:7px}
 .idx-name{font-weight:500;color:#37352f;line-height:1.4;white-space:normal;word-break:break-word}
 .idx-ref{display:inline-block;margin-left:6px;font-size:10px;color:#b8860b;background:#fef7e8;border-radius:4px;padding:1px 6px;font-weight:500;white-space:normal}
@@ -2327,7 +2344,7 @@ function filingLogRowHtml(type, idx, r){
       </div>
       <textarea class="flog-content" rows="2" placeholder="이 회차에 Filing한 문서 파일명을 줄바꿈(Enter)으로 적으세요&#10;예) CartiLife_PMP_V1.0_20250225_signed_F&#10;    CartiLife_PMP_V2.0_20250625_Signed_F" oninput="autoGrow(this)" onchange="setFilingLogField('${type}',${idx},${li},'content',this.value)">${esc(e.content||'')}</textarea>
     </div>`).join('');
-  return `<tr class="idx-log-row"><td colspan="9"><div class="flog-wrap">
+  return `<tr class="idx-log-row"><td colspan="${10+idxCheckCols(type).length}"><div class="flog-wrap">
     <div class="flog-head">🗂 회차별 Filing 이력 <span class="flog-cnt">${log.length}건</span></div>
     ${log.length?entries:'<div class="flog-empty">아직 기록이 없어요. 아래 버튼으로 1회차부터 남겨보세요.</div>'}
     <button class="flog-add" onclick="addFilingLogEntry('${type}',${idx})">+ 회차 기록 추가</button>
@@ -2432,6 +2449,87 @@ function clearIndex(type){
   setIndexRowsArray(type, []); saveData(); renderBody();
 }
 
+
+/* ══════════ ☑ 사용자가 직접 만드는 체크 칸 (Index) ══════════
+   저장 위치: protocolData[과제].idxChecks[기관::Index] = [{id,label}]
+             각 항목 행의 r.chk = {체크칸id:true}
+   → 기존 saveData() 경로를 그대로 타므로 로컬·클라우드에 함께 저장됨          */
+const IDX_CK_W=88, IDX_CK_ADD_W=64;
+function escHtml(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return escHtml(s).replace(/'/g,'&#39;'); }
+function idxCheckStore(){
+  if(!curProtocolId) return null;
+  const pd=protocolData[curProtocolId]; if(!pd) return null;
+  if(!pd.idxChecks) pd.idxChecks={};
+  return pd.idxChecks;
+}
+function idxCheckCols(type){
+  const st=idxCheckStore(); if(!st) return [];
+  const k=indexStoreKey(type);
+  if(!Array.isArray(st[k])) st[k]=[];
+  return st[k];
+}
+function addIdxCheckCol(type){
+  const st=idxCheckStore();
+  if(!st){ alert('먼저 과제(Protocol)와 기관을 선택해주세요.'); return; }
+  const name=(prompt('만들 체크 칸 이름을 입력하세요.\n예) 원본 수령 · PI 서명 · 스캔 완료 · 원본 대조','')||'').trim();
+  if(!name) return;
+  const cols=idxCheckCols(type);
+  if(cols.some(c=>c.label===name)){ alert('같은 이름의 체크 칸이 이미 있어요.'); return; }
+  const col={id:'ck_'+Date.now()+'_'+Math.random().toString(36).slice(2,5), label:name};
+  cols.push(col);
+  // 여러 기관을 담당하는 경우 → 다른 기관 Index에도 같은 체크 칸을 한 번에 생성
+  const others=(sites||[]).filter(x=>x.code!==curSiteCode());
+  if(others.length && confirm(`다른 기관 ${others.length}곳의 같은 Index에도 '${name}' 체크 칸을 만들까요?`)){
+    const tk=indexTemplateKey(type);
+    others.forEach(x=>{
+      const k=x.code+'::'+type+'__'+tk;
+      if(!Array.isArray(st[k])) st[k]=[];
+      if(!st[k].some(c=>c.label===name)) st[k].push({id:col.id, label:name});
+    });
+  }
+  saveData(); renderBody();
+}
+function renameIdxCheckCol(type,id){
+  const cols=idxCheckCols(type); const c=cols.find(x=>x.id===id); if(!c) return;
+  const nt=prompt('체크 칸 이름 수정', c.label); if(nt===null) return;
+  const t=nt.trim(); if(!t) return;
+  c.label=t; saveData(); renderBody();
+}
+function moveIdxCheckCol(type,id,dir){
+  const cols=idxCheckCols(type); const i=cols.findIndex(x=>x.id===id);
+  const j=i+dir; if(i<0||j<0||j>=cols.length) return;
+  const tmp=cols[i]; cols[i]=cols[j]; cols[j]=tmp;
+  saveData(); renderBody();
+}
+function delIdxCheckCol(type,id){
+  const cols=idxCheckCols(type); const i=cols.findIndex(x=>x.id===id); if(i<0) return;
+  const rows=getIndexRows(type);
+  const used=rows.filter(r=>r.chk&&r.chk[id]).length;
+  if(!confirm(`'${cols[i].label}' 체크 칸을 삭제할까요?${used?`\n체크해둔 ${used}건도 함께 사라져요.`:''}\n(⏱ 백업 복원으로 되돌릴 수 있어요)`)) return;
+  cols.splice(i,1);
+  rows.forEach(r=>{ if(r.chk) delete r.chk[id]; });
+  saveData(); renderBody();
+}
+function setIdxCheck(type,idx,id,val){
+  const rows=getIndexRows(type); const r=rows[idx]; if(!r) return;
+  if(!r.chk) r.chk={};
+  if(val) r.chk[id]=true; else delete r.chk[id];
+  saveData(); renderBody();
+}
+function toggleIdxCheckAll(type,id){
+  const rows=getIndexRows(type);
+  const targets=rows.filter(r=>!r.h && !r.na);
+  const allOn=targets.length>0 && targets.every(r=>r.chk&&r.chk[id]);
+  targets.forEach(r=>{ if(!r.chk) r.chk={}; if(allOn) delete r.chk[id]; else r.chk[id]=true; });
+  saveData(); renderBody();
+}
+function clearIdxChecks(type){
+  const cols=idxCheckCols(type); if(!cols.length) return;
+  if(!confirm('이 Index의 체크 표시를 모두 해제할까요?\n(체크 칸 자체는 그대로 남아요)')) return;
+  getIndexRows(type).forEach(r=>{ r.chk={}; });
+  saveData(); renderBody();
+}
 
 function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
 
@@ -2887,6 +2985,7 @@ function renderIndexBody(){
   const naCount=rows.filter(r=>!r.h && r.na).length;
   const issue=rows.filter(r=>!r.h && r.status==='issue').length;
   const fullName=indexLabel(type);
+  const CHK=idxCheckCols(type);          // 사용자가 직접 만든 체크 칸 목록
 
   let bodyRows='';
   let curSecCollapsed=false;
@@ -2898,7 +2997,7 @@ function renderIndexBody(){
       const ctrls = secEditable ? `<span class="idx-sec-ctrls" onclick="event.stopPropagation()"><button class="idx-sec-additem" onclick="addItemToSection('${type}',${idx})" title="이 섹션에 항목 추가">➕ 항목</button><button onclick="editIndexSection('${type}',${idx})" title="섹션 제목 수정">✏️</button><button onclick="delIndexSection('${type}',${idx})" title="섹션 삭제">🗑️</button></span>` : '';
       const secSel = idxSelMode ? `<input type="checkbox" class="idx-sel idx-sel-sec" ${r.selected?'checked':''} onclick="event.stopPropagation();idxSecSelClick(event,'${type}',${idx})" title="이 섹션 선택 (안의 항목도 함께 삭제)"> ` : '';
       bodyRows+=`<tr class="idx-sec-row${r.selected?' idx-sec-selected':''}" onclick="toggleIndexSec('${type}','${r.n}')">
-        <td colspan="9">${secSel}<span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${ctrls}</td></tr>`;
+        <td colspan="${10+CHK.length}">${secSel}<span class="chevron${open?' open':''}" style="margin-right:6px">▶</span><b>${esc(r.n)}. ${esc(r.t)}</b>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${ctrls}</td></tr>`;
       return;
     }
     // 위치상 직전 섹션이 접혀 있으면 숨김 (번호 무관 — 커스텀 항목도 포함)
@@ -2912,7 +3011,9 @@ function renderIndexBody(){
     const titleCell = editable
       ? `<td class="idx-name"><div class="idx-name-row"><textarea class="idx-title-input" rows="1" placeholder="문서명 입력" oninput="autoGrow(this)" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${esc(r.t||'')}</textarea><button class="idx-name-edit" onclick="editIdxName(this)" title="이름 편집">✏️</button></div>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
       : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
-    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}" data-ridx="${idx}">
+    const ckAll = CHK.length>0 && CHK.every(c=>r.chk&&r.chk[c.id]);
+    const ckCells = CHK.map(c=>`<td class="idx-ck-cell"><input type="checkbox" ${(r.chk&&r.chk[c.id])?'checked':''} title="${escAttr(c.label)}" onchange="setIdxCheck('${type}',${idx},'${c.id}',this.checked)"></td>`).join('')+`<td class="idx-ck-cell"></td>`;
+    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}${ckAll?' idx-ck-all':''}" data-ridx="${idx}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
       ${numCell}
       ${titleCell}
@@ -2922,6 +3023,7 @@ function renderIndexBody(){
       <td><div class="prevfiling-wrap"><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea><button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
       <td><div class="thisfiling-wrap"><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea><input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
       <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}</td>
+      ${ckCells}
     </tr>`;
     if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
   });
@@ -2942,6 +3044,8 @@ function renderIndexBody(){
         ` : `
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexRow('${type}')">+ 항목 추가</button>
         <button class="idx-add-btn" style="margin-top:0" onclick="addIndexSection('${type}')">+ 섹션 추가</button>
+        <button class="idx-ckcol-btn" onclick="addIdxCheckCol('${type}')" title="예: 원본 수령 / PI 서명 / 스캔 완료 — 직접 이름 붙인 체크 칸을 만들어요">☑ 체크 칸 추가</button>
+        ${CHK.length?`<button class="idx-ckcol-btn" onclick="clearIdxChecks('${type}')" title="이 Index의 모든 체크 표시를 해제 (칸은 그대로)">↺ 체크 초기화</button>`:''}
         <button class="idx-bulkdel-btn" onclick="toggleIdxSelMode('${type}')" title="항목을 체크해서 여러 개 삭제">✕ 선택 삭제</button>
         <button class="idx-clear-btn" onclick="clearIndex('${type}')" title="이 Index의 모든 항목 삭제">🗑️ 전체 비우기</button>
         <button class="btn" onclick="toggleFilingCols()" title="이전·이번 Filing 칸 ${showFilingCols?'숨기기':'펼치기'}">${showFilingCols?'⊟ Filing 칸':'⊞ Filing 칸'}</button>
@@ -2952,8 +3056,8 @@ function renderIndexBody(){
       </div>
     </div>
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
-    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showNaRows?'':' hide-na'}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))}px">
-      <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
+    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showNaRows?'':' hide-na'}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px">
+      <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}${CHK.map(()=>`<col style="width:${IDX_CK_W}px">`).join('')}<col style="width:${IDX_CK_ADD_W}px"></colgroup>
       <thead><tr>
         <th>✓</th>
         <th>No.<span class="col-rsz" data-ci="1"></span></th>
@@ -2964,6 +3068,16 @@ function renderIndexBody(){
         <th title="지난 모니터링 방문까지 Filing 완료한 항목">이전 Filing<span class="col-rsz" data-ci="6"></span></th>
         <th title="이번 모니터링 방문에 Filing 할 항목">이번 Filing<span class="col-rsz" data-ci="7"></span></th>
         <th>비고<span class="col-rsz" data-ci="8"></span></th>
+        ${CHK.map(c=>{
+          const tot=rows.filter(r=>!r.h&&!r.na).length;
+          const dn=rows.filter(r=>!r.h&&!r.na&&r.chk&&r.chk[c.id]).length;
+          return `<th class="idx-ck-th" title="${escAttr(c.label)} — 이름을 클릭하면 수정돼요"><div class="ckh">
+            <span class="ckh-name" onclick="renameIdxCheckCol('${type}','${c.id}')">${escHtml(c.label)}</span>
+            <span class="ckh-cnt">${dn}/${tot}</span>
+            <span class="ckh-btns"><button onclick="toggleIdxCheckAll('${type}','${c.id}')" title="전체 체크 / 전체 해제">☑</button><button onclick="moveIdxCheckCol('${type}','${c.id}',-1)" title="왼쪽으로">◀</button><button onclick="delIdxCheckCol('${type}','${c.id}')" title="이 체크 칸 삭제">✕</button></span>
+          </div></th>`;
+        }).join('')}
+        <th class="idx-ck-add" title="내가 원하는 체크 칸을 직접 만들어요"><button onclick="addIdxCheckCol('${type}')">＋<br>체크칸</button></th>
       </tr></thead>
       <tbody>${bodyRows}</tbody>
     </table></div>
@@ -3135,13 +3249,14 @@ function exportIndexCSV(type){
   let csv='\uFEFF';
   csv+=`Protocol,${(cur?.protocolNo||cur?.name||'').replace(/,/g,' ')}\n`;
   csv+=`Index,${type}\n\n`;
-  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note,EffDate,FileName\n';
+  const ckCols=idxCheckCols(type);
+  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note,EffDate,FileName'+ckCols.map(c=>','+(c.label||'').replace(/,/g,' ')).join('')+'\n';
   const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
   rows.forEach(r=>{
-    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,,,\n`; return; }
+    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,,,`+ckCols.map(()=>',').join('')+`\n`; return; }
     const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
     const naOut=r.naType||(r.na?'NA':'');
-    csv+=`${r.n},${q(r.t)},${naOut},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)},${q(r.effDate)},${q(r.fileName)}\n`;
+    csv+=`${r.n},${q(r.t)},${naOut},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)},${q(r.effDate)},${q(r.fileName)}`+ckCols.map(c=>','+((r.chk&&r.chk[c.id])?'O':'')).join('')+`\n`;
   });
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');
