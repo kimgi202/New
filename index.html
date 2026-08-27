@@ -1052,6 +1052,12 @@ const TMPL = {
     {name:'문제 보고서 본문',               dtype:'doc', needVer:false},
     {name:'예상하지 못한 문제 보고 접수증', dtype:'receipt', needVer:false},
   ]},
+  safety: { emoji:'🛡️', name:'안전성 보고', docs:[
+    {name:'안전성 보고 신청서(의뢰서)', dtype:'app', needVer:false},
+    {name:'SAE/SUSAR 보고서 본문', dtype:'doc', needVer:false},
+    {name:'안전성 정보 서한(DIL)·Line Listing', dtype:'doc', needVer:false},
+    {name:'안전성 보고 접수증', dtype:'receipt', needVer:false},
+  ]},
   suspend: { emoji:'⏸️', name:'중지보고', docs:[
     {name:'중지보고 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'중지보고서 본문', dtype:'doc', needVer:false},
@@ -3846,6 +3852,7 @@ function renderSecForm(){
       <button class="sec-type-btn" onclick="doAddSection('fundchange')">💰 연구비 변경보고</button>
       <button class="sec-type-btn" onclick="doAddSection('interim')">📊 중간보고</button>
       <button class="sec-type-btn" onclick="doAddSection('unexpected')">🚨 예상하지 못한 문제 보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('safety')">🛡️ 안전성 보고</button>
       <button class="sec-type-btn" onclick="doAddSection('suspend')">⏸️ 중지보고</button>
       <button class="sec-type-btn" onclick="doAddSection('close')">🔚 종료보고</button>
       <button class="sec-type-btn" onclick="doAddSection('result')">📑 결과보고</button>
