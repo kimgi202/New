@@ -460,6 +460,13 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-split-main{flex:1;min-width:0}
 .idx-visit{width:340px;flex:0 0 340px;position:sticky;top:96px;max-height:calc(100vh - 130px);display:flex;flex-direction:column;
   background:#fff;border:1px solid #e3ece9;border-radius:11px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+/* 패널 좌측 폭 조절 손잡이 (왼쪽으로 끌면 넓어짐) */
+.vi-rsz{position:absolute;left:0;top:0;width:7px;height:100%;cursor:col-resize;z-index:12;touch-action:none;user-select:none}
+.vi-rsz::after{content:"";position:absolute;left:2px;top:calc(50% - 22px);width:3px;height:44px;background:#d5ded9;border-radius:2px}
+.vi-rsz:hover::after,.vi-rsz.dragging::after{background:var(--accent);height:100%;top:0;border-radius:0}
+.vi-rszbar{position:absolute;left:0;bottom:0;width:100%;height:9px;cursor:row-resize;z-index:12;touch-action:none;user-select:none}
+.vi-rszbar::after{content:"";position:absolute;left:calc(50% - 16px);bottom:3px;width:32px;height:3px;background:#d5ded9;border-radius:2px}
+.vi-rszbar:hover::after,.vi-rszbar.dragging::after{background:var(--accent)}
 .vi-head{background:var(--accent);color:#fff;padding:9px 11px}
 .vi-head-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .vi-head-top b{font-size:15px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -493,15 +500,20 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .vi-prev{font-size:11.5px;color:#8d8d88;background:#f2f2f0;border-radius:5px;padding:2px 6px;white-space:nowrap}
 .vi-prev.p-ok{color:#1e6e3e;background:#e9f6ee}.vi-prev.p-part{color:#9a6b00;background:#fdf5e2}.vi-prev.p-miss{color:#a52020;background:#fbeceb}
 .vi-date{font-size:11.5px;color:#a8a8a3;margin-left:auto;white-space:nowrap}
-.vi-memo{width:100%;box-sizing:border-box;border:1px solid #ececea;border-radius:6px;padding:4px 6px;font-size:13px;outline:none;background:#fff}
+.vi-memo{width:100%;box-sizing:border-box;border:1px solid #ececea;border-radius:6px;padding:4px 6px;font-size:13px;outline:none;background:#fff;
+  font-family:inherit;color:#37352f;line-height:1.5;min-height:26px;resize:vertical;overflow-y:auto;white-space:pre-wrap;word-break:break-word;display:block}
 .vi-memo:focus{border-color:var(--accent)}
+.vi-memo-foot{display:flex;align-items:center;gap:4px;margin-top:2px}
+.vi-memo-hint{font-size:11px;color:#b3b3ae;margin-left:auto}
+.vi-memo-rst{border:none;background:none;color:#b3b3ae;font-size:11px;cursor:pointer;padding:0 3px;font-family:inherit}
+.vi-memo-rst:hover{color:var(--accent)}
 .vi-empty{color:#a8a8a3;font-size:13px;text-align:center;line-height:1.7;padding:18px 6px}
-.vi-foot{border-top:1px solid #f0f0ee;padding:7px 9px;display:flex;gap:5px}
+.vi-foot{border-top:1px solid #f0f0ee;padding:7px 9px 13px;display:flex;gap:5px}
 .vi-foot button{flex:1;font-size:12px;padding:6px;border-radius:7px;border:1px solid var(--accent);background:#fff;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit}
 .vi-foot button:hover{background:var(--accent);color:#fff}
 .idx-pull-btn{display:block;margin-top:4px;font-size:11.5px;padding:2px 6px;border-radius:5px;border:1px solid #dfe6e4;background:#fff;color:#5f7169;cursor:pointer;font-family:inherit}
 .idx-pull-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-xl)}
-@media(max-width:1100px){.idx-split{flex-direction:column}.idx-visit{width:100%;flex:1 1 auto;position:static;max-height:none}}
+@media(max-width:1100px){.idx-split{flex-direction:column}.idx-visit{width:100% !important;flex:1 1 auto !important;position:static;max-height:none}.vi-rsz,.vi-rszbar{display:none}.vi-foot{padding-bottom:7px}}
 .index-table-wrap{background:#fff;border:1px solid #e9e9e7;border-radius:8px;overflow-x:auto;overflow-y:auto;max-height:70vh;scrollbar-width:thin}
 .index-table-wrap::-webkit-scrollbar{display:none}
 .idx-topscroll{position:sticky;z-index:60;overflow-x:auto;overflow-y:hidden;height:14px;background:#eef1f5;border:1px solid #e4e8ee;border-bottom:none;border-radius:6px 6px 0 0}
@@ -520,6 +532,9 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-row:hover td{background:#f7faf9}
 .idx-row.idx-na{opacity:.5}
 .index-table.hide-na .idx-row.idx-na{display:none}
+/* 방금 N/A로 바꾼 줄은 바로 사라지지 않게 (화면이 튀는 걸 막음) */
+.index-table.hide-na .idx-row.idx-na.idx-na-keep{display:table-row;opacity:.42}
+.idx-row.idx-na-keep td:first-child{box-shadow:inset 3px 0 0 #c9b47a}
 .idx-row.idx-done{background:#f3faf6}
 .idx-chk{text-align:center}.idx-chk input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 /* ── 사용자가 직접 만드는 체크 칸 (Index) ── */
@@ -2257,6 +2272,8 @@ function setIndexNaType(indexType, idx, val){
   if(!row) return;
   row.naType=val;
   row.na=(val==='NA'); // 기존 로직 호환
+  // N/A 숨김이 켜져 있으면 방금 고른 줄이 즉시 사라져 화면이 튀므로, 이 줄만 남겨둠
+  idxJustNa = (row.na && !showNaRows) ? (indexType+':'+idx) : null;
   saveData(); renderBody();
 }
 // 사용자가 직접 Index 항목 추가/편집/삭제 (방식 A)
@@ -2596,6 +2613,75 @@ function toggleVisitPanel(){
   try{ localStorage.setItem('idxVisitPanel', showVisitPanel?'1':'0'); }catch(e){}
   renderBody();
 }
+
+/* ── 방문 대조 패널 크기 조절 (폭·높이 기억) ── */
+const VI_W_MIN=280, VI_W_MAX=900, VI_H_MIN=240;
+let viPanelW=(function(){ try{ const n=parseInt(localStorage.getItem('idxVisitW')||'',10); return (n>=VI_W_MIN&&n<=VI_W_MAX)?n:340; }catch(e){ return 340; } })();
+let viPanelH=(function(){ try{ const n=parseInt(localStorage.getItem('idxVisitH')||'',10); return (n>=VI_H_MIN)?n:0; }catch(e){ return 0; } })();
+function viPanelStyle(){
+  const h = viPanelH ? `max-height:${viPanelH}px;height:${viPanelH}px;` : '';
+  return `width:${viPanelW}px;flex:0 0 ${viPanelW}px;${h}`;
+}
+function viDragStart(e,axis){
+  const handle=e.currentTarget, panel=handle.closest('.idx-visit'); if(!panel) return;
+  e.preventDefault();
+  handle.classList.add('dragging');
+  const r=panel.getBoundingClientRect();
+  const sx=e.clientX, sy=e.clientY, sw=r.width, sh=r.height;
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(v,hi));
+  function mv(ev){
+    if(axis==='x'){                                   // 손잡이가 왼쪽 → 왼쪽으로 끌면 넓어짐
+      viPanelW=Math.round(clamp(sw-(ev.clientX-sx), VI_W_MIN, Math.min(VI_W_MAX, window.innerWidth-320)));
+      panel.style.width=viPanelW+'px'; panel.style.flex='0 0 '+viPanelW+'px';
+    }else{                                            // 손잡이가 아래 → 아래로 끌면 길어짐
+      viPanelH=Math.round(clamp(sh+(ev.clientY-sy), VI_H_MIN, window.innerHeight*2));
+      panel.style.height=viPanelH+'px'; panel.style.maxHeight=viPanelH+'px';
+    }
+  }
+  function up(){
+    window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);
+    handle.classList.remove('dragging');
+    try{ localStorage.setItem('idxVisitW', String(viPanelW)); localStorage.setItem('idxVisitH', String(viPanelH)); }catch(e){}
+  }
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+}
+function viResetPanelSize(){
+  viPanelW=340; viPanelH=0;
+  try{ localStorage.setItem('idxVisitW','340'); localStorage.removeItem('idxVisitH'); }catch(e){}
+  renderBody();
+}
+/* 화면을 다시 그릴 때: ① 스크롤·포커스 유지 ② 메모 칸 높이 맞추기
+   단, 탭/기관/과제를 바꿔서 다시 그리는 경우엔 원래대로 맨 위로 올라가야 하므로 유지하지 않음 */
+function _navKey(){
+  try{ return (curView||'')+'|'+(curIndexType||'')+'|'+(curSite||'')+'|'+(curProtocolId||''); }
+  catch(e){ return ''; }
+}
+let _lastNavKey=null;
+let idxJustNa=null;                    // 방금 N/A로 바꾼 줄 (숨김 상태여도 잠깐 남겨둠)
+(function(){
+  const _rb=window.renderBody;
+  if(typeof _rb!=='function') return;
+  let busy=false;
+  window.renderBody=function(){
+    if(busy) return _rb.apply(this,arguments);        // 중첩 호출이면 그냥 통과
+    busy=true;
+    const k=_navKey(), sameView=(k===_lastNavKey);
+    _lastNavKey=k;
+    if(!sameView) idxJustNa=null;                     // 화면을 옮겼으면 N/A 임시 표시 해제
+    let s=null,f=null;
+    if(sameView){ try{ s=_capScroll(); f=_capFocus(); }catch(e){} }
+    const r=_rb.apply(this,arguments);
+    try{ document.querySelectorAll('.vi-memo').forEach(viMemoGrow); }catch(e){}
+    try{
+      if(s){
+        _restore(s,f);                                                            // 즉시 복원
+        requestAnimationFrame(function(){ try{ _restore(s,null); }catch(e){} });   // 레이아웃 확정 후 한 번 더
+      }
+    }catch(e){}
+    busy=false;
+    return r;
+  };
+})();
 function visitStore(type){
   if(!curProtocolId) return null;
   const pd=protocolData[curProtocolId]; if(!pd) return null;
@@ -2701,6 +2787,30 @@ function setVisitItemMemo(type,itemId,val){
   const it=v.items.find(x=>x.id===itemId); if(!it) return;
   it.memo=val; saveData();                        // 입력 중 포커스 유지를 위해 다시 그리지 않음
 }
+/* 메모 칸: 내용에 맞춰 자동으로 늘어남 (직접 끌어서 조절한 높이는 그대로 유지) */
+function viMemoGrow(ta){
+  if(ta.dataset.manual==='1') return;
+  ta.style.height='auto';
+  ta.style.height=Math.max(ta.scrollHeight,26)+'px';
+}
+/* 사용자가 우측 하단을 끌어 직접 높이를 정하면 그 높이를 기억
+   (그냥 클릭한 경우까지 높이가 고정되지 않도록, 누르기 전 높이와 비교) */
+function viMemoDown(ta){ ta.dataset.h0=String(Math.round(ta.getBoundingClientRect().height)); }
+function viMemoResized(type,itemId,ta){
+  const h0=parseInt(ta.dataset.h0||'0',10);
+  const h=Math.round(ta.getBoundingClientRect().height);
+  if(!h0 || Math.abs(h-h0)<3) return;                 // 크기가 안 바뀌었으면 그냥 클릭한 것
+  const v=curVisit(type); if(!v) return;
+  const it=v.items.find(x=>x.id===itemId); if(!it) return;
+  it.memoH=h; ta.dataset.manual='1'; saveData(); renderBody();
+}
+function viMemoResetH(type,itemId,btn){
+  const v=curVisit(type); if(!v) return;
+  const it=v.items.find(x=>x.id===itemId); if(!it) return;
+  delete it.memoH; saveData();
+  const ta=btn.closest('.vi-item').querySelector('.vi-memo');
+  if(ta){ ta.dataset.manual='0'; ta.style.height='auto'; viMemoGrow(ta); }
+}
 function delVisitItem(type,itemId){
   const v=curVisit(type); if(!v) return;
   v.items=v.items.filter(x=>x.id!==itemId);
@@ -2728,10 +2838,11 @@ function applyVisitToIndex(type){
 }
 function visitPanelHtml(type,rows){
   const st=visitStore(type);
-  if(!st) return '<div class="idx-visit"><div class="vi-empty">과제·기관을 먼저 선택해주세요.</div></div>';
+  if(!st) return `<div class="idx-visit" style="${viPanelStyle()}"><div class="vi-rsz" onpointerdown="viDragStart(event,'x')" title="좌우로 끌어 폭 조절"></div><div class="vi-empty">과제·기관을 먼저 선택해주세요.</div></div>`;
   const v=curVisit(type);
   if(!v){
-    return `<div class="idx-visit">
+    return `<div class="idx-visit" style="${viPanelStyle()}">
+      <div class="vi-rsz" onpointerdown="viDragStart(event,'x')" title="좌우로 끌어 폭 조절"></div>
       <div class="vi-head"><div class="vi-head-top"><b>📋 방문 대조</b><button class="vi-hbtn" onclick="toggleVisitPanel()">✕</button></div></div>
       <div class="vi-empty">아직 방문 회차가 없어요.<br>회차를 만들면 <b>지난 방문에서 못 끝낸 항목</b>을<br>자동으로 이어받을 수 있어요 🙂</div>
       <div class="vi-foot"><button onclick="addVisit('${type}')">＋ 첫 회차 만들기</button></div>
@@ -2757,11 +2868,18 @@ function visitPanelHtml(type,rows){
         ${pchip}
         <span class="vi-date">${it.ts?mdStr(it.ts)+' 체크':''}</span>
       </div>
-      <input class="vi-memo" placeholder="메모 한 줄 (예: 사본만 있음)" value="${escAttr(it.memo||'')}" onchange="setVisitItemMemo('${type}','${it.id}',this.value)">
+      <textarea class="vi-memo" rows="1" placeholder="메모 (여러 줄 가능 · 오른쪽 아래 모서리를 끌면 칸이 커져요)"
+        style="${it.memoH?`height:${it.memoH}px`:''}" data-manual="${it.memoH?'1':'0'}"
+        oninput="viMemoGrow(this);setVisitItemMemo('${type}','${it.id}',this.value)"
+        onpointerdown="viMemoDown(this)" onmouseup="viMemoResized('${type}','${it.id}',this)"
+        onchange="setVisitItemMemo('${type}','${it.id}',this.value)">${escHtml(it.memo||'')}</textarea>
+      ${it.memoH?`<div class="vi-memo-foot"><button class="vi-memo-rst" onclick="viMemoResetH('${type}','${it.id}',this)" title="메모 칸 높이를 자동으로 되돌리기">↺ 높이 자동</button></div>`:''}
     </div>`;
   }).join('') : `<div class="vi-empty">담긴 항목이 없어요.<br>아래 버튼으로 Index에서 가져오거나,<br>표의 <b>📋 이번 방문에 담기</b>를 눌러보세요.</div>`;
 
-  return `<div class="idx-visit">
+  return `<div class="idx-visit" style="${viPanelStyle()}">
+    <div class="vi-rsz" onpointerdown="viDragStart(event,'x')" title="좌우로 끌어 패널 폭 조절"></div>
+    <div class="vi-rszbar" onpointerdown="viDragStart(event,'y')" title="위아래로 끌어 패널 높이 조절"></div>
     <div class="vi-head">
       <div class="vi-head-top"><b>📋 ${escHtml(v.label)}</b>
         <button class="vi-hbtn" onclick="renameVisit('${type}')" title="회차 이름 수정">✏️</button>
@@ -2790,6 +2908,7 @@ function visitPanelHtml(type,rows){
       <button class="vi-tool" onclick="pullToVisit('${type}','issue')" title="이슈 상태 항목 담기">⬅ 이슈</button>
       <button class="vi-tool" onclick="addVisitItemManual('${type}')">＋ 직접 추가</button>
       <button class="vi-tool" onclick="clearVisitChecks('${type}')">↺ 체크 초기화</button>
+      <button class="vi-tool" onclick="viResetPanelSize()" title="패널 폭·높이를 기본값으로 되돌리기">⇱ 크기 초기화</button>
     </div>
     <div class="vi-list">${itemsHtml}</div>
     <div class="vi-foot">
@@ -3300,7 +3419,7 @@ function renderIndexBody(){
       : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
     const ckAll = CHK.length>0 && CHK.every(c=>r.chk&&r.chk[c.id]);
     const ckCells = CHK.map(c=>`<td class="idx-ck-cell"><input type="checkbox" ${(r.chk&&r.chk[c.id])?'checked':''} title="${escAttr(c.label)}" onchange="setIdxCheck('${type}',${idx},'${c.id}',this.checked)"></td>`).join('')+`<td class="idx-ck-cell"></td>`;
-    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${r.status==='ok'?' idx-done':''}${ckAll?' idx-ck-all':''}" data-ridx="${idx}">
+    bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${(idxJustNa===type+':'+idx)?' idx-na-keep':''}${r.status==='ok'?' idx-done':''}${ckAll?' idx-ck-all':''}" data-ridx="${idx}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
       ${numCell}
       ${titleCell}
@@ -3562,7 +3681,46 @@ function saveSecColW(){ try{ localStorage.setItem('secColW_v2', JSON.stringify(s
 let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
 let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols')==='1'; }catch(e){ return false; } })();
 let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'; }catch(e){ return false; } })();
-function toggleNaRows(){ showNaRows=!showNaRows; try{ localStorage.setItem('showNaRows', showNaRows?'1':'0'); }catch(e){} renderBody(); }
+function toggleNaRows(){ showNaRows=!showNaRows; idxJustNa=null; try{ localStorage.setItem('showNaRows', showNaRows?'1':'0'); }catch(e){} renderBody(); }
+
+/* ══════════ 다시 그릴 때 화면이 튀지 않게 (스크롤·포커스 유지) ══════════
+   renderBody()는 bodyWrap 전체를 innerHTML로 새로 만들기 때문에
+   - 표(#idxTableWrap)의 스크롤 위치가 0으로 돌아가고
+   - 방금 누른 칸의 포커스도 사라짐
+   → 그래서 N/A·상태를 고를 때마다 맨 위로 튕겨 올라갔음. 아래에서 값을 기억했다가 되돌려줌. */
+function _capScroll(){
+  const w=document.getElementById('idxTableWrap');
+  const t=document.getElementById('idxTopScroll');
+  return { win:(window.pageYOffset||document.documentElement.scrollTop||0),
+           top:(w?w.scrollTop:0), left:(w?w.scrollLeft:0), tl:(t?t.scrollLeft:0) };
+}
+function _capFocus(){
+  const el=document.activeElement;
+  if(!el||!el.closest) return null;
+  const tr=el.closest('tr.idx-row'); if(!tr) return null;
+  const ridx=tr.getAttribute('data-ridx'); if(ridx==null) return null;
+  const list=Array.prototype.slice.call(tr.querySelectorAll('select,input,textarea'));
+  const pos=list.indexOf(el); if(pos<0) return null;
+  return { ridx:ridx, pos:pos, tag:el.tagName, cls:el.className };
+}
+function _restore(s,f){
+  const w=document.getElementById('idxTableWrap');
+  const t=document.getElementById('idxTopScroll');
+  if(w){ w.scrollTop=s.top; w.scrollLeft=s.left; }
+  if(t) t.scrollLeft=s.tl;
+  window.scrollTo(0,s.win);
+  if(f){
+    const tr=document.querySelector('.idx-row[data-ridx="'+f.ridx+'"]');
+    if(tr){
+      const list=Array.prototype.slice.call(tr.querySelectorAll('select,input,textarea'));
+      let el=list[f.pos];
+      // 칸 개수가 달라졌을 수 있으니 같은 종류·같은 class 를 우선으로 다시 찾음
+      if(!el || el.tagName!==f.tag || el.className!==f.cls)
+        el=list.find(function(x){ return x.tagName===f.tag && x.className===f.cls; }) || el;
+      if(el){ try{ el.focus({preventScroll:true}); }catch(e){ try{ el.focus(); }catch(e2){} } }
+    }
+  }
+}
 function toggleFilingCols(){ showFilingCols=!showFilingCols; try{ localStorage.setItem('showFilingCols', showFilingCols?'1':'0'); }catch(e){} renderBody(); }
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
 // 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 문서명·TMF·서버 칸에 자동 분배
@@ -4880,12 +5038,21 @@ authInit();
 .memo-date{font-size:11.5px;color:#8d8d88;flex:1;white-space:nowrap;overflow:hidden}
 .memo-ibtn{background:none;border:none;cursor:pointer;font-size:12.5px;color:#9a9a95;padding:1px 3px;line-height:1;border-radius:4px}
 .memo-ibtn:hover{background:rgba(0,0,0,.07);color:#37352f}
-.memo-ta{width:100%;box-sizing:border-box;border:none;background:transparent;resize:none;outline:none;font-size:14.5px;line-height:1.55;
-  color:#37352f;min-height:46px;overflow:hidden;padding:0 1px}
+.memo-ta{width:100%;box-sizing:border-box;border:none;background:transparent;resize:vertical;outline:none;font-size:14.5px;line-height:1.55;
+  color:#37352f;min-height:46px;overflow-y:auto;padding:0 1px;font-family:inherit}
+.memo-ta::-webkit-scrollbar{width:6px}
+.memo-ta::-webkit-scrollbar-thumb{background:rgba(0,0,0,.16);border-radius:6px}
+.memo-ta-rst{border:none;background:none;color:rgba(0,0,0,.3);font-size:11px;cursor:pointer;padding:0 2px;font-family:inherit;float:right}
+.memo-ta-rst:hover{color:var(--accent)}
 .memo-item.done .memo-ta{text-decoration:line-through;opacity:.5}
 .memo-empty{text-align:center;color:#b3b3ae;font-size:14px;padding:26px 10px;line-height:1.7}
 .memo-foot{border-top:1px solid #f0f0ee;padding:6px 10px;font-size:12px;color:#a6a6a1;display:flex;align-items:center;gap:6px}
-.memo-grip{margin-left:auto;cursor:nwse-resize;color:#c3c3be;font-size:14px;padding:0 2px;user-select:none}
+.memo-grip{margin-left:auto;cursor:nwse-resize;color:#a8a8a3;font-size:16px;padding:2px 4px;user-select:none;touch-action:none;border-radius:5px;position:relative;z-index:6}
+.memo-grip:hover{color:var(--accent);background:rgba(0,0,0,.05)}
+/* 좌·하 가장자리로도 크기 조절 가능 */
+#memoPanel .mp-edge{position:absolute;z-index:5;touch-action:none;user-select:none}
+#memoPanel .mp-edge.w{left:0;top:34px;bottom:0;width:7px;cursor:ew-resize}
+#memoPanel .mp-edge.s{left:0;right:0;bottom:0;height:6px;cursor:ns-resize}
 @media(max-width:720px){
   #memoPanel{left:8px !important;right:8px !important;top:auto !important;bottom:8px !important;width:auto !important;height:56vh !important}
   #memoHandle{top:auto;bottom:96px}
@@ -4909,7 +5076,9 @@ authInit();
   </div>
   <div class="memo-hint" id="memoHint"></div>
   <div class="memo-list" id="memoList"></div>
-  <div class="memo-foot"><span id="memoFootTxt">자동 저장됨</span><span class="memo-grip" id="memoGrip" title="크기 조절">◢</span></div>
+  <div class="memo-foot"><span id="memoFootTxt">자동 저장됨</span><span class="memo-grip" id="memoGrip" title="끌어서 크기 조절 · 더블클릭하면 기본 크기">◢</span></div>
+  <div class="mp-edge w" id="memoEdgeW" title="좌우로 끌어 너비 조절"></div>
+  <div class="mp-edge s" id="memoEdgeS" title="위아래로 끌어 높이 조절"></div>
 </div>
 
 <script>
@@ -4962,7 +5131,15 @@ authInit();
   function badge(){ var b=$('memoHandleCnt'); if(b) b.textContent=count(); }
 
   /* ── 그리기 ── */
-  function grow(ta){ ta.style.height='auto'; ta.style.height=Math.min(Math.max(ta.scrollHeight,46),260)+'px'; }
+  /* 직접 끌어서 높이를 정한 메모는 그 높이를 유지, 아니면 내용에 맞춰 자동으로 늘어남
+     (자동 한도를 260px → 패널 높이의 70%까지 늘리고, 넘치면 잘리지 않고 스크롤되게 함) */
+  function grow(ta,m){
+    if(m && m.h){ ta.style.height=m.h+'px'; return; }
+    var panel=$('memoPanel');
+    var cap=Math.max(260, Math.round(((panel&&panel.getBoundingClientRect().height)||430)*0.7));
+    ta.style.height='auto';
+    ta.style.height=Math.min(Math.max(ta.scrollHeight,46),cap)+'px';
+  }
   function render(force){
     var list=$('memoList'); if(!list) return;
     if(!force && list.contains(document.activeElement)) { badge(); return; }   // 타이핑 중엔 다시 그리지 않음
@@ -4999,12 +5176,25 @@ authInit();
 
       var ta=document.createElement('textarea');
       ta.className='memo-ta'; ta.placeholder='메모를 입력하세요…'; ta.value=m.text||'';
-      ta.oninput=function(){ m.text=ta.value; m.upd=Date.now(); grow(ta); scheduleSave(); };
+      ta.title='오른쪽 아래 모서리를 끌면 이 메모 칸의 높이를 직접 정할 수 있어요';
+      ta.oninput=function(){ m.text=ta.value; m.upd=Date.now(); grow(ta,m); scheduleSave(); };
       ta.onblur=function(){ dt.textContent=fmt(m.upd||m.ts); };
+      // 직접 끌어서 조절한 높이만 기억 (그냥 클릭한 경우는 제외)
+      var h0=0;
+      ta.onpointerdown=function(){ h0=Math.round(ta.getBoundingClientRect().height); };
+      ta.onmouseup=function(){
+        var h=Math.round(ta.getBoundingClientRect().height);
+        if(!h0 || Math.abs(h-h0)<3) return;
+        m.h=h; scheduleSave(); if(!rstBtn.parentNode) top.insertBefore(rstBtn, del);
+      };
+      var rstBtn=document.createElement('button');
+      rstBtn.className='memo-ibtn'; rstBtn.type='button'; rstBtn.textContent='⇕'; rstBtn.title='메모 칸 높이를 자동으로 되돌리기';
+      rstBtn.onclick=function(){ delete m.h; grow(ta,m); scheduleSave(); rstBtn.remove(); };
+      if(m.h) top.insertBefore(rstBtn, del);
 
       box.appendChild(top); box.appendChild(ta);
       list.appendChild(box);
-      grow(ta);
+      grow(ta,m);
     });
     badge();
   }
@@ -5050,35 +5240,63 @@ authInit();
       p.style.top=top+'px'; p.style.right=right+'px';
     }
     function up(){
-      document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);
       var rr=p.getBoundingClientRect();
       lsSet(K.pos, JSON.stringify({top:rr.top, right:window.innerWidth-rr.right}));
     }
-    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
     e.preventDefault();
   }
-  function dragSize(e){
+  /* 크기 조절
+     - 패널은 오른쪽(right)에 붙어 있어서, 그대로 두면 ◢ 를 오른쪽으로 끌 때 오히려 작아졌음
+     - 끄는 동안만 왼쪽(left) 고정으로 바꿔서 "끄는 방향 = 커지는 방향"이 되도록 수정
+     - axis: 'xy'(모서리) / 'x'(왼쪽 가장자리) / 'y'(아래 가장자리)                       */
+  var MIN_W=240, MIN_H=200;
+  function dragSize(e,axis){
+    if(window.innerWidth<=720) return;              // 좁은 화면은 CSS가 크기를 고정함
+    axis=axis||'xy';
     var p=$('memoPanel'), r=p.getBoundingClientRect();
-    var sx=e.clientX, sy=e.clientY, sw=r.width, sh=r.height;
+    var sx=e.clientX, sy=e.clientY, sw=r.width, sh=r.height, sl=r.left, sRight=r.right;
+    var fixLeft = (axis!=='x');                     // 왼쪽 가장자리를 끌 때만 오른쪽을 고정
+    if(fixLeft){ p.style.left=sl+'px'; p.style.right='auto'; }
     function mv(ev){
-      p.style.width=Math.max(230,Math.min(sw-(ev.clientX-sx),640))+'px';
-      p.style.height=Math.max(220,Math.min(sh+(ev.clientY-sy),window.innerHeight-40))+'px';
+      if(axis!=='y'){
+        var w = fixLeft ? sw+(ev.clientX-sx)        // 모서리·아래: 오른쪽으로 끌면 넓어짐
+                        : sw-(ev.clientX-sx);       // 왼쪽 가장자리: 왼쪽으로 끌면 넓어짐
+        var maxW = fixLeft ? (window.innerWidth-sl-6) : (sRight-6);
+        p.style.width=Math.max(MIN_W,Math.min(w,Math.max(MIN_W,maxW)))+'px';
+      }
+      if(axis!=='x'){
+        p.style.height=Math.max(MIN_H,Math.min(sh+(ev.clientY-sy), window.innerHeight-r.top-8))+'px';
+      }
     }
     function up(){
-      document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);
+      window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);
       var rr=p.getBoundingClientRect();
-      lsSet(K.size, JSON.stringify({w:Math.round(rr.width), h:Math.round(rr.height)}));
+      if(fixLeft){ p.style.right=Math.max(4,window.innerWidth-rr.right)+'px'; p.style.left='auto'; }   // 다시 오른쪽 고정으로 복귀
+      var r2=p.getBoundingClientRect();
+      lsSet(K.size, JSON.stringify({w:Math.round(r2.width), h:Math.round(r2.height)}));
+      lsSet(K.pos,  JSON.stringify({top:r2.top, right:window.innerWidth-r2.right}));
     }
-    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
-    e.preventDefault();
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+    e.preventDefault(); e.stopPropagation();
+  }
+  function resetSize(){
+    var p=$('memoPanel');
+    p.style.width='304px'; p.style.height='430px';
+    lsSet(K.size, JSON.stringify({w:304,h:430}));
+    render(true);
   }
 
   /* ── 연결 ── */
   $('memoHandle').onclick=toggle;
   $('memoCloseBtn').onclick=toggle;
   $('memoAddBtn').onclick=add;
-  $('memoHead').addEventListener('mousedown',dragMove);
-  $('memoGrip').addEventListener('mousedown',dragSize);
+  $('memoHead').addEventListener('pointerdown',dragMove);
+  $('memoGrip').addEventListener('pointerdown',function(e){ dragSize(e,'xy'); });
+  $('memoGrip').addEventListener('dblclick',resetSize);
+  $('memoEdgeW').addEventListener('pointerdown',function(e){ dragSize(e,'x'); });
+  $('memoEdgeS').addEventListener('pointerdown',function(e){ dragSize(e,'y'); });
   Array.prototype.forEach.call(document.querySelectorAll('.memo-tab'),function(t){
     t.onclick=function(){ scope=t.dataset.scope; lsSet(K.scope,scope); render(true); };
   });
