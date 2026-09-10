@@ -210,6 +210,8 @@ tr:hover td{background:var(--bg)}
 .protocol-name-input{font-size:15px;border:1px solid #e9e9e7;border-radius:6px;padding:6px 10px;min-width:280px;max-width:520px;flex:1;background:#fff;color:#37352f;outline:none;font-family:inherit}
 .protocol-name-input:focus{border-color:var(--accent)}
 .protocol-select{font-size:15px;border:1px solid #e9e9e7;border-radius:6px;padding:6px 10px;min-width:150px;background:#fff;color:#37352f;outline:none;font-family:inherit}
+.protocol-title-row{flex-basis:100%;display:flex;align-items:center;gap:10px;margin-top:2px}
+.protocol-title-row .protocol-name-input{max-width:none;font-weight:600}
 .protocol-select:focus{border-color:var(--accent)}
 .protocol-name-input.small{min-width:170px;max-width:260px;flex:0 1 220px}
 
@@ -978,6 +980,10 @@ td.vc-nover{background:#fef8ec}
   </datalist>
   <button class="btn" onclick="openProtocolModal()">+ Protocol</button>
   <button class="btn btn-danger" onclick="deleteProtocol()">Protocol 삭제</button>
+  <div class="protocol-title-row">
+    <span class="protocol-label">연구 제목</span>
+    <input class="protocol-name-input" id="protocolTitleInput" placeholder="연구(프로토콜) 제목 입력 — 예: 앱스틸라주 시판후사용성적조사" onchange="setProjectField('protocolTitle',this.value)">
+  </div>
 </div>
 <div class="protocol-tabs-wrap" id="protocolTabsWrap"></div>
 <div class="tabs-wrap" id="tabsWrap"></div>
@@ -1207,6 +1213,7 @@ function bindCurrentProtocol(){
   if(p.contractNo===undefined) p.contractNo='';
   if(p.projectName===undefined) p.projectName='';
   if(p.protocolNo===undefined) p.protocolNo=p.name||'';
+  if(p.protocolTitle===undefined) p.protocolTitle='';
   if(p.sponsor===undefined) p.sponsor='';
   if(p.studyType===undefined) p.studyType='PMS';
   if(!protocolData[p.id]) protocolData[p.id]={sites:[],sections:{}};
@@ -3026,6 +3033,8 @@ function renderProtocolTabs(){
   if(sponsorInput) sponsorInput.value=cur?.sponsor||'';
   const studyTypeInput=document.getElementById('studyTypeInput');
   if(studyTypeInput) studyTypeInput.value=cur?.studyType||'';
+  const titleInput=document.getElementById('protocolTitleInput');
+  if(titleInput) titleInput.value=cur?.protocolTitle||'';
 }
 
 function switchProtocol(id){
