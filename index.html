@@ -857,6 +857,57 @@ body.sb-collapsed .sb-hover-zone{display:block}
 .ho-reject:hover{background:var(--bg)}
 .ho-empty{font-size:15px;color:#999;text-align:center;padding:24px 0}
 .ho-close{margin-top:8px;width:100%;border:1px solid #e0e0dd;background:#fff;border-radius:8px;padding:10px;font-size:15px;cursor:pointer;color:#555}
+
+/* ━━━ 버전 로그 (Essential Doc Version Log) ━━━ */
+.vlog-badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:5px;border-radius:999px;background:#e03131;color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:17px}
+.vlog-sum{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.vlog-sum-card{background:#fff;border:1px solid #e9e9e7;border-radius:8px;padding:8px 14px;min-width:110px}
+.vlog-sum-card b{display:block;font-size:20px;font-weight:800}
+.vlog-sum-card span{font-size:12.5px;color:#787774}
+.vlog-sum-card.v-stale{border-left:4px solid #e03131}.vlog-sum-card.v-stale b{color:#c80e0e}
+.vlog-sum-card.v-exp{border-left:4px solid #b8860b}.vlog-sum-card.v-exp b{color:#b8860b}
+.vlog-sum-card.v-ok{border-left:4px solid #0f7b3f}.vlog-sum-card.v-ok b{color:#0f7b3f}
+.vlog-alarms{background:#fff;border:1px solid #f3c4c4;border-radius:8px;padding:10px 14px;margin-bottom:16px}
+.vlog-alarms h4{font-size:14.5px;margin:0 0 6px;color:#c80e0e}
+.vlog-alarm-item{font-size:13.5px;padding:4px 2px;border-bottom:1px dashed #f0e0e0;cursor:pointer}
+.vlog-alarm-item:last-child{border-bottom:none}
+.vlog-alarm-item:hover{background:#fdf3f3}
+.vlog-sec-title{font-size:16.5px;font-weight:700;margin:18px 0 4px}
+.vlog-sec-desc{font-size:13px;color:#787774;margin-bottom:8px}
+.vlog-table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff}
+.vlog-table th,.vlog-table td{border:1px solid #e9e9e7;padding:7px 9px;text-align:left;vertical-align:top}
+.vlog-table thead th{background:var(--surf);font-size:12.5px;font-weight:700;position:sticky;top:0;z-index:2}
+.vlog-wrap{overflow:auto;max-height:65vh;border:1px solid #e9e9e7;border-radius:7px}
+.vlog-wrap .vlog-table{border:none}
+.vlog-sticky{position:sticky;left:0;background:#fff;z-index:1;min-width:160px;font-weight:600}
+.vlog-wrap thead .vlog-sticky{z-index:3;background:var(--surf)}
+.vlog-chip{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.vlog-chip.c-ok{background:#e6f4ea;color:#0d652d}
+.vlog-chip.c-stale{background:#fce8e8;color:#c80e0e}
+.vlog-chip.c-nover{background:#fef3e2;color:#b8860b}
+.vlog-chip.c-none{background:#eef1f0;color:#7a8683}
+.vlog-chip.c-multi{background:#e8f0f9;color:#2b5c93}
+td.vc-stale{background:#fce8e8}
+td.vc-ok{background:#f2faf4}
+td.vc-nover{background:#fef8ec}
+.vlog-cell{cursor:pointer}
+.vlog-cell:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.vlog-cell .vmeta{font-size:11.5px;color:#787774;margin-top:2px}
+.vlog-exp{font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 6px;display:inline-block;margin-top:2px}
+.vlog-exp.e-over{background:#fce8e8;color:#c80e0e}
+.vlog-exp.e-warn{background:#fef3e2;color:#b8860b}
+.vlog-exp.e-safe{background:#eef1f0;color:#6a7370}
+.vlog-hist{font-size:12px;color:#787774;margin:2px 0 0 14px}
+.vlog-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 13px;font-size:13.5px;font-weight:600;cursor:pointer}
+.vlog-btn:hover{background:var(--accent-d)}
+.vlog-mini{background:none;border:none;color:var(--accent);font-size:12.5px;text-decoration:underline;cursor:pointer;padding:1px 4px}
+.vlog-mini.m-del{color:#c80e0e}
+.vlog-form label{font-size:12.5px;font-weight:700;color:#787774;display:block;margin:8px 0 3px}
+.vlog-form input,.vlog-form textarea{width:100%;border:1px solid #e0e0dd;border-radius:6px;padding:7px 9px;font-size:14px;font-family:inherit}
+.vlog-form .vf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.vlog-form .vf-check{display:flex;align-items:center;gap:7px;font-size:13.5px;margin-top:10px}
+.vlog-form .vf-check input{width:auto}
+.ver-input.ver-stale,textarea.ver-stale{border-color:#e03131!important;background:#fce8e8!important;color:#c80e0e!important;font-weight:700}
 </style>
 <div id="authGate" data-mode="login" style="display:none">
   <div class="auth-card">
@@ -3143,6 +3194,7 @@ function renderTabs(){
     `<div class="tab idx-add-tab" onclick="addCustomIndex()" title="새 Index 만들기">+ Index</div>`;
   document.getElementById('tabsWrap').innerHTML=
     `<div class="tab home-tab${curView==='home'?' active':''}" onclick="switchHome()">🏠 홈</div>`+
+    (function(){ const n=vlogAlarmCount(); return `<div class="tab home-tab${curView==='verlog'?' active':''}" onclick="switchVerLog()">🔔 버전 로그${n?`<span class="vlog-badge">${n}</span>`:''}</div>`; })()+
     `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
     sites.map(s=>{
       const on=(s.code===activeSiteCode);
@@ -3153,6 +3205,281 @@ function renderTabs(){
     `<div class="tab-add" onclick="openSiteModal()">+</div>`+
     idxTabs;
 }
+
+/* ━━━━━━━━━━ 버전 로그 (Essential Doc Version Log) ━━━━━━━━━━
+   스터디(Protocol) 레벨 기준 버전(source of truth)을 관리하고,
+   각 기관 문서 테이블의 버전을 자동 대조해 구버전/유효기간 알람 표시.
+   데이터는 protocolData[curProtocolId].verMaster 에 저장(클라우드 자동 동기화). */
+function getVerMaster(){
+  if(!curProtocolId) return {docs:[],cells:{}};
+  if(!protocolData[curProtocolId]) protocolData[curProtocolId]={sites:[],sections:{}};
+  const pd=protocolData[curProtocolId];
+  if(!pd.verMaster) pd.verMaster={docs:[],cells:{}};
+  if(!Array.isArray(pd.verMaster.docs)) pd.verMaster.docs=[];
+  if(!pd.verMaster.cells) pd.verMaster.cells={};
+  return pd.verMaster;
+}
+function vNorm(s){ return String(s||'').trim().toLowerCase().replace(/^ver\.?\s*/,'').replace(/^v/,'').replace(/\s+/g,''); }
+function docCurVer(doc){ return (doc.versions&&doc.versions.length)?doc.versions[doc.versions.length-1]:null; }
+function expState(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr); if(isNaN(d)) return null;
+  const today=new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0);
+  const days=Math.round((d-today)/86400000);
+  if(days<0) return {cls:'e-over',days,txt:'만료됨 ('+(-days)+'일 경과)'};
+  if(days<=30) return {cls:'e-warn',days,txt:'D-'+days};
+  return {cls:'e-safe',days,txt:'D-'+days};
+}
+function vlogKeywords(doc){
+  return String(doc.match||doc.name||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+}
+function rowCmpVal(row){
+  // 비교에 쓸 버전값: 동의서류(masterVer 보유)는 Master 버전, 변경대비표(compare)는 제외
+  if(row.dtype==='compare') return null;
+  if(row.masterVer) return {v:row.masterVer, disp:row.masterVer+(row.siteVer?'_'+row.siteVer:'')};
+  if(row.ver) return {v:row.ver, disp:row.ver};
+  return {v:'', disp:''};
+}
+function vlogFindRows(code, doc){
+  const kws=vlogKeywords(doc); if(!kws.length) return [];
+  const out=[];
+  ((sections&&sections[code])||[]).forEach(sec=>{
+    (sec.rows||[]).forEach(row=>{
+      if(!row.needVer||row.dtype==='compare') return;
+      const nm=String(row.name||'').toLowerCase();
+      if(kws.some(k=>nm.includes(k))) out.push(row);
+    });
+  });
+  return out;
+}
+function vlogJudge(doc, rows){
+  const cv=docCurVer(doc); const cur=cv?cv.ver:'';
+  if(!rows.length) return {code:'none', label:'문서 없음'};
+  const vals=rows.map(rowCmpVal).filter(Boolean);
+  const entered=vals.filter(x=>x.v);
+  if(!entered.length) return {code:'nover', label:'버전 미기재'};
+  if(!cur) return {code:'nover', label:'기준버전 없음'};
+  const bad=entered.filter(x=>vNorm(x.v)!==vNorm(cur));
+  if(bad.length) return {code:'stale', label:'구버전', found:bad[0].disp};
+  return {code:'ok', label:'최신 일치', found:entered[0].disp};
+}
+function vlogCellExtra(code, docId){ return getVerMaster().cells[code+'|'+docId]||{}; }
+function vlogAlarms(){
+  const VM=getVerMaster(); const out=[];
+  VM.docs.forEach((doc,di)=>{
+    const cv=docCurVer(doc);
+    const ex=expState(doc.expiry);
+    if(ex&&ex.cls!=='e-safe') out.push({kind:'doc-exp',di,msg:'📄 '+doc.name+' — 유효기간 '+doc.expiry+' · '+ex.txt,cls:ex.cls});
+    (sites||[]).forEach(s=>{
+      const j=vlogJudge(doc, vlogFindRows(s.code,doc));
+      if(j.code==='stale') out.push({kind:'stale',code:s.code,di,
+        msg:'['+s.code+'] '+s.name+' · '+doc.name+' — 구버전 (기관 '+(j.found||'-')+' / 기준 '+(cv?cv.ver:'-')+')',cls:'e-over'});
+      const cex=expState(vlogCellExtra(s.code,doc.id).expiry);
+      if(cex&&cex.cls!=='e-safe') out.push({kind:'cell-exp',code:s.code,di,
+        msg:'['+s.code+'] '+s.name+' · '+doc.name+' — 유효기간 '+vlogCellExtra(s.code,doc.id).expiry+' · '+cex.txt,cls:cex.cls});
+    });
+  });
+  return out;
+}
+function vlogAlarmCount(){ try{ return vlogAlarms().length; }catch(e){ return 0; } }
+// 기관 문서 테이블의 버전칸 빨간 표시: 마스터 기준과 다르면 ' ver-stale' 반환
+function verAlertCls(code,row){
+  try{
+    const VM=getVerMaster(); if(!VM.docs.length) return '';
+    const cmp=rowCmpVal(row); if(!cmp||!cmp.v) return '';
+    const nm=String(row.name||'').toLowerCase();
+    for(const doc of VM.docs){
+      if(!vlogKeywords(doc).some(k=>nm.includes(k))) continue;
+      const cv=docCurVer(doc); if(!cv||!cv.ver) continue;
+      if(vNorm(cmp.v)!==vNorm(cv.ver)) return ' ver-stale';
+      return '';
+    }
+  }catch(e){}
+  return '';
+}
+function verAlertTip(code,row){
+  try{
+    const VM=getVerMaster();
+    const cmp=rowCmpVal(row); if(!cmp||!cmp.v) return '';
+    const nm=String(row.name||'').toLowerCase();
+    for(const doc of VM.docs){
+      if(!vlogKeywords(doc).some(k=>nm.includes(k))) continue;
+      const cv=docCurVer(doc); if(!cv||!cv.ver) continue;
+      if(vNorm(cmp.v)!==vNorm(cv.ver)) return '⚠ 스터디 기준 v'+cv.ver+'와 다름 (버전 로그 확인)';
+      return '';
+    }
+  }catch(e){}
+  return '';
+}
+function switchVerLog(){
+  curView='verlog'; curIndexType=null;
+  addingDoc=null; showSecForm=false; searchTerm='';
+  renderTabs(); renderBody();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function renderVerLogBody(){
+  const wrap=document.getElementById('bodyWrap');
+  const VM=getVerMaster();
+  const alarms=vlogAlarms();
+  let stale=0, over=0, warn=0, okN=0;
+  VM.docs.forEach(doc=>{
+    (sites||[]).forEach(s=>{
+      const j=vlogJudge(doc, vlogFindRows(s.code,doc));
+      if(j.code==='stale') stale++; if(j.code==='ok') okN++;
+    });
+  });
+  alarms.forEach(a=>{ if(a.kind!=='stale'){ if(a.cls==='e-over') over++; else warn++; } });
+  const alarmHtml = alarms.length?`
+    <div class="vlog-alarms"><h4>🔔 알람 ${alarms.length}건</h4>
+      ${alarms.map(a=>`<div class="vlog-alarm-item" onclick="${a.code?`switchSite('${a.code}')`:`switchVerLog()`}">${esc(a.msg)}</div>`).join('')}
+    </div>`:'';
+  const masterRows = VM.docs.map((doc,di)=>{
+    const cv=docCurVer(doc);
+    const ex=expState(doc.expiry);
+    return `<tr>
+      <td><b>${esc(doc.name)}</b>${doc.siteSpecific?' <span class="vlog-chip c-multi">기관별(Master_Site)</span>':''}</td>
+      <td style="font-size:12.5px;color:#787774">${esc(doc.match||doc.name)}</td>
+      <td><b>${cv?('v'+esc(cv.ver)):'-'}</b><div class="vlog-hist" style="margin-left:0">${cv?esc(cv.date||''):''}</div></td>
+      <td>${(doc.versions||[]).slice().reverse().map(v=>`<div class="vlog-hist">v${esc(v.ver)} (${esc(v.date||'-')}) ${esc(v.reason||'')}</div>`).join('')||'-'}</td>
+      <td>${doc.expiry?`${esc(doc.expiry)}<br><span class="vlog-exp ${ex?ex.cls:'e-safe'}">${ex?esc(ex.txt):''}</span>`:'-'}</td>
+      <td style="white-space:nowrap">
+        <button class="vlog-mini" onclick="vlogAddVer(${di})">버전 추가</button>
+        <button class="vlog-mini" onclick="vlogEditDoc(${di})">수정</button>
+        <button class="vlog-mini m-del" onclick="vlogDelDoc(${di})">삭제</button>
+      </td></tr>`;
+  }).join('');
+  const matrixHead = VM.docs.map(doc=>{
+    const cv=docCurVer(doc);
+    return `<th>${esc(doc.name)}<div style="font-weight:500;color:#787774;font-size:11.5px">기준 ${cv?('v'+esc(cv.ver)):'-'}</div></th>`;
+  }).join('');
+  const matrixRows = (sites||[]).map((s,si)=>{
+    const cells = VM.docs.map((doc,di)=>{
+      const rows=vlogFindRows(s.code,doc);
+      const j=vlogJudge(doc,rows);
+      const extra=vlogCellExtra(s.code,doc.id);
+      const cex=expState(extra.expiry);
+      let inner=`<span class="vlog-chip c-${j.code}">${j.label}</span>`;
+      if(j.found) inner+=`<div class="vmeta"><b>${esc(j.found)}</b>${rows.length>1?` 외 ${rows.length-1}건`:''}</div>`;
+      if(extra.expiry) inner+=`<div><span class="vlog-exp ${cex?cex.cls:'e-safe'}">유효 ${esc(extra.expiry)} · ${cex?esc(cex.txt):''}</span></div>`;
+      if(extra.note) inner+=`<div class="vmeta">${esc(extra.note)}</div>`;
+      return `<td class="vlog-cell vc-${j.code}" onclick="vlogEditCell(${si},${di})">${inner}</td>`;
+    }).join('');
+    return `<tr><td class="vlog-sticky">[${esc(s.code)}] ${esc(s.name)}</td>${cells}</tr>`;
+  }).join('');
+  wrap.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:18.5px;font-weight:700">🔔 Essential Doc 버전 로그</div>
+        <div style="font-size:13.5px;color:#787774;margin-top:2px">스터디 기준 버전을 등록하면, 각 기관 문서 테이블의 버전과 자동 대조해서 구버전·유효기간을 빨갛게 알려줘요.</div>
+      </div>
+      <button class="vlog-btn" onclick="vlogEditDoc(-1)">+ 기준 문서 추가</button>
+    </div>
+    <div class="vlog-sum">
+      <div class="vlog-sum-card v-stale"><b>${stale}</b><span>구버전 (조치 필요)</span></div>
+      <div class="vlog-sum-card v-exp"><b>${over}</b><span>유효기간 만료</span></div>
+      <div class="vlog-sum-card v-exp"><b>${warn}</b><span>만료 30일 이내</span></div>
+      <div class="vlog-sum-card v-ok"><b>${okN}</b><span>최신 일치</span></div>
+    </div>
+    ${alarmHtml}
+    <div class="vlog-sec-title">① 문서 마스터 — 스터디 기준 버전</div>
+    <div class="vlog-sec-desc">여기 등록한 최신 버전이 유일한 기준(source of truth). 개정되면 '버전 추가'로 이력을 쌓아요. 유효기간(보험증권 등)이 있으면 만료 30일 전부터 알람이 떠요.</div>
+    ${VM.docs.length?`<div class="vlog-wrap"><table class="vlog-table"><thead><tr>
+      <th>문서</th><th>매칭 키워드</th><th>현재 버전</th><th>버전 이력</th><th>유효기간(만료일)</th><th></th></tr></thead>
+      <tbody>${masterRows}</tbody></table></div>`
+      :`<div class="empty" style="padding:24px;text-align:center;color:#999">아직 기준 문서가 없어요. '+ 기준 문서 추가'로 조사계획서·동의서·증례기록서부터 등록해보세요.</div>`}
+    <div class="vlog-sec-title">② 기관 매트릭스 — 자동 대조</div>
+    <div class="vlog-sec-desc">각 기관의 문서 테이블에서 '매칭 키워드'가 포함된 문서를 찾아 버전을 비교해요 (동의서는 Master 버전 기준). 셀을 클릭하면 기관별 유효기간·메모를 넣을 수 있어요.</div>
+    ${(VM.docs.length&&(sites||[]).length)?`<div class="vlog-wrap"><table class="vlog-table"><thead><tr>
+      <th class="vlog-sticky">기관</th>${matrixHead}</tr></thead>
+      <tbody>${matrixRows}</tbody></table></div>`
+      :`<div class="empty" style="padding:24px;text-align:center;color:#999">기준 문서와 기관이 모두 있어야 매트릭스가 생성돼요.</div>`}
+  `;
+}
+/* ── 버전 로그 모달 ── */
+function vlogModalOpen(title, bodyHtml, onSave){
+  let host=document.getElementById('vlogModalHost');
+  if(!host){ host=document.createElement('div'); host.id='vlogModalHost'; document.body.appendChild(host); }
+  window._vlogSave=onSave;
+  host.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)vlogModalClose()">
+    <div class="snap-modal" style="max-width:520px;width:94vw">
+      <h3 style="margin-top:0">${title}</h3>
+      <div class="vlog-form">${bodyHtml}</div>
+      <div class="snap-acts" style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+        <button class="snap-cancel" onclick="vlogModalClose()">취소</button>
+        <button class="vlog-btn" onclick="if(window._vlogSave&&window._vlogSave()!==false){vlogModalClose();saveData();render();}">저장</button>
+      </div>
+    </div></div>`;
+}
+function vlogModalClose(){ const h=document.getElementById('vlogModalHost'); if(h) h.innerHTML=''; window._vlogSave=null; }
+function vlogEditDoc(di){
+  const VM=getVerMaster(); const doc=di>=0?VM.docs[di]:null;
+  vlogModalOpen(doc?'기준 문서 수정':'기준 문서 추가', `
+    <label>문서명</label><input id="vf_name" value="${esc(doc?doc.name:'')}" placeholder="예: 조사계획서">
+    <label>매칭 키워드 <span style="font-weight:400">(쉼표로 여러 개 — 기관 문서명에 이 단어가 있으면 자동 대조)</span></label>
+    <input id="vf_match" value="${esc(doc?(doc.match||''):'')}" placeholder="비우면 문서명 그대로 사용">
+    ${doc?'':`<div class="vf-grid">
+      <div><label>현재 버전</label><input id="vf_ver" placeholder="1.0"></div>
+      <div><label>버전 일자</label><input id="vf_date" type="date"></div></div>
+      <label>비고/변경사유</label><input id="vf_reason" placeholder="최초 제정">`}
+    <label>유효기간 만료일 <span style="font-weight:400">(보험증권 등 만료가 있을 때만)</span></label>
+    <input id="vf_exp" type="date" value="${esc(doc?(doc.expiry||''):'')}">
+    <div class="vf-check"><input type="checkbox" id="vf_ss" ${doc&&doc.siteSpecific?'checked':''}><span>기관별 버전 문서 (동의서 등 — Master 버전으로 비교)</span></div>
+  `, ()=>{
+    const name=document.getElementById('vf_name').value.trim();
+    if(!name){ alert('문서명을 입력해주세요.'); return false; }
+    if(doc){
+      doc.name=name; doc.match=document.getElementById('vf_match').value.trim();
+      doc.expiry=document.getElementById('vf_exp').value;
+      doc.siteSpecific=document.getElementById('vf_ss').checked;
+    }else{
+      VM.docs.push({id:makeId('vd'), name, match:document.getElementById('vf_match').value.trim(),
+        siteSpecific:document.getElementById('vf_ss').checked,
+        expiry:document.getElementById('vf_exp').value,
+        versions:[{ver:document.getElementById('vf_ver').value.trim()||'1.0',
+          date:document.getElementById('vf_date').value,
+          reason:document.getElementById('vf_reason').value.trim()}]});
+    }
+  });
+}
+function vlogAddVer(di){
+  const doc=getVerMaster().docs[di]; if(!doc) return;
+  vlogModalOpen('버전 추가 — '+esc(doc.name), `
+    <div class="vf-grid">
+      <div><label>새 버전</label><input id="vf_ver" placeholder="예: 3.0"></div>
+      <div><label>버전 일자</label><input id="vf_date" type="date"></div></div>
+    <label>변경 사유</label><input id="vf_reason" placeholder="예: 조사항목 개정">
+    <div style="font-size:12.5px;color:#787774;margin-top:8px">추가하면 이 버전이 새 기준이 되고, 모든 기관 대조 상태가 자동으로 다시 계산돼요.</div>
+  `, ()=>{
+    const v=document.getElementById('vf_ver').value.trim();
+    if(!v){ alert('버전을 입력해주세요.'); return false; }
+    if(!Array.isArray(doc.versions)) doc.versions=[];
+    doc.versions.push({ver:v, date:document.getElementById('vf_date').value, reason:document.getElementById('vf_reason').value.trim()});
+  });
+}
+function vlogDelDoc(di){
+  const VM=getVerMaster(); const doc=VM.docs[di]; if(!doc) return;
+  if(!confirm('"'+doc.name+'" 기준 문서를 삭제할까요? (기관 문서 자체는 지워지지 않아요)')) return;
+  Object.keys(VM.cells).forEach(k=>{ if(k.endsWith('|'+doc.id)) delete VM.cells[k]; });
+  VM.docs.splice(di,1); saveData(); render();
+}
+function vlogEditCell(si,di){
+  const s=(sites||[])[si]; const doc=getVerMaster().docs[di]; if(!s||!doc) return;
+  const VM=getVerMaster(); const key=s.code+'|'+doc.id;
+  const cur=VM.cells[key]||{};
+  const rows=vlogFindRows(s.code,doc);
+  const found=rows.length?rows.map(r=>{const c=rowCmpVal(r);return '– '+esc(r.name)+' : '+esc((c&&c.disp)||'버전 미기재');}).join('<br>'):'매칭되는 문서가 없어요 (매칭 키워드 확인)';
+  vlogModalOpen('['+esc(s.code)+'] '+esc(s.name)+' — '+esc(doc.name), `
+    <div style="font-size:12.5px;color:#787774;background:var(--surf);border-radius:6px;padding:8px 10px">${found}</div>
+    <label>이 기관의 유효기간 만료일 <span style="font-weight:400">(IRB 승인 유효기간, CV·GCP 유효기간 등)</span></label>
+    <input id="vc_exp" type="date" value="${esc(cur.expiry||'')}">
+    <label>메모</label><textarea id="vc_note" rows="2">${esc(cur.note||'')}</textarea>
+  `, ()=>{
+    VM.cells[key]={expiry:document.getElementById('vc_exp').value,
+      note:document.getElementById('vc_note').value.trim()};
+    if(!VM.cells[key].expiry&&!VM.cells[key].note) delete VM.cells[key];
+  });
+}
+/* ━━━━━━━━━━ /버전 로그 끝 ━━━━━━━━━━ */
 
 function switchHome(){
   curView='home'; curIndexType=null;
@@ -3276,6 +3603,7 @@ function renderHomeBody(){
 
 function renderBody(){
   if(curView==='home'){ renderHomeBody(); return; }
+  if(curView==='verlog'){ renderVerLogBody(); return; }
   if(curView==='index'){ renderIndexBody(); return; }
   const wrap=document.getElementById('bodyWrap');
   if(!curSite){wrap.innerHTML='<div class="empty">현재 Protocol에 기관을 추가해주세요</div>';return;}
@@ -3967,10 +4295,10 @@ function rowHtml(code,secId,idx,row,total){
     <td><textarea class="tmf-input" rows="1" placeholder="서버 경로/파일명" oninput="autoGrow(this)" onchange="${setter},'serverFileName',this.value)">${esc(row.serverFileName||'')}</textarea></td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
-        `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap"><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#999;font-size:14px;flex-shrink:0">_</span><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
+        `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap"><input class="ver-input${verAlertCls(code,row)}" title="${esc(verAlertTip(code,row))}" style="width:65px;flex-shrink:0" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#999;font-size:14px;flex-shrink:0">_</span><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
         :(row.name.includes('변경대비표')?
           `<div style="display:flex;gap:3px;align-items:center;flex-wrap:nowrap"><input class="ver-input" style="width:55px;flex-shrink:0" placeholder="v1.0" value="${esc(row.fromVer||row.ver||'')}" onchange="${setter},'fromVer',this.value)"><span style="color:#999;font-size:12.5px;white-space:nowrap;flex-shrink:0">to</span><input class="ver-input" style="width:55px;flex-shrink:0" placeholder="v2.0" value="${esc(row.toVer||'')}" onchange="${setter},'toVer',this.value)"></div>`
-          :`<input class="ver-input" style="width:104px" placeholder="v1.0" value="${esc(row.ver||'')}" onchange="${setter},'ver',this.value)">`)
+          :`<input class="ver-input${verAlertCls(code,row)}" title="${esc(verAlertTip(code,row))}" style="width:104px" placeholder="v1.0" value="${esc(row.ver||'')}" onchange="${setter},'ver',this.value)">`)
       )
       :na()
     }</td>
