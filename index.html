@@ -4285,13 +4285,22 @@ function setSecMeta(code,secId,field,val){
   if(!sec) return;
   const meta=ensureSecMeta(sec);
   meta[field]=val;
+  // IRB No.는 기관 단위로 하나 — 어느 섹션(초기심의/변경심의 등)에 입력해도 같은 기관의 모든 섹션에 동일하게 연동
+  if(field==='irbNo'){
+    (sections[code]||[]).forEach(sc=>{ ensureSecMeta(sc).irbNo=val; });
+  }
   saveData();
   renderBody();
+}
+// 같은 기관의 어느 섹션에든 IRB No.가 있으면 그 값을 돌려줌 (빈 섹션 표시용)
+function siteIrbNo(code){
+  const hit=(sections[code]||[]).find(sc=>sc.meta&&sc.meta.irbNo&&sc.meta.irbNo.trim());
+  return hit?hit.meta.irbNo:'';
 }
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
   return `<div class="sec-meta">
-    <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||'')}" placeholder="예: 2024-08-001" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
+    <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||siteIrbNo(code)||'')}" placeholder="예: 2024-08-001" title="기관 공통 — 어느 섹션에 입력해도 모든 섹션에 같이 적용돼요" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
     <div class="meta-field"><span>CRA 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>PI 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>접수일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
