@@ -723,6 +723,10 @@ body.sb-collapsed .sb-hover-zone{display:block}
 #appSidebar .tab-add,#appSidebar .protocol-add{width:100%;text-align:left;padding:7px 10px;color:#9aa3b2;border-radius:7px;border:1px dashed #d6deea}
 #appSidebar .tab-add:hover,#appSidebar .protocol-add:hover{background:#eef1f5;color:var(--accent)}
 #appSidebar .tabs-wrap > div[style*="background:#e9e9e7"]{display:none}
+/* 기관 탭 길게 눌러 드래그 정렬 */
+#appSidebar .tab[data-key]{touch-action:pan-y;-webkit-touch-callout:none}
+.tab-drag-on .tab[data-key]{transition:transform .12s}
+.tab.tab-dragging{opacity:.75;background:#e6edf7 !important;box-shadow:0 6px 18px rgba(20,40,80,.18);transform:scale(1.02);cursor:grabbing;z-index:5;position:relative}
 .sb-user{margin-top:auto;border-top:1px solid #e9edf2;padding-top:10px;margin-top:14px}
 .sb-user #userBar{display:flex;flex-direction:column;align-items:stretch;gap:5px}
 .sb-user .ub-email{font-size:12.5px;color:#5b6b80;padding:2px 6px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -3213,6 +3217,58 @@ function renderTabs(){
     }).join('')+
     `<div class="tab-add" onclick="openSiteModal()">+</div>`+
     idxTabs;
+  initSiteTabDrag();
+}
+
+/* ━━━ 기관 탭 길게 눌러 위/아래 드래그로 순서 바꾸기 (마우스·터치) ━━━ */
+function initSiteTabDrag(){
+  const wrap=document.getElementById('tabsWrap'); if(!wrap||wrap._dragInit) return;
+  wrap._dragInit=true;
+  const HOLD=350; // ms — 이보다 길게 누르면 드래그 모드
+  let holdTimer=null, dragEl=null, dragCode=null, startY=0, moved=false;
+  const siteTabs=()=>[...wrap.querySelectorAll('.tab[data-key]')];
+  const clearHold=()=>{ if(holdTimer){clearTimeout(holdTimer);holdTimer=null;} };
+  const endDrag=(commit)=>{
+    clearHold();
+    if(!dragEl) return;
+    const el=dragEl; dragEl=null;
+    el.classList.remove('tab-dragging'); wrap.classList.remove('tab-drag-on');
+    document.body.style.userSelect='';
+    if(commit){
+      const order=siteTabs().map(t=>t.dataset.key);
+      const from=sites.findIndex(s=>s.code===dragCode);
+      const to=order.indexOf(dragCode);
+      if(from>=0&&to>=0&&from!==to){ const [it]=sites.splice(from,1); sites.splice(to,0,it); saveData(); }
+    }
+    dragCode=null; render();
+  };
+  wrap.addEventListener('pointerdown',e=>{
+    const t=e.target.closest('.tab[data-key]'); if(!t||e.button>0) return;
+    startY=e.clientY; moved=false;
+    holdTimer=setTimeout(()=>{
+      dragEl=t; dragCode=t.dataset.key;
+      t.classList.add('tab-dragging'); wrap.classList.add('tab-drag-on');
+      document.body.style.userSelect='none';
+      try{ t.setPointerCapture(e.pointerId); }catch(_){ }
+      if(navigator.vibrate) navigator.vibrate(15);
+    },HOLD);
+  });
+  wrap.addEventListener('pointermove',e=>{
+    if(!dragEl){ if(holdTimer&&Math.abs(e.clientY-startY)>8) clearHold(); return; }
+    e.preventDefault(); moved=true;
+    const tabs=siteTabs().filter(t=>t!==dragEl);
+    let target=null, after=false;
+    for(const t of tabs){ const r=t.getBoundingClientRect(); if(e.clientY<r.top+r.height/2){ target=t; break; } target=t; after=true; }
+    if(!target) return;
+    if(after){ if(target.nextSibling!==dragEl) target.parentNode.insertBefore(dragEl,target.nextSibling); }
+    else if(target.previousSibling!==dragEl) target.parentNode.insertBefore(dragEl,target);
+  },{passive:false});
+  wrap.addEventListener('pointerup',e=>{ if(dragEl){ e.preventDefault(); endDrag(true); } else clearHold(); });
+  wrap.addEventListener('pointercancel',()=>endDrag(false));
+  // 드래그 직후 click으로 기관 전환되는 것 방지
+  wrap.addEventListener('click',e=>{ if(moved){ e.stopPropagation(); e.preventDefault(); moved=false; } },true);
+  // 모바일: 길게 눌렀을 때 컨텍스트 메뉴 안 뜨게
+  wrap.addEventListener('contextmenu',e=>{ if(e.target.closest('.tab[data-key]')) e.preventDefault(); });
 }
 
 /* ━━━━━━━━━━ 버전 로그 (Essential Doc Version Log) ━━━━━━━━━━
@@ -3254,7 +3310,7 @@ function vlogFindRows(code, doc){
   const out=[];
   ((sections&&sections[code])||[]).forEach(sec=>{
     (sec.rows||[]).forEach(row=>{
-      if(!row.needVer||row.dtype==='compare') return;
+      if(row.dtype==='compare') return;
       const nm=String(row.name||'').toLowerCase();
       if(kws.some(k=>nm.includes(k))) out.push(row);
     });
@@ -3368,6 +3424,7 @@ function renderVerLogBody(){
       const extra=vlogCellExtra(s.code,doc.id);
       const cex=expState(extra.expiry);
       let inner=`<span class="vlog-chip c-${j.code}">${j.label}</span>`;
+      if(j.code==='nover'&&rows.length) inner+=`<div class="vmeta" style="color:#c80e0e">클릭해서 버전 입력</div>`;
       if(j.found) inner+=`<div class="vmeta"><b>${esc(j.found)}</b>${rows.length>1?` 외 ${rows.length-1}건`:''}</div>`;
       if(extra.expiry) inner+=`<div><span class="vlog-exp ${cex?cex.cls:'e-safe'}">유효 ${esc(extra.expiry)} · ${cex?esc(cex.txt):''}</span></div>`;
       if(extra.note) inner+=`<div class="vmeta">${esc(extra.note)}</div>`;
@@ -3476,13 +3533,31 @@ function vlogEditCell(si,di){
   const VM=getVerMaster(); const key=s.code+'|'+doc.id;
   const cur=VM.cells[key]||{};
   const rows=vlogFindRows(s.code,doc);
-  const found=rows.length?rows.map(r=>{const c=rowCmpVal(r);return '– '+esc(r.name)+' : '+esc((c&&c.disp)||'버전 미기재');}).join('<br>'):'매칭되는 문서가 없어요 (매칭 키워드 확인)';
+  const cv=docCurVer(doc);
+  const found=rows.length?rows.map((r,ri)=>{
+    const isConsent=String(r.name||'').includes('동의서');
+    const verIn=isConsent
+      ?`<input class="ver-input vc-row" data-ri="${ri}" data-f="masterVer" style="width:64px" placeholder="Master" value="${esc(r.masterVer||'')}"><span style="color:#999">_</span><input class="ver-input vc-row" data-ri="${ri}" data-f="siteVer" style="width:64px" placeholder="Site" value="${esc(r.siteVer||'')}">`
+      :`<input class="ver-input vc-row" data-ri="${ri}" data-f="ver" style="width:80px" placeholder="${esc(cv?cv.ver:'v1.0')}" value="${esc(r.ver||'')}">`;
+    return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0;border-bottom:1px dashed #e9e9e7">
+      <span style="flex:1;min-width:120px;font-size:12.5px">${esc(r.name)}</span>${verIn}
+      <input type="date" class="vc-row" data-ri="${ri}" data-f="effectiveDate" style="font-size:12px;border:1px solid #e9e9e7;border-radius:4px;padding:2px 4px" value="${esc(r.effectiveDate||'')}" title="Effective Date">
+    </div>`;
+  }).join(''):'<span style="color:#999">매칭되는 문서가 없어요 (매칭 키워드 확인)</span>';
   vlogModalOpen('['+esc(s.code)+'] '+esc(s.name)+' — '+esc(doc.name), `
-    <div style="font-size:12.5px;color:#787774;background:var(--surf);border-radius:6px;padding:8px 10px">${found}</div>
+    <label>이 기관의 문서 버전 <span style="font-weight:400">(기준 ${cv?('v'+esc(cv.ver)):'-'} · 여기서 입력하면 기관 문서 테이블에도 바로 반영)</span></label>
+    <div style="font-size:12.5px;color:#37352f;background:var(--surf);border-radius:6px;padding:6px 10px">${found}</div>
     <label>이 기관의 유효기간 만료일 <span style="font-weight:400">(IRB 승인 유효기간, CV·GCP 유효기간 등)</span></label>
     <input id="vc_exp" type="date" value="${esc(cur.expiry||'')}">
     <label>메모</label><textarea id="vc_note" rows="2">${esc(cur.note||'')}</textarea>
   `, ()=>{
+    document.querySelectorAll('#vlogModalHost .vc-row').forEach(inp=>{
+      const r=rows[+inp.dataset.ri]; if(!r) return;
+      const f=inp.dataset.f, v=inp.value.trim();
+      if((r[f]||'')===v) return;
+      r[f]=v;
+      if(f!=='effectiveDate'&&v&&!r.needVer) r.needVer=true; // 버전을 적으면 버전 관리 대상으로 켬
+    });
     VM.cells[key]={expiry:document.getElementById('vc_exp').value,
       note:document.getElementById('vc_note').value.trim()};
     if(!VM.cells[key].expiry&&!VM.cells[key].note) delete VM.cells[key];
@@ -4015,7 +4090,7 @@ const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,200];
 let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v2')); if(Array.isArray(v)&&v.length===10) return v.map(Number);}catch(e){} return SEC_COL_DEFAULT.slice(); })();
 function saveSecColW(){ try{ localStorage.setItem('secColW_v2', JSON.stringify(secColW)); }catch(e){} }
 // 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
-let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')==='1'; }catch(e){ return false; } })();
+let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')!=='0'; }catch(e){ return true; } })(); // 기본: 보임
 let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols')==='1'; }catch(e){ return false; } })();
 let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'; }catch(e){ return false; } })();
 function toggleNaRows(){ showNaRows=!showNaRows; idxJustNa=null; try{ localStorage.setItem('showNaRows', showNaRows?'1':'0'); }catch(e){} renderBody(); }
