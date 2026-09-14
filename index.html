@@ -155,7 +155,7 @@ tr:hover td{background:var(--bg)}
 .issue-note:focus{border-color:#d9534f}
 .doc-name-display{white-space:pre-wrap;word-break:break-word}
 .text-input::placeholder{color:#c7c7c5}
-.tmf-input{font-size:11.5px;border:1px solid #e9e9e7;border-radius:4px;padding:2px 4px;color:#444;background:var(--bg);width:100%;font-family:'Courier New',monospace;outline:none;min-width:150px;resize:none;overflow:hidden;min-height:30px;overflow-wrap:break-word;white-space:pre-wrap;word-break:break-all;line-height:1.4;display:block;box-sizing:border-box}
+.tmf-input{font-size:13.5px;border:1px solid #e9e9e7;border-radius:4px;padding:2px 4px;color:#444;background:var(--bg);width:100%;font-family:'Courier New',monospace;outline:none;min-width:150px;resize:none;overflow:hidden;min-height:30px;overflow-wrap:break-word;white-space:pre-wrap;word-break:break-all;line-height:1.4;display:block;box-sizing:border-box}
 .tmf-input:focus{border-color:var(--accent);background:#fff}
 .tmf-input::placeholder{color:#bbb}
 .dtype{font-size:12.5px;padding:1px 6px;border-radius:4px;font-weight:500;white-space:nowrap}
@@ -670,7 +670,7 @@ tr:hover td{background:#f6f8fb !important}
 .home-stat{background:#fff;border:1px solid #e4e8ee;border-radius:10px;padding:14px 16px}
 .hs-label{font-size:15px;color:#76819a;margin-bottom:4px}
 .hs-val{font-size:30px;font-weight:600;color:#1f2a3a;line-height:1.1}
-.home-cols{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.home-cols{display:grid;grid-template-columns:1fr;gap:16px}
 .home-section-label{font-size:15px;color:#5b6b80;font-weight:600;margin-bottom:10px}
 .home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .home-card{background:#fff;border:1px solid #e4e8ee;border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow .15s,transform .15s}
@@ -3638,24 +3638,6 @@ function renderHomeBody(){
     return {s,t,ok,iss,pct,badge,bcls};
   });
   const totPct=totDocs?Math.round(totOk/totDocs*100):0;
-  // 다가오는 마감 수집 (섹션 단위 CRA 제출기한)
-  const deadlines=[];
-  sites.forEach(s=>{
-    (sections[s.code]||[]).forEach(sec=>{
-      const dl=sec.meta&&sec.meta.craDeadline;
-      if(dl){
-        const rows=sec.rows||[];
-        const allDone=rows.length>0 && rows.every(r=>r.status==='ok');
-        if(!allDone && !sec.meta.craSubmitDate){
-          const d=calcDday(dl);
-          if(d.days!==null) deadlines.push({code:s.code, name:sec.title||'섹션', dday:d, days:d.days});
-        }
-      }
-    });
-  });
-  deadlines.sort((a,b)=>a.days-b.days);
-  const topDl=deadlines.slice(0,8);
-
   const statCards=`<div class="home-stats">
     <div class="home-stat"><div class="hs-label">기관</div><div class="hs-val">${sites.length}</div></div>
     <div class="home-stat"><div class="hs-label">문서</div><div class="hs-val">${totDocs}</div></div>
@@ -3671,15 +3653,6 @@ function renderHomeBody(){
       <div class="hc-pct">완료 ${c.pct}%</div>
     </div>`).join('')}</div>` : '<div class="empty">기관을 추가하면 여기에 카드로 표시돼요</div>';
 
-  const dlList = `<div class="home-dl">
-    <div class="home-dl-title">📅 다가오는 마감</div>
-    ${topDl.length ? topDl.map(d=>`
-      <div class="hdl-item" onclick="switchSite('${d.code}')">
-        <span class="hdl-name">${d.code} · ${esc(d.name)}</span>
-        <span class="hdl-dday ${d.dday.cls}">${d.dday.txt}</span>
-      </div>`).join('') : '<div class="hdl-empty">마감 기한이 설정된 문서가 없어요</div>'}
-  </div>`;
-
   wrap.innerHTML=`
     <div class="home-head"><span class="home-title">${esc(proto?.name||'홈')}</span><span class="home-sub">/ 홈 대시보드</span></div>
     ${statCards}
@@ -3688,7 +3661,6 @@ function renderHomeBody(){
         <div class="home-section-label">기관 <span style="color:#aaa;font-weight:400">· 카드를 누르면 상세로</span></div>
         ${siteCards}
       </div>
-      <div class="home-col-side">${dlList}</div>
     </div>
   `;
 }
@@ -4318,10 +4290,8 @@ function setSecMeta(code,secId,field,val){
 }
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
-  const dl = meta.craSubmitDate ? {cls:'deadline-done',txt:'✓ 완료'} : (meta.craDeadline?calcDday(meta.craDeadline):null);
   return `<div class="sec-meta">
     <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||'')}" placeholder="예: 2024-08-001" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
-    <div class="meta-field"><span>CRA 제출기한</span><div style="display:flex;gap:8px;align-items:center"><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.craDeadline||''}" onchange="setSecMeta('${code}','${sec.id}','craDeadline',this.value)" style="width:140px">${dl&&dl.txt?`<span class="${dl.cls}">${dl.txt}</span>`:''}</div></div>
     <div class="meta-field"><span>CRA 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>PI 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>접수일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
@@ -4843,7 +4813,7 @@ function deleteSite(code){
 }
 
 function exportCSV(){
-  let csv='\uFEFFContract No.(프로토콜),Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,기관Contract No.,계약일,계약금액,의뢰사(기관),PI,계약비고,섹션,문서명,구분,TMF파일명,서버 내 파일명,버전,Master Ver.,Site Ver.,Effective Date,상태,CRA 제출기한,승인서 승인일,승인서 통지일,CRA 제출일,PI 제출일,접수일,승인일,비고\n';
+  let csv='\uFEFFContract No.(프로토콜),Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,기관Contract No.,계약일,계약금액,의뢰사(기관),PI,계약비고,섹션,문서명,구분,TMF파일명,서버 내 파일명,버전,Master Ver.,Site Ver.,Effective Date,상태,승인서 승인일,승인서 통지일,CRA 제출일,PI 제출일,접수일,승인일,비고\n';
   protocols.forEach(protocol=>{
     const pdata=protocolData[protocol.id]||{sites:[],sections:{}};
     (pdata.sites||[]).forEach(site=>{
@@ -4852,7 +4822,7 @@ function exportCSV(){
         sec.rows.forEach(r=>{
           const st=STATUSES.find(s=>s.val===r.status)?.label||'';
           const isApproval=(r.name||'').includes('승인서') || (r.name||'').toLowerCase().includes('approval');
-          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${(site.contractNo||'').replace(/"/g,'""')}","${site.contractDate||''}","${(site.contractAmount||'').replace(/"/g,'""')}","${(site.sponsor||'').replace(/"/g,'""')}","${(site.piName||'').replace(/"/g,'""')}","${(site.contractNote||'').replace(/\n/g,' ').replace(/"/g,'""')}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.serverFileName||''}","${r.ver||''}","${r.masterVer||''}","${r.siteVer||''}","${r.effectiveDate||''}","${st}","${r.deadline||''}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${meta.craSubmitDate||''}","${meta.piSubmitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
+          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${(site.contractNo||'').replace(/"/g,'""')}","${site.contractDate||''}","${(site.contractAmount||'').replace(/"/g,'""')}","${(site.sponsor||'').replace(/"/g,'""')}","${(site.piName||'').replace(/"/g,'""')}","${(site.contractNote||'').replace(/\n/g,' ').replace(/"/g,'""')}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.serverFileName||''}","${r.ver||''}","${r.masterVer||''}","${r.siteVer||''}","${r.effectiveDate||''}","${st}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${meta.craSubmitDate||''}","${meta.piSubmitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
         });
       });
     });
