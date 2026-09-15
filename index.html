@@ -153,6 +153,15 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .rich-note:empty::before{content:attr(data-ph);color:#bbb}
 .rich-note.idx-editing{cursor:text;border-color:var(--accent) !important;background:#fff !important}
 .rich-note b,.rich-note strong{font-weight:800}
+.rich-note.rich-mono{font-family:'Courier New',monospace;font-size:13.5px;color:#444;background:var(--bg);border:1px solid #e9e9e7;min-height:30px;word-break:break-all}
+.rich-note.rich-mono:hover{background:var(--accent-xl)}
+.rich-note.idx-loc{font-size:15px;color:#37352f;background:#fff}
+.rich-note.rich-docname{font-size:14.5px;font-weight:500;color:#37352f;border-color:transparent;padding:2px 4px}
+.rich-note.issue-note{background:#fdf2f1;border:1px solid #f0b4ae;color:#a3271f;margin-bottom:5px}
+.rich-note.rich-box{border:1px solid #e9e9e7;background:#fff;min-height:36px;padding:6px 8px;font-size:14px;cursor:text}
+.rich-note.rich-box:hover{background:#fff}
+.rich-note.idx-note{border:1px solid #e9e9e7;background:#fff;min-height:24px;font-size:15px}
+.rich-note[contenteditable="true"]{cursor:text}
 .rich-bar{position:absolute;z-index:500;display:none;gap:3px;background:#fff;border:1px solid #d6deea;border-radius:8px;padding:4px;box-shadow:0 4px 14px rgba(0,0,0,.14)}
 .rich-bar.show{display:flex}
 .rich-bar button{border:1px solid #e3e6ea;background:#fff;border-radius:5px;padding:3px 8px;font-size:12.5px;cursor:pointer;font-family:inherit;line-height:1.3;white-space:nowrap}
@@ -1957,11 +1966,11 @@ function renderContractList(code){
       </div>
       <div class="contract-field memo" style="flex:1;min-width:240px">
         <label>비고 / 메모</label>
-        <textarea placeholder="계약 관련 메모..." oninput="autoGrow(this)" onchange="setSiteContract('${code}','memo',this.value)">${esc(c.memo||'')}</textarea>
+        ${richField('contract',{code},'memo',c,'계약 관련 메모...','rich-box')}
       </div>` : `
       <div class="contract-field" style="flex:1;min-width:220px">
         <label>변경 사유</label>
-        <textarea class="ct-reason" rows="2" placeholder="변경 사유를 입력하세요 (Enter로 줄바꿈)" oninput="autoGrow(this)" onchange="setContractField('${code}','${it.id}','reason',this.value)">${esc(it.reason||'')}</textarea>
+        ${richField('ct',{code,id:it.id},'reason',it,'변경 사유를 입력하세요 (Enter로 줄바꿈)','ct-reason rich-box')}
       </div>`;
     return `<div class="ct-card${isInit?' init':''}">
       <div class="ct-card-head">
@@ -2185,14 +2194,14 @@ if(!window._dtPasteBound){
   const IDX_EDIT_SEL='.idx-title-input,.idx-loc,.idx-note,.idx-num-input,.tmf-input,.text-input';
   document.addEventListener('dblclick', function(e){
     const el=e.target;
-    if(!el.matches || !el.matches(IDX_EDIT_SEL)) return;
+    if(!el.matches || !el.matches(IDX_EDIT_SEL) || el.classList.contains('rich-note')) return;
     el.readOnly=false; el.classList.add('idx-editing'); el.focus();
     const v=el.value; el.value=''; el.value=v; // 커서를 맨 끝으로
     if(typeof autoGrow==='function') autoGrow(el);
   });
   document.addEventListener('blur', function(e){
     const el=e.target;
-    if(!el.matches || !el.matches(IDX_EDIT_SEL)) return;
+    if(!el.matches || !el.matches(IDX_EDIT_SEL) || el.classList.contains('rich-note')) return;
     el.readOnly=true; el.classList.remove('idx-editing');
   }, true);
 }
@@ -3966,10 +3975,10 @@ function renderIndexBody(){
       ${titleCell}
       <td class="idx-na-cell"><select class="na-sel" onchange="setIndexNaType('${type}',${idx},this.value)" title="원본/사본/해당없음 구분"><option value=""${(!r.naType&&!r.na)?' selected':''}>–</option><option value="원본"${r.naType==='원본'?' selected':''}>원본</option><option value="사본"${r.naType==='사본'?' selected':''}>사본</option><option value="NA"${(r.naType==='NA'||(r.na&&!r.naType))?' selected':''}>N/A</option></select></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
-      <td><div class="idx-loc-wrap"><textarea class="idx-loc idx-loc-top" rows="1" placeholder="위치" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea><textarea class="idx-loc idx-loc-bot" rows="1" placeholder="파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'fileName',this.value)">${esc(r.fileName||'')}</textarea></div></td>
-      <td><div class="prevfiling-wrap"><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea><button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
-      <td><div class="thisfiling-wrap"><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea><input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
-      <td><div class="rich-note" contenteditable="false" data-kind="idx" data-type="${type}" data-idx="${idx}" data-ph="비고 (더블클릭 → 편집)" title="더블클릭하면 편집돼요. 글자를 드래그하면 서식 버튼이 떠요.">${noteToHtml(r)}</div>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}</td>
+      <td><div class="idx-loc-wrap">${richField('idx',{type,idx},'location',r,'위치','idx-loc idx-loc-top rich-mono')}${richField('idx',{type,idx},'fileName',r,'파일명','idx-loc idx-loc-bot rich-mono')}</div></td>
+      <td><div class="prevfiling-wrap">${richField('idx',{type,idx},'prevFiling',r,'지난 방문까지 Filing 완료','idx-note')}<button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
+      <td><div class="thisfiling-wrap">${richField('idx',{type,idx},'thisFiling',r,'이번 방문에 Filing 할 것','idx-note')}<input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
+      <td>${richField('idx',{type,idx},'note',r,'비고 (더블클릭 → 편집)')}${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}</td>
       ${ckCells}
     </tr>`;
     if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
@@ -4065,9 +4074,25 @@ function autoGrow(el){
 // ━━━ 비고 서식(볼드 · 노랑/파랑 형광 · 빨간 글씨) ━━━
 // 저장: noteHtml(서식 포함) + note(순수 텍스트 — 검색/CSV/알람 호환)
 function escHtml2(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function noteToHtml(row){
-  if(row.noteHtml) return row.noteHtml;
-  return escHtml2(row.note||'').replace(/\n/g,'<br>');
+function noteToHtml(row){ return fieldHtml(row,'note'); }
+function fieldHtml(obj,field){
+  if(!obj) return '';
+  if(obj[field+'Html']) return obj[field+'Html'];
+  return escHtml2(obj[field]||'').replace(/\n/g,'<br>');
+}
+// 서식 가능한 칸 만들기. kind/args 로 저장 대상 객체를 찾고 field(텍스트)+fieldHtml(서식)에 저장
+//   kind: 'sec'(code,sec,idx) · 'idx'(type,idx) · 'contract'(code) · 'ct'(code,id)
+function richField(kind,args,field,obj,ph,cls,extraAttr){
+  const a=Object.entries(args).map(([k,v])=>`data-${k}="${esc(String(v))}"`).join(' ');
+  return `<div class="rich-note ${cls||''}" contenteditable="false" data-kind="${kind}" data-field="${field}" ${a} data-ph="${esc(ph||'')}" title="더블클릭하면 편집돼요. 글자를 드래그하면 서식(B/형광/빨강) 버튼이 떠요." ${extraAttr||''}>${fieldHtml(obj,field)}</div>`;
+}
+function richResolve(el){
+  const d=el.dataset;
+  if(d.kind==='sec'){ const sec=getSec(d.code,d.sec); return sec&&sec.rows[+d.idx]; }
+  if(d.kind==='idx'){ return getIndexRows(d.type)[+d.idx]; }
+  if(d.kind==='contract'){ return getSiteContract(d.code); }
+  if(d.kind==='ct'){ return getSiteContracts(d.code).find(x=>x.id===d.id); }
+  return null;
 }
 // 허용 태그/스타일만 남기고 나머지는 벗겨냄
 function sanitizeNoteHtml(html){
@@ -4146,18 +4171,13 @@ function richCommit(el){
   const html=sanitizeNoteHtml(el.innerHTML);
   const tmp=document.createElement('div'); tmp.innerHTML=html.replace(/<br\s*\/?>/gi,'\n');
   const text=(tmp.textContent||'').replace(/\u00a0/g,' ');
-  const kind=el.dataset.kind;
-  if(kind==='sec'){
-    const sec=getSec(el.dataset.code,el.dataset.sec); const row=sec&&sec.rows[+el.dataset.idx]; if(!row) return;
-    if((row.noteHtml||'')===html && (row.note||'')===text) return;
-    row.noteHtml=html; row.note=text; saveData();
-    if(!showNoteCol) renderBody();
-  } else if(kind==='idx'){
-    const rows=getIndexRows(el.dataset.type); const row=rows[+el.dataset.idx]; if(!row) return;
-    if((row.noteHtml||'')===html && (row.note||'')===text) return;
-    row.noteHtml=html; row.note=text; saveData();
-  }
-  el.innerHTML=html;
+  const field=el.dataset.field||'note';
+  const obj=richResolve(el); if(!obj) return;
+  if(field==='name' && !text.trim()){ el.innerHTML=fieldHtml(obj,'name'); return; } // 문서명은 비울 수 없음
+  if((obj[field+'Html']||'')===html && (obj[field]||'')===text) return;
+  obj[field+'Html']=html; obj[field]=text; saveData();
+  if(field==='name' || (field==='note'&&!showNoteCol)) renderBody();
+  else el.innerHTML=html;
 }
 document.addEventListener('dblclick',e=>{ const el=e.target.closest&&e.target.closest('.rich-note'); if(el&&el.contentEditable!=='true') richStartEdit(el); });
 document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.rich-note'); if(el&&el.contentEditable!=='true'&&!el.textContent.trim()) richStartEdit(el); });
@@ -4509,7 +4529,7 @@ function renderContractPanel(code){
       </div>
       <div class="contract-field memo">
         <label>비고 / 메모</label>
-        <textarea placeholder="계약 관련 메모..." oninput="autoGrow(this)" onchange="setSiteContract('${code}','memo',this.value)">${esc(c.memo||'')}</textarea>
+        ${richField('contract',{code},'memo',c,'계약 관련 메모...','rich-box')}
       </div>
     </div>`:''}
   </div>`;
@@ -4624,9 +4644,9 @@ function rowHtml(code,secId,idx,row,total){
         <span class="dtype ${dt.cls}">${dt.label}</span>
       </div>
     </td>
-    <td ondblclick="editDocName(this,'${code}','${secId}',${idx})" style="cursor:pointer;user-select:none"><span class="doc-name-display">${highlight(row.name)}</span>${histTxt}</td>
-    <td><textarea class="tmf-input" rows="1" placeholder="파일명" oninput="autoGrow(this)" onchange="${setter},'tmfName',this.value)">${esc(row.tmfName||'')}</textarea></td>
-    <td><textarea class="tmf-input" rows="1" placeholder="서버 경로/파일명" oninput="autoGrow(this)" onchange="${setter},'serverFileName',this.value)">${esc(row.serverFileName||'')}</textarea></td>
+    <td>${searchTerm.trim()?`<span class="doc-name-display">${highlight(row.name)}</span>`:richField('sec',{code,sec:secId,idx},'name',row,'문서명','rich-docname')}${histTxt}</td>
+    <td>${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</td>
+    <td>${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
         `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap"><input class="ver-input${verAlertCls(code,row)}" title="${esc(verAlertTip(code,row))}" style="width:65px;flex-shrink:0" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#999;font-size:14px;flex-shrink:0">_</span><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
@@ -4641,7 +4661,7 @@ function rowHtml(code,secId,idx,row,total){
       ${stOpts(row.status)}
     </select></td>
     ${showNoteCol
-      ?`<td>${row.status==='issue'?`<textarea class="issue-note" rows="1" placeholder="⚠️ 어떤 부분이 이슈인지 메모" oninput="autoGrow(this)" onchange="${setter},'issueNote',this.value)">${esc(row.issueNote||'')}</textarea>`:''}<div class="rich-note" contenteditable="false" data-kind="sec" data-code="${code}" data-sec="${secId}" data-idx="${idx}" data-ph="메모 (더블클릭 → 편집, 드래그해서 B/형광/빨강)" title="더블클릭하면 편집돼요. 글자를 드래그하면 서식 버튼이 떠요.">${noteToHtml(row)}</div></td>`
+      ?`<td>${row.status==='issue'?richField('sec',{code,sec:secId,idx},'issueNote',row,'⚠️ 어떤 부분이 이슈인지 메모','issue-note'):''}${richField('sec',{code,sec:secId,idx},'note',row,'메모 (더블클릭 → 편집)')}</td>`
       :`<td class="note-cell-collapsed">${rowHasNote(row)?`<span class="note-dot" onclick="toggleNoteCol()" title="${esc(((row.issueNote||'')+(row.issueNote&&row.note?'\n':'')+(row.note||'')).slice(0,200))}">!</span>`:''}</td>`}
   </tr>`;
 }
