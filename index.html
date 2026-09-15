@@ -129,8 +129,17 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .sip-sum{font-size:13px;color:#787774;white-space:nowrap;margin-left:4px}
 .sip-warn{color:#c0392b}
 .sip-quick{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
-.sip-link{font-size:12.5px;font-weight:600;color:var(--accent);background:#fff;border:1px solid var(--accent-l);border-radius:14px;padding:3px 10px;text-decoration:none;white-space:nowrap}
-.sip-link:hover{background:var(--accent);color:#fff}
+.sip-link{font-size:12.5px;font-weight:700;border-radius:14px;padding:4px 11px;text-decoration:none;white-space:nowrap;border:1px solid transparent;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.sip-link:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.sip-link.sip-irb{background:var(--accent)}
+.sip-link.sip-ctc{background:#2e9e5b}
+.sip-link.sip-pharm{background:#e0762a}
+/* 포털 바 제목·바로가기도 같은 색으로 구분 */
+.ctc-portal-bar .ipb-title,.ctc-portal-bar .ipb-go{color:#fff}
+.ctc-portal-bar .ipb-title{color:#2e9e5b}
+.ctc-portal-bar .ipb-go{background:#2e9e5b}
+.pharm-portal-bar .ipb-title{color:#e0762a}
+.pharm-portal-bar .ipb-go{background:#e0762a}
 .sip-body{padding:12px 14px 4px;border-top:1px solid #eef0f2}
 /* ── 포털 바 숨김/복구 ── */
 .ipb-hide{margin-left:auto;border:none;background:transparent;color:#b0b0ad;font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px;white-space:nowrap}
@@ -396,7 +405,8 @@ tr:hover td{background:var(--bg)}
 .contract-field input.irb-url{min-width:240px;font-family:'Courier New',monospace;font-size:12.5px}
 .irb-portal-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--accent-xl);border:1px solid #c5d9f0;border-radius:10px;padding:9px 12px;margin-bottom:10px}
 .ipb-title{font-size:14px;font-weight:700;color:var(--accent);white-space:nowrap}
-.ctc-portal-bar{background:#fff;border-style:dashed}
+.ctc-portal-bar{background:#f2faf5;border:1px solid #bfe3cc}
+.pharm-portal-bar{background:#fff7f0;border:1px solid #f3d3b8}
 .ipb-url{flex:1;min-width:200px;font-size:14px;border:1px solid #c5d9f0;border-radius:6px;padding:5px 8px;background:#fff;color:#37352f;outline:none;font-family:'Courier New',monospace}
 .ipb-url:focus{border-color:var(--accent)}
 .ipb-go{font-size:14px;font-weight:700;color:#fff;background:var(--accent);border-radius:6px;padding:6px 10px;text-decoration:none;white-space:nowrap}
@@ -766,7 +776,11 @@ body.sb-collapsed .sb-hover-zone{display:block}
 #appSidebar .tab-add:hover,#appSidebar .protocol-add:hover{background:#eef1f5;color:var(--accent)}
 #appSidebar .tabs-wrap > div[style*="background:#e9e9e7"]{display:none}
 /* 기관 탭 길게 눌러 드래그 정렬 */
-#appSidebar .tab[data-key]{touch-action:pan-y;-webkit-touch-callout:none}
+#appSidebar .tab[data-key]{touch-action:pan-y;-webkit-touch-callout:none;display:flex;align-items:center;gap:6px}
+.tab-grip{flex-shrink:0;color:#c3cad4;font-size:13px;line-height:1;cursor:grab;touch-action:none;padding:2px 3px;margin-left:-4px;border-radius:4px;letter-spacing:-2px;opacity:.55}
+#appSidebar .tab[data-key]:hover .tab-grip{opacity:1;color:var(--accent)}
+.tab-grip:active{cursor:grabbing}
+.tab-txt{flex:1;min-width:0}
 .tab-drag-on .tab[data-key]{transition:transform .12s}
 .tab.tab-dragging{opacity:.75;background:#e6edf7 !important;box-shadow:0 6px 18px rgba(20,40,80,.18);transform:scale(1.02);cursor:grabbing;z-index:5;position:relative}
 .sb-user{margin-top:auto;border-top:1px solid #e9edf2;padding-top:10px;margin-top:14px}
@@ -1658,7 +1672,7 @@ function renderPharmPortalBar(code){
   const c=getSiteContract(code);
   if(c.pharmHidden) return '';
   const url=(c.pharmUrl||'').trim();
-  return `<div class="irb-portal-bar ctc-portal-bar">
+  return `<div class="irb-portal-bar ctc-portal-bar pharm-portal-bar">
     <span class="ipb-title">💊 약국 포털</span>
     <input class="ipb-url" placeholder="약국(약제부) 포털 링크" value="${esc(c.pharmUrl||'')}" onchange="setSiteContract('${code}','pharmUrl',this.value)">
     ${url?`<a class="ipb-go" href="${esc(extUrl(url))}" target="_blank" rel="noopener" title="새 탭에서 열기">↗ 바로가기</a>`:''}
@@ -2000,11 +2014,11 @@ function renderSiteInfoPanel(code){
   const pending=stateIdx>=0?H.rows.filter(r=>(r[stateIdx]||'').includes('심의중')).length:0;
   const todos=getTodos(code), todoLeft=todos.filter(t=>!t.done).length;
   const ctN=getSiteContracts(code).length;
-  const link=(u,label,icon)=>u&&u.trim()?`<a class="sip-link" href="${esc(extUrl(u))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${icon} ${label} ↗</a>`:'';
+  const link=(u,label,icon,cls)=>u&&u.trim()?`<a class="sip-link ${cls}" href="${esc(extUrl(u))}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(u)}">${icon} ${label} ↗</a>`:'';
   const quick=[
-    link(c.irbUrl,'IRB','🔗'),
-    c.ctcHidden?'':link(c.ctcUrl,'CTC','🏥'),
-    (c.pharmHidden||studyCategory(cur?.studyType)!=='임상시험')?'':link(c.pharmUrl,'약국','💊')
+    link(c.irbUrl,'IRB','🔗','sip-irb'),
+    c.ctcHidden?'':link(c.ctcUrl,'CTC','🏥','sip-ctc'),
+    (c.pharmHidden||studyCategory(cur?.studyType)!=='임상시험')?'':link(c.pharmUrl,'약국','💊','sip-pharm')
   ].filter(Boolean).join('');
   const sum=[
     pending?`<b class="sip-warn">심의중 ${pending}</b>`:`심의 이력 ${H.rows.length}건`,
@@ -3307,6 +3321,7 @@ function deleteProtocol(){
 }
 
 function renderTabs(){
+  { const w=document.getElementById('tabsWrap'); if(w&&w.classList.contains('tab-drag-on')) return; }
   const idxTypes=getIndexTypesForProtocol();
   const pd=curProtocolId?protocolData[curProtocolId]:null;
   const customSet=new Set(siteCustomIndexes());
@@ -3328,7 +3343,7 @@ function renderTabs(){
       const on=(s.code===activeSiteCode);
       // curView==='index'일 때 기관 탭은 "소속(맥락)" 표시 → 초록 배경은 동일, 왼쪽 바만 생략
       const cls='tab'+(on?' active':'')+((on&&curView==='index')?' sb-ctx':'');
-      return `<div class="${cls}" data-key="${s.code}" onclick="switchSite('${s.code}')">${s.code} ${s.name}</div>`;
+      return `<div class="${cls}" data-key="${s.code}" onclick="switchSite('${s.code}')"><span class="tab-grip" title="잡고 위아래로 끌어 순서 바꾸기">⋮⋮</span><span class="tab-txt">${s.code} ${s.name}</span></div>`;
     }).join('')+
     `<div class="tab-add" onclick="openSiteModal()">+</div>`+
     idxTabs;
@@ -3357,16 +3372,18 @@ function initSiteTabDrag(){
     }
     dragCode=null; render();
   };
+  const beginDrag=(t,e)=>{
+    dragEl=t; dragCode=t.dataset.key;
+    t.classList.add('tab-dragging'); wrap.classList.add('tab-drag-on');
+    document.body.style.userSelect='none';
+    try{ t.setPointerCapture(e.pointerId); }catch(_){ }
+    if(navigator.vibrate) navigator.vibrate(15);
+  };
   wrap.addEventListener('pointerdown',e=>{
     const t=e.target.closest('.tab[data-key]'); if(!t||e.button>0) return;
     startY=e.clientY; moved=false;
-    holdTimer=setTimeout(()=>{
-      dragEl=t; dragCode=t.dataset.key;
-      t.classList.add('tab-dragging'); wrap.classList.add('tab-drag-on');
-      document.body.style.userSelect='none';
-      try{ t.setPointerCapture(e.pointerId); }catch(_){ }
-      if(navigator.vibrate) navigator.vibrate(15);
-    },HOLD);
+    if(e.target.closest('.tab-grip')){ e.preventDefault(); beginDrag(t,e); return; } // 그립: 바로 드래그
+    holdTimer=setTimeout(()=>beginDrag(t,e),HOLD);                                   // 본문: 길게 누르기
   });
   wrap.addEventListener('pointermove',e=>{
     if(!dragEl){ if(holdTimer&&Math.abs(e.clientY-startY)>8) clearHold(); return; }
@@ -3378,8 +3395,9 @@ function initSiteTabDrag(){
     if(after){ if(target.nextSibling!==dragEl) target.parentNode.insertBefore(dragEl,target.nextSibling); }
     else if(target.previousSibling!==dragEl) target.parentNode.insertBefore(dragEl,target);
   },{passive:false});
-  wrap.addEventListener('pointerup',e=>{ if(dragEl){ e.preventDefault(); endDrag(true); } else clearHold(); });
+  wrap.addEventListener('pointerup',e=>{ if(dragEl){ e.preventDefault(); moved=true; endDrag(true); } else clearHold(); });
   wrap.addEventListener('pointercancel',()=>endDrag(false));
+  wrap.addEventListener('lostpointercapture',()=>{ if(dragEl) endDrag(true); });
   // 드래그 직후 click으로 기관 전환되는 것 방지
   wrap.addEventListener('click',e=>{ if(moved){ e.stopPropagation(); e.preventDefault(); moved=false; } },true);
   // 모바일: 길게 눌렀을 때 컨텍스트 메뉴 안 뜨게
@@ -5206,8 +5224,9 @@ function setupReorder(container, isDraggable, onCommit){
     }
     e.preventDefault();
     const sibs=[...container.children].filter(isDraggable);
+    const vertical=getComputedStyle(container).flexDirection==='column';
     let target=null;
-    for(const s of sibs){ if(s===el) continue; const r=s.getBoundingClientRect(); if(e.clientX < r.left + r.width/2){ target=s; break; } }
+    for(const s of sibs){ if(s===el) continue; const r=s.getBoundingClientRect(); if(vertical ? (e.clientY < r.top + r.height/2) : (e.clientX < r.left + r.width/2)){ target=s; break; } }
     if(target){ if(el.nextElementSibling!==target) container.insertBefore(el, target); }
     else { const firstNon=[...container.children].find(c=>!isDraggable(c) && c!==el);
       if(firstNon){ if(el.nextElementSibling!==firstNon) container.insertBefore(el, firstNon); } else container.appendChild(el); }
@@ -5230,9 +5249,7 @@ function initTabReorder(){
   setupReorder(document.getElementById('protocolTabsWrap'),
     el=>el.classList&&el.classList.contains('protocol-tab'),
     order=>{ commitOrder(protocols, order, p=>p.id); saveData(); renderProtocolTabs(); });
-  setupReorder(document.getElementById('tabsWrap'),
-    el=>el.classList&&el.classList.contains('tab')&&!el.classList.contains('idx-tab'),
-    order=>{ commitOrder(sites, order, s=>s.code); saveData(); renderTabs(); });
+  // 기관 탭(tabsWrap)은 initSiteTabDrag() 가 전담 — 여기 같이 걸면 두 핸들러가 서로 튕김
 }
 
 function normalizeSectionOrdinals(){
