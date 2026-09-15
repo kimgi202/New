@@ -2129,7 +2129,31 @@ function dtFocus(el){
   el.type='date';
   try{ if(el.showPicker) el.showPicker(); }catch(e){}
 }
-function dtBlur(el){ el.type='text'; }
+function dtBlur(el){ el.type='text'; dtFlushPending(el); }
+// ── 날짜칸: 입력 중(포커스 있는 동안)에는 저장하지 않고, 칸을 벗어날 때 한 번만 저장 ──
+// 이유: 브라우저 date 입력은 "일"을 한 자리만 쳐도 change가 바로 나가는데,
+//       그때마다 저장+화면 재렌더가 돌면서 커서가 튕겨서 두 자리째를 못 치는 문제가 있었음.
+function isDateField(el){ return !!el && el.tagName==='INPUT' && ((el.getAttribute('onfocus')||'').includes('dtFocus') || el.placeholder==='YYYY-MM-DD'); }
+function dtFlushPending(el){
+  if(el && el._dtPending){ el._dtPending=false; el.dispatchEvent(new Event('change',{bubbles:true})); }
+}
+if(!window._dtHoldBound){
+  window._dtHoldBound=true;
+  document.addEventListener('change', function(e){
+    const el=e.target;
+    if(!isDateField(el) || el.type!=='date' || document.activeElement!==el) return;
+    e.stopPropagation(); el._dtPending=true;   // 아직 입력 중 → 보류
+  }, true);
+  document.addEventListener('focusout', function(e){
+    const el=e.target; if(!isDateField(el)) return;
+    if(el.type==='date') el.type='text';
+    setTimeout(()=>dtFlushPending(el),0);
+  }, true);
+  document.addEventListener('keydown', function(e){
+    const el=e.target; if(!isDateField(el)) return;
+    if(e.key==='Enter'){ e.preventDefault(); el.blur(); }
+  });
+}
 // 텍스트로 복사한 날짜를 붙여넣기 지원: "2025.04.06" "2025년 4월 6일" "2025-04-06 승인" 등에서 날짜 추출
 function extractDate(s){
   s=(s||'').trim(); if(!s) return '';
