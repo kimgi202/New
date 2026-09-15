@@ -119,6 +119,40 @@ input::placeholder,textarea::placeholder{opacity:.5}
 .doc-topscroll::-webkit-scrollbar-thumb{background:#c2cdda;border-radius:6px}
 .doc-topscroll::-webkit-scrollbar-thumb:hover{background:#aab6c6}
 .doc-table{table-layout:fixed}
+/* ── 기관 정보 패널 (접힘 기본) ── */
+.site-info-panel{background:#fff;border:1px solid #e9e9e7;border-radius:10px;margin-bottom:12px;overflow:hidden}
+.site-info-panel.open{border-color:#c5d9f0}
+.sip-head{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;user-select:none;flex-wrap:wrap;background:var(--surf)}
+.sip-head:hover{background:var(--accent-xl)}
+.sip-title{font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap}
+.sip-sub{font-size:12px;color:#aaa;white-space:nowrap}
+.sip-sum{font-size:13px;color:#787774;white-space:nowrap;margin-left:4px}
+.sip-warn{color:#c0392b}
+.sip-quick{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.sip-link{font-size:12.5px;font-weight:600;color:var(--accent);background:#fff;border:1px solid var(--accent-l);border-radius:14px;padding:3px 10px;text-decoration:none;white-space:nowrap}
+.sip-link:hover{background:var(--accent);color:#fff}
+.sip-body{padding:12px 14px 4px;border-top:1px solid #eef0f2}
+/* ── 포털 바 숨김/복구 ── */
+.ipb-hide{margin-left:auto;border:none;background:transparent;color:#b0b0ad;font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.ipb-hide:hover{color:#c0392b;background:#fbe9e7}
+.ipb-hidden-row{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 6px}
+.ipb-restore{border:1px dashed #cfd6de;background:#fff;color:#8a8f96;border-radius:14px;font-size:12px;padding:2px 10px;cursor:pointer;font-family:inherit}
+.ipb-restore:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-xl)}
+/* ── 비고 서식(리치 텍스트) ── */
+.rich-note{font-size:13.5px;border:1px solid transparent;border-radius:4px;background:transparent;color:#37352f;width:100%;min-height:24px;padding:2px 4px;line-height:1.5;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;cursor:pointer;outline:none}
+.rich-note:hover{background:var(--accent-xl)}
+.rich-note:empty::before{content:attr(data-ph);color:#bbb}
+.rich-note.idx-editing{cursor:text;border-color:var(--accent) !important;background:#fff !important}
+.rich-note b,.rich-note strong{font-weight:800}
+.rich-bar{position:absolute;z-index:500;display:none;gap:3px;background:#fff;border:1px solid #d6deea;border-radius:8px;padding:4px;box-shadow:0 4px 14px rgba(0,0,0,.14)}
+.rich-bar.show{display:flex}
+.rich-bar button{border:1px solid #e3e6ea;background:#fff;border-radius:5px;padding:3px 8px;font-size:12.5px;cursor:pointer;font-family:inherit;line-height:1.3;white-space:nowrap}
+.rich-bar button:hover{border-color:var(--accent);background:var(--accent-xl)}
+.rich-bar .rb-b{font-weight:800}
+.rich-bar .rb-y{background:#fff59d}
+.rich-bar .rb-bl{background:#bfe0ff}
+.rich-bar .rb-r{color:#d32f2f;font-weight:700}
+.rich-bar .rb-x{color:#888}
 /* ── 비고 칸 접기 + 알람 ── */
 .note-th-collapsed{text-align:center !important;cursor:pointer;padding:5px 2px !important}
 .note-cell-collapsed{text-align:center;vertical-align:middle;padding:4px 2px !important}
@@ -1537,7 +1571,7 @@ function setSiteContract(code,field,val){
   if(!site.contract) site.contract={contractNo:'',contractDate:'',amount:'',sponsor:'',pi:'',memo:'',irbUrl:''};
   site.contract[field]=val;
   saveData();
-  if(field==='irbUrl'||field==='ctcUrl'||field==='pharmUrl') renderBody();
+  if(field==='irbUrl'||field==='ctcUrl'||field==='pharmUrl'||field==='ctcHidden'||field==='pharmHidden') renderBody();
 }
 
 // ── 계약 관리 (초기/변경 계약 이력 + 연구비 자동계산) ──────────
@@ -1606,13 +1640,23 @@ function renderIrbPortalBar(code){
     <span class="ipb-lbl">PW</span>
     <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.craPw||'')}" onchange="setSiteContract('${code}','craPw',this.value)">
   </div>
-  ${renderCtcPortalBar(code)}${renderPharmPortalBar(code)}`;
+  ${renderCtcPortalBar(code)}${renderPharmPortalBar(code)}${renderHiddenPortalChips(code)}`;
+}
+// 숨긴 포털 바 다시 꺼내기 (없는 기관은 그냥 숨겨두면 돼요)
+function renderHiddenPortalChips(code){
+  const c=getSiteContract(code);
+  const cur=getCurProtocol?.();
+  const chips=[];
+  if(c.ctcHidden) chips.push(`<button class="ipb-restore" onclick="setSiteContract('${code}','ctcHidden',false)" title="CTC 포털 바 다시 보기">+ 🏥 CTC 포털</button>`);
+  if(c.pharmHidden && studyCategory(cur?.studyType)==='임상시험') chips.push(`<button class="ipb-restore" onclick="setSiteContract('${code}','pharmHidden',false)" title="약국 포털 바 다시 보기">+ 💊 약국 포털</button>`);
+  return chips.length?`<div class="ipb-hidden-row">${chips.join('')}</div>`:'';
 }
 // ── 약국 포털 바 (임상시험 과제일 때만 표시) ──
 function renderPharmPortalBar(code){
   const cur=getCurProtocol?.();
   if(studyCategory(cur?.studyType)!=='임상시험') return ''; // PMS 등에는 약국 포털 불필요
   const c=getSiteContract(code);
+  if(c.pharmHidden) return '';
   const url=(c.pharmUrl||'').trim();
   return `<div class="irb-portal-bar ctc-portal-bar">
     <span class="ipb-title">💊 약국 포털</span>
@@ -1622,11 +1666,13 @@ function renderPharmPortalBar(code){
     <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.pharmId||'')}" onchange="setSiteContract('${code}','pharmId',this.value)">
     <span class="ipb-lbl">PW</span>
     <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.pharmPw||'')}" onchange="setSiteContract('${code}','pharmPw',this.value)">
+    <button class="ipb-hide" onclick="setSiteContract('${code}','pharmHidden',true)" title="이 기관은 약국 포털 없음 — 바 숨기기">✕ 숨김</button>
   </div>`;
 }
 // ── 임상시험센터(CTC) 포털 바 ──
 function renderCtcPortalBar(code){
   const c=getSiteContract(code);
+  if(c.ctcHidden) return '';
   const url=(c.ctcUrl||'').trim();
   return `<div class="irb-portal-bar ctc-portal-bar">
     <span class="ipb-title">🏥 CTC 포털</span>
@@ -1636,6 +1682,7 @@ function renderCtcPortalBar(code){
     <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.ctcId||'')}" onchange="setSiteContract('${code}','ctcId',this.value)">
     <span class="ipb-lbl">PW</span>
     <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.ctcPw||'')}" onchange="setSiteContract('${code}','ctcPw',this.value)">
+    <button class="ipb-hide" onclick="setSiteContract('${code}','ctcHidden',true)" title="이 기관은 CTC 포털 없음 — 바 숨기기">✕ 숨김</button>
   </div>`;
 }
 // ── 중간보고 보고 가능일 (IRB 승인 종료일 2개월 전 권장) ──
@@ -1940,6 +1987,39 @@ function irbHref(url){
   if(!/^https?:\/\//i.test(u)) u='https://'+u;
   return u.replace(/"/g,'%22');
 }
+// ━━━ 기관 정보 패널 (포털·심의 이력·계약·To-do를 하나로 접기) — 기본 접힘 ━━━
+let siteInfoOpen=(function(){ try{ return JSON.parse(localStorage.getItem('siteInfoOpen')||'{}'); }catch(e){ return {}; } })();
+function toggleSiteInfo(code){ siteInfoOpen[code]=!siteInfoOpen[code]; try{ localStorage.setItem('siteInfoOpen',JSON.stringify(siteInfoOpen)); }catch(e){} renderBody(); }
+function openSiteInfo(code){ if(!siteInfoOpen[code]){ siteInfoOpen[code]=true; try{ localStorage.setItem('siteInfoOpen',JSON.stringify(siteInfoOpen)); }catch(e){} } }
+function renderSiteInfoPanel(code){
+  const open=!!siteInfoOpen[code];
+  const c=getSiteContract(code);
+  const cur=getCurProtocol?.();
+  const H=getIrbHist(code);
+  const stateIdx=H.cols.findIndex(x=>/상태/.test(x));
+  const pending=stateIdx>=0?H.rows.filter(r=>(r[stateIdx]||'').includes('심의중')).length:0;
+  const todos=getTodos(code), todoLeft=todos.filter(t=>!t.done).length;
+  const ctN=getSiteContracts(code).length;
+  const link=(u,label,icon)=>u&&u.trim()?`<a class="sip-link" href="${esc(extUrl(u))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${icon} ${label} ↗</a>`:'';
+  const quick=[
+    link(c.irbUrl,'IRB','🔗'),
+    c.ctcHidden?'':link(c.ctcUrl,'CTC','🏥'),
+    (c.pharmHidden||studyCategory(cur?.studyType)!=='임상시험')?'':link(c.pharmUrl,'약국','💊')
+  ].filter(Boolean).join('');
+  const sum=[
+    pending?`<b class="sip-warn">심의중 ${pending}</b>`:`심의 이력 ${H.rows.length}건`,
+    `계약 ${ctN}건`,
+    todoLeft?`<b class="sip-warn">할 일 ${todoLeft}</b>`:`할 일 ${todos.length?'완료':'없음'}`
+  ].join(' · ');
+  const head=`<div class="sip-head" onclick="toggleSiteInfo('${code}')" title="${open?'접기':'펼치기'}">
+    <span class="contract-panel-chevron${open?' open':''}">▶</span>
+    <span class="sip-title">🏛️ 기관 정보</span>
+    <span class="sip-sub">포털 · 심의 이력 · 계약 · To-do</span>
+    <span class="sip-sum">${sum}</span>
+    <span class="sip-quick">${quick}</span>
+  </div>`;
+  return `<div class="site-info-panel${open?' open':''}">${head}${open?`<div class="sip-body">${renderContractList(code)}${renderTodoPanel(code)}</div>`:''}</div>`;
+}
 function irbLinkButton(code){
   const c=getSiteContract(code);
   if(c.irbUrl && c.irbUrl.trim()){
@@ -1948,12 +2028,39 @@ function irbLinkButton(code){
   return `<button class="irb-link-btn empty" onclick="focusIrbField('${code}')" title="아래 패널에서 IRB 링크를 입력하세요">🔗 IRB 링크 추가</button>`;
 }
 function focusIrbField(code){
+  openSiteInfo(code);
   contractListCollapsed[code]=false;
   renderBody();
   setTimeout(()=>{
     const el=document.querySelector('.irb-url');
     if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}
   },60);
+}
+function renameSiteCode(code){
+  const site=sites.find(s=>s.code===code);
+  if(!site) return;
+  const v=prompt('기관 No.(코드)를 입력하세요\n예: 010, 005', site.code);
+  if(v===null) return;
+  const nc=v.trim();
+  if(!nc){ alert('기관 No.는 비울 수 없어요.'); return; }
+  if(nc===code) return;
+  if(sites.some(s=>s.code===nc)){ alert(`'${nc}' 코드는 이미 다른 기관이 쓰고 있어요.`); return; }
+  // 1) 기관 객체
+  site.code=nc;
+  // 2) 섹션(IRB 문서표)
+  if(sections[code]!==undefined){ sections[nc]=sections[code]; delete sections[code]; }
+  // 3) Index (ISF/PSF/TMF) — 'code::type__tmpl' 키
+  const pd=protocolData[curProtocolId];
+  if(pd&&pd.indexes){
+    Object.keys(pd.indexes).forEach(k=>{
+      if(k.startsWith(code+'::')){ pd.indexes[nc+'::'+k.slice(code.length+2)]=pd.indexes[k]; delete pd.indexes[k]; }
+    });
+  }
+  // 4) 화면 상태(접힘/정렬 등)
+  [contractListCollapsed,contractPanelCollapsed,irbHistOpen,ihSort].forEach(m=>{ if(m&&m[code]!==undefined){ m[nc]=m[code]; delete m[code]; } });
+  if(curSite===code) curSite=nc;
+  saveData(); renderTabs(); renderBody();
+  showToastNow(`✓ 기관 No.를 ${code} → ${nc} 로 바꿨어요`);
 }
 function renameSite(code){
   const site=sites.find(s=>s.code===code);
@@ -3683,12 +3790,12 @@ function renderBody(){
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         ${irbLinkButton(curSite)}
+        <button class="btn" onclick="renameSiteCode('${curSite}')" title="기관 No.(코드) 수정 — 문서·Index 데이터가 같이 따라와요">🔢 No. 수정</button>
         <button class="btn" onclick="renameSite('${curSite}')">✏️ 이름 수정</button>
         <button class="btn btn-danger" onclick="deleteSite('${curSite}')">기관 삭제</button>
       </div>
     </div>
-    ${renderContractList(curSite)}
-    ${renderTodoPanel(curSite)}
+    ${renderSiteInfoPanel(curSite)}
     <div class="search-box">
       <span style="color:#bbb">🔍</span>
       <input id="searchInput" placeholder="문서명 검색..." value="${esc(searchTerm)}" oninput="onSearch(this.value)">
@@ -3820,7 +3927,7 @@ function renderIndexBody(){
       <td><div class="idx-loc-wrap"><textarea class="idx-loc idx-loc-top" rows="1" placeholder="위치" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'location',this.value)">${esc(r.location||'')}</textarea><textarea class="idx-loc idx-loc-bot" rows="1" placeholder="파일명" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'fileName',this.value)">${esc(r.fileName||'')}</textarea></div></td>
       <td><div class="prevfiling-wrap"><textarea class="idx-note" rows="1" placeholder="지난 방문까지 Filing 완료" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'prevFiling',this.value)">${esc(r.prevFiling||'')}</textarea><button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
       <td><div class="thisfiling-wrap"><textarea class="idx-note" rows="1" placeholder="이번 방문에 Filing 할 것" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'thisFiling',this.value)">${esc(r.thisFiling||'')}</textarea><input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
-      <td><textarea class="idx-note" rows="1" placeholder="비고" oninput="autoGrow(this)" onchange="setIndexField('${type}',${idx},'note',this.value)">${esc(r.note||'')}</textarea>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}</td>
+      <td><div class="rich-note" contenteditable="false" data-kind="idx" data-type="${type}" data-idx="${idx}" data-ph="비고 (더블클릭 → 편집)" title="더블클릭하면 편집돼요. 글자를 드래그하면 서식 버튼이 떠요.">${noteToHtml(r)}</div>${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}</td>
       ${ckCells}
     </tr>`;
     if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
@@ -3909,9 +4016,116 @@ function setupIdxTopScroll(){
   window.addEventListener('resize',()=>{ setW(); setTop(); });
 }
 function autoGrow(el){
+  if(el.tagName!=='TEXTAREA') return;
   el.style.height='auto';
   el.style.height=Math.max(el.scrollHeight, 24)+'px';
 }
+// ━━━ 비고 서식(볼드 · 노랑/파랑 형광 · 빨간 글씨) ━━━
+// 저장: noteHtml(서식 포함) + note(순수 텍스트 — 검색/CSV/알람 호환)
+function escHtml2(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noteToHtml(row){
+  if(row.noteHtml) return row.noteHtml;
+  return escHtml2(row.note||'').replace(/\n/g,'<br>');
+}
+// 허용 태그/스타일만 남기고 나머지는 벗겨냄
+function sanitizeNoteHtml(html){
+  const tmp=document.createElement('div'); tmp.innerHTML=html||'';
+  const ALLOW={B:1,STRONG:1,I:1,U:1,SPAN:1,FONT:1,MARK:1,BR:1};
+  (function walk(node){
+    Array.from(node.childNodes).forEach(ch=>{
+      if(ch.nodeType===3) return;
+      if(ch.nodeType!==1){ ch.remove(); return; }
+      walk(ch);
+      const tag=ch.tagName;
+      if(tag==='DIV'||tag==='P'){ // 줄바꿈으로 변환
+        const br=document.createElement('br');
+        if(ch.previousSibling && ch.previousSibling.nodeName!=='BR') ch.parentNode.insertBefore(br,ch);
+        while(ch.firstChild) ch.parentNode.insertBefore(ch.firstChild,ch);
+        ch.remove(); return;
+      }
+      if(!ALLOW[tag]){ while(ch.firstChild) ch.parentNode.insertBefore(ch.firstChild,ch); ch.remove(); return; }
+      // 속성 정리
+      const bg=ch.style&&ch.style.backgroundColor, fc=(ch.style&&ch.style.color)||ch.getAttribute('color'), fw=ch.style&&ch.style.fontWeight;
+      Array.from(ch.attributes).forEach(a=>ch.removeAttribute(a.name));
+      if(tag==='SPAN'||tag==='FONT'){
+        let st='';
+        if(bg) st+='background-color:'+bg+';';
+        if(fc) st+='color:'+fc+';';
+        if(fw&&(fw==='bold'||+fw>=600)) st+='font-weight:800;';
+        if(!st){ while(ch.firstChild) ch.parentNode.insertBefore(ch.firstChild,ch); ch.remove(); return; }
+        ch.setAttribute('style',st);
+      }
+    });
+  })(tmp);
+  return tmp.innerHTML.replace(/(<br>\s*)+$/,'');
+}
+let _richActive=null;
+function richBar(){
+  let b=document.getElementById('richBar');
+  if(!b){
+    b=document.createElement('div'); b.id='richBar'; b.className='rich-bar';
+    b.innerHTML=`<button class="rb-b" data-cmd="bold" title="굵게 (Ctrl+B)">B</button>
+      <button class="rb-y" data-cmd="hilite" data-val="#fff59d" title="노랑 형광펜">노랑</button>
+      <button class="rb-bl" data-cmd="hilite" data-val="#bfe0ff" title="파랑 형광펜">파랑</button>
+      <button class="rb-r" data-cmd="fore" data-val="#d32f2f" title="빨간 글씨">빨강</button>
+      <button class="rb-x" data-cmd="clear" title="서식 지우기">지우기</button>`;
+    b.addEventListener('mousedown',e=>e.preventDefault()); // 포커스/선택 유지
+    b.addEventListener('click',e=>{
+      const btn=e.target.closest('button'); if(!btn||!_richActive) return;
+      const cmd=btn.dataset.cmd, val=btn.dataset.val;
+      try{ document.execCommand('styleWithCSS',false,true); }catch(_){}
+      if(cmd==='bold') document.execCommand('bold');
+      else if(cmd==='hilite'){ if(!document.execCommand('hiliteColor',false,val)) document.execCommand('backColor',false,val); }
+      else if(cmd==='fore') document.execCommand('foreColor',false,val);
+      else if(cmd==='clear'){ document.execCommand('removeFormat'); try{document.execCommand('unlink');}catch(_){} }
+      _richActive.focus();
+    });
+    document.body.appendChild(b);
+  }
+  return b;
+}
+function showRichBar(el){
+  const b=richBar(); _richActive=el;
+  const r=el.getBoundingClientRect();
+  b.classList.add('show');
+  const top=window.scrollY+r.top-b.offsetHeight-6;
+  b.style.top=(top<window.scrollY+4?window.scrollY+r.bottom+6:top)+'px';
+  b.style.left=Math.max(4,window.scrollX+r.left)+'px';
+}
+function hideRichBar(){ const b=document.getElementById('richBar'); if(b) b.classList.remove('show'); _richActive=null; }
+function richStartEdit(el){
+  el.contentEditable='true'; el.classList.add('idx-editing'); el.focus();
+  // 커서 맨 끝으로
+  try{ const rg=document.createRange(); rg.selectNodeContents(el); rg.collapse(false); const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(rg); }catch(_){}
+  showRichBar(el);
+}
+function richCommit(el){
+  el.contentEditable='false'; el.classList.remove('idx-editing'); hideRichBar();
+  const html=sanitizeNoteHtml(el.innerHTML);
+  const tmp=document.createElement('div'); tmp.innerHTML=html.replace(/<br\s*\/?>/gi,'\n');
+  const text=(tmp.textContent||'').replace(/\u00a0/g,' ');
+  const kind=el.dataset.kind;
+  if(kind==='sec'){
+    const sec=getSec(el.dataset.code,el.dataset.sec); const row=sec&&sec.rows[+el.dataset.idx]; if(!row) return;
+    if((row.noteHtml||'')===html && (row.note||'')===text) return;
+    row.noteHtml=html; row.note=text; saveData();
+    if(!showNoteCol) renderBody();
+  } else if(kind==='idx'){
+    const rows=getIndexRows(el.dataset.type); const row=rows[+el.dataset.idx]; if(!row) return;
+    if((row.noteHtml||'')===html && (row.note||'')===text) return;
+    row.noteHtml=html; row.note=text; saveData();
+  }
+  el.innerHTML=html;
+}
+document.addEventListener('dblclick',e=>{ const el=e.target.closest&&e.target.closest('.rich-note'); if(el&&el.contentEditable!=='true') richStartEdit(el); });
+document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.rich-note'); if(el&&el.contentEditable!=='true'&&!el.textContent.trim()) richStartEdit(el); });
+document.addEventListener('focusout',e=>{ const el=e.target; if(el&&el.classList&&el.classList.contains('rich-note')&&el.contentEditable==='true') setTimeout(()=>{ if(document.activeElement!==el) richCommit(el); },0); });
+document.addEventListener('keydown',e=>{
+  const el=document.activeElement; if(!el||!el.classList||!el.classList.contains('rich-note')||el.contentEditable!=='true') return;
+  if(e.key==='Escape'){ e.preventDefault(); el.blur(); }
+  if(e.ctrlKey&&e.key.toLowerCase()==='b'){ e.preventDefault(); try{document.execCommand('styleWithCSS',false,true);}catch(_){}; document.execCommand('bold'); }
+});
+document.addEventListener('scroll',()=>{ if(_richActive) showRichBar(_richActive); },true);
 function idxStOpts(cur){
   const opts=[['pend','미확인'],['wip','진행중'],['ok','✓완료'],['issue','❌이슈']];
   return opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
@@ -4385,7 +4599,7 @@ function rowHtml(code,secId,idx,row,total){
       ${stOpts(row.status)}
     </select></td>
     ${showNoteCol
-      ?`<td>${row.status==='issue'?`<textarea class="issue-note" rows="1" placeholder="⚠️ 어떤 부분이 이슈인지 메모" oninput="autoGrow(this)" onchange="${setter},'issueNote',this.value)">${esc(row.issueNote||'')}</textarea>`:''}<textarea class="text-input" rows="1" placeholder="메모" oninput="autoGrow(this)" onchange="${setter},'note',this.value)">${esc(row.note||'')}</textarea></td>`
+      ?`<td>${row.status==='issue'?`<textarea class="issue-note" rows="1" placeholder="⚠️ 어떤 부분이 이슈인지 메모" oninput="autoGrow(this)" onchange="${setter},'issueNote',this.value)">${esc(row.issueNote||'')}</textarea>`:''}<div class="rich-note" contenteditable="false" data-kind="sec" data-code="${code}" data-sec="${secId}" data-idx="${idx}" data-ph="메모 (더블클릭 → 편집, 드래그해서 B/형광/빨강)" title="더블클릭하면 편집돼요. 글자를 드래그하면 서식 버튼이 떠요.">${noteToHtml(row)}</div></td>`
       :`<td class="note-cell-collapsed">${rowHasNote(row)?`<span class="note-dot" onclick="toggleNoteCol()" title="${esc(((row.issueNote||'')+(row.issueNote&&row.note?'\n':'')+(row.note||'')).slice(0,200))}">!</span>`:''}</td>`}
   </tr>`;
 }
