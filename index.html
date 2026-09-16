@@ -6898,8 +6898,8 @@ authInit();
           <span><b class="seg-qual">■</b> 상세</span><span><b class="seg-date">■</b> 날짜</span><span><b class="seg-sfx">■</b> 접미사</span>
         </div>
         <div class="tmfn-insert">
-          <button class="primary" onclick="tmfnInsert(false)">이 행 '파일명'에 입력</button>
-          <button class="alt" onclick="tmfnInsert(true)">Index 포함으로 입력</button>
+          <button class="primary" onclick="tmfnInsert(false)">이 행에 입력 (TMF파일명 + 서버 내 파일명 자동)</button>
+          <button class="alt" onclick="tmfnInsert(true)">TMF파일명도 Index 포함으로 입력</button>
           <span class="toast" id="toast">복사됐어요</span>
         </div>
         <div class="example" id="example"></div>
@@ -7613,7 +7613,7 @@ function renderFields(){
 }
 function autoIdx(){
   var e=v.event;
-  var irbIdx=e==="Interim"?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
+  var irbIdx=(e==="Interim"||e==="Annual")?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
   if(study==="cbr"){
     var bIdx=e==="Annual"?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
     switch(cur.id){
@@ -7729,6 +7729,7 @@ window.__tmfn={
   applyStudy:applyStudy,
   setStudy:function(s){ if(!STUDIES[s])return; study=s; try{localStorage.setItem("tmfnStudy",s)}catch(e){} $("study").value=s; },
   getStudy:function(){return study},
+  idx:function(){return (v.idxOv||"").trim()||autoIdx()},
   names:function(withIdx){
     var list=currentList();
     var ix=(v.idxOv||"").trim()||autoIdx();
@@ -7758,27 +7759,79 @@ window.openTmfNamer=function(code,secId,idx){
     if(d){var p3=('000'+d).slice(-3);T.v.site=p3;T.v.bsite=p3;T.v.csite=('0'+String(+d)).slice(-2);}
   }catch(e){}
   try{
+    // 날짜는 행(row)이 아니라 섹션 메타(sec.meta)에 들어 있다.
+    // 행 레벨 approveDate/submitDate/receiptDate 는 emptyFields() 에 선언만 있고
+    // 입력 UI 가 없어 항상 비어 있으므로, 예전 데이터 호환용 폴백으로만 쓴다.
+    // (승인일 키 이름도 approvalDate 다 — approveDate 가 아님)
     var sec=getSec(code,secId), row=sec&&sec.rows[idx];
-    if(row){
-      var ap=(row.approveDate||'').trim();
-      var su=(row.piSubmitDate||row.submitDate||row.craSubmitDate||'').trim();
-      var rc=(row.receiptDate||'').trim();
-      if(ap)T.v.date=ap;
-      var st=T.getStudy();
-      var d2=(st==='cbr')?(rc||su):(su||rc);
-      if(d2)T.v.date2=d2;
-      if(!ap&&d2)T.v.date=d2;
-    }
+    var m=(sec&&sec.meta)||{};
+    var ap=(m.approvalDate||(row&&row.approveDate)||'').trim();
+    var su=(m.piSubmitDate||m.craSubmitDate||(row&&row.piSubmitDate)||(row&&row.craSubmitDate)||'').trim();
+    var rc=(m.receiptDate||(row&&row.receiptDate)||'').trim();
+    if(ap)T.v.date=ap;
+    var st=T.getStudy();
+    var d2=(st==='cbr')?(rc||su):(su||rc);
+    if(d2)T.v.date2=d2;
+    if(!ap&&d2)T.v.date=d2;
   }catch(e){}
   T.applyStudy();
   document.getElementById('tmfnOverlay').style.display='flex';
 };
+/* ISF Index 연동: 생성한 파일명(Index 포함본)을 같은 No. 항목의 '파일명' 칸에 누적 기록 */
+function tmfnLinkIsf(r, namesJoined, ixNo){
+  try{
+    if(!namesJoined||!ixNo) return '';
+    if(typeof getIndexRows!=='function'||typeof curProtocolId==='undefined'||!curProtocolId) return '';
+    // Index 저장소는 '현재 보고 있는 기관' 기준 — 행의 기관과 다르면 잠깐 바꿨다 되돌린다.
+    var swapped=false, saved=null;
+    if(typeof curSite!=='undefined'&&String(curSite)!==String(r.code)){saved=curSite;curSite=r.code;swapped=true;}
+    var out='';
+    try{
+      var rows=getIndexRows('ISF')||[];
+      var norm=function(x){return String(x==null?'':x).trim().replace(/\.$/,'');};
+      var hit=null;
+      for(var i=0;i<rows.length;i++){var q=rows[i];if(q&&!q.h&&norm(q.n)===norm(ixNo)){hit=q;break;}}
+      if(hit){
+        delete hit.fileNameHtml;  // 서식본이 남아 있으면 새 값이 안 보임
+        var cur0=String(hit.fileName||'').trim();
+        var lines=cur0?cur0.split(/\n+/):[];
+        String(namesJoined).split(/,\s*/).forEach(function(nm){
+          nm=nm.trim(); if(nm&&lines.indexOf(nm)<0) lines.push(nm);   // 중복은 안 쌓음
+        });
+        hit.fileName=lines.join('\n');
+        if(typeof saveData==='function') saveData();
+        out=norm(ixNo);
+      }
+    }finally{ if(swapped) curSite=saved; }
+    return out;
+  }catch(e){ return ''; }
+}
 window.tmfnInsert=function(withIdx){
   var T=window.__tmfn,r=window.__tmfnRow; if(!T)return;
   var name=T.names(withIdx); if(!name)return;
   if(r&&typeof setField==='function'){
-    setField(r.code,r.secId,r.idx,'tmfName',name);
+    // 'TMF 파일명'·'서버 내 파일명' 칸은 서식 입력칸(richField)이다.
+    // 화면에 보이는 값은 ...Html 이 우선하므로, 평문만 바꾸면
+    // 한 번이라도 직접 입력한 적 있는 칸은 옛 값이 그대로 남는다.
+    // 서식본을 지워야 새로 넣은 이름이 실제로 보인다.
+    try{
+      var sec=(typeof getSec==='function')?getSec(r.code,r.secId):null;
+      var row=sec&&sec.rows&&sec.rows[r.idx];
+      if(row){ delete row.tmfNameHtml; delete row.serverFileNameHtml; }
+    }catch(e){}
+    // '서버 내 파일명'에는 Index 포함본(폴더 실제 저장명)을 자동으로 같이 넣는다.
+    var linked='';
+    try{
+      var sv=T.names(true);
+      if(sv) setField(r.code,r.secId,r.idx,'serverFileName',sv);
+      linked=tmfnLinkIsf(r, sv, T.idx?T.idx():'');   // ISF Index 파일명 칸에도 기록
+    }catch(e){}
+    setField(r.code,r.secId,r.idx,'tmfName',name);   // 내부에서 saveData + 화면 갱신
     document.getElementById('tmfnOverlay').style.display='none';
+    try{
+      if(linked) showToastNow('ISF Index '+linked+' 항목 파일명에도 추가했어요');
+      else if(T.idx&&T.idx()) showToastNow('ISF Index에 No. '+T.idx()+' 항목이 없어 파일명 연동은 건너뛰었어요');
+    }catch(e){}
   }else{
     try{navigator.clipboard.writeText(name)}catch(e){}
   }
