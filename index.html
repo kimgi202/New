@@ -506,14 +506,14 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-sec-additem:hover{background:var(--accent-l) !important}
 .idx-del-row{display:inline-block;margin-top:6px;border:none;background:transparent;color:#c0392b;font-size:12.5px;cursor:pointer;opacity:.6;padding:2px 4px}
 .idx-del-row:hover{opacity:1}
-.idx-add-btn{margin-top:12px;border:1px dashed #b9c6d6;background:#fff;color:var(--accent);border-radius:8px;padding:10px 16px;font-size:15px;font-weight:600;cursor:pointer}
+.idx-add-btn{margin-top:12px;border:1px dashed #b9c6d6;background:#fff;color:var(--accent);cursor:pointer}
 .idx-add-btn:hover{background:#f0f4f9}
-.idx-clear-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:15px;font-weight:600;cursor:pointer}
-.idx-bulkdel-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:15px;font-weight:600;cursor:pointer}
+.idx-clear-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;cursor:pointer}
+.idx-bulkdel-btn{margin-top:0;border:1px solid #f0c4c0;background:#fff;color:#c0392b;cursor:pointer}
 .idx-bulkdel-btn:hover{background:#fdf2f1}
-.idx-doselect-btn{margin-top:0;border:1px solid #c0392b;background:#c0392b;color:#fff;border-radius:8px;padding:10px 16px;font-size:15px;font-weight:700;cursor:pointer}
+.idx-doselect-btn{margin-top:0;border:1px solid #c0392b;background:#c0392b;color:#fff;cursor:pointer}
 .idx-doselect-btn:hover{background:#a93226}
-.idx-cancelsel-btn{margin-top:0;border:1px solid #d8d8d4;background:#fff;color:#666;border-radius:8px;padding:10px 16px;font-size:15px;font-weight:600;cursor:pointer}
+.idx-cancelsel-btn{margin-top:0;border:1px solid #d8d8d4;background:#fff;color:#666;cursor:pointer}
 .idx-cancelsel-btn:hover{background:#f3f3f1}
 .idx-clear-btn:hover{background:#fdf2f1}
 .idx-sec-ctrls{display:inline-flex;gap:3px;margin-left:12px;vertical-align:middle}
@@ -617,9 +617,9 @@ tr.idx-drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .idx-ck-cell{text-align:center;border-left:1px solid #f2f6f5}
 .idx-ck-cell input{width:17px;height:17px;cursor:pointer;accent-color:var(--accent)}
 .idx-row.idx-ck-all td{background:#eefaf4}
-.idx-visit-btn{font-size:12.5px;padding:5px 11px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap}
+.idx-visit-btn{border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
 .idx-visit-btn:hover{background:var(--accent-d)}
-.idx-ckcol-btn{font-size:12.5px;padding:5px 11px;border-radius:6px;border:1px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap}
+.idx-ckcol-btn{border:1px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer;white-space:nowrap}
 .idx-ckcol-btn:hover{background:var(--accent);color:#fff}
 .idx-num{font-family:'Courier New',monospace;color:#999;font-size:12.5px;white-space:nowrap;vertical-align:top;padding-top:7px}
 .idx-name{font-weight:500;color:#37352f;line-height:1.4;white-space:normal;word-break:break-word}
@@ -830,6 +830,62 @@ body.sb-collapsed .sb-hover-zone{display:block}
 /* 호버는 선택 상태와 헷갈리지 않게 더 옅은 회색으로 유지 */
 #appSidebar .tab:not(.active):hover,
 #appSidebar .protocol-tab:not(.active):hover{background:#eef1f5;box-shadow:none}
+</style>
+<style id="toolbar-uniform">
+/* ── 표 상단 버튼 크기 통일 ────────────────────────────────
+   Index / 문서 표 위의 버튼들이 제각각 크기를 들고 있었다.
+     .idx-add-btn 계열   15px / padding 10px 16px
+     .idx-visit-btn 계열 12.5px / padding 5px 11px
+     .btn                14px  / padding 7px 14px
+   한 줄에 세 가지 크기가 섞여 들쭉날쭉했다.
+   색과 테두리는 각자 두고, 크기·글꼴·정렬만 여기서 한 번에 맞춘다. */
+.idx-add-btn,.idx-clear-btn,.idx-bulkdel-btn,.idx-doselect-btn,.idx-cancelsel-btn,
+.idx-visit-btn,.idx-ckcol-btn,
+.idx-toolbar .btn,
+.sec-actions-row .btn,.sec-actions-row .sec-add-btn,.sec-actions-row .ver-toggle-btn{
+  font-family:inherit;
+  font-size:14px;
+  line-height:1.2;
+  font-weight:600;
+  padding:7px 12px;
+  border-radius:7px;
+  height:32px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  white-space:nowrap;
+  box-sizing:border-box;
+  vertical-align:middle;
+}
+/* 표 아래쪽 '+ 항목 추가'는 본문 폭 전체를 쓰는 별개 버튼이라 높이만 해제 */
+.idx-split-main > .idx-add-btn{height:auto;padding:10px 16px}
+/* 툴바 자체의 간격·줄바꿈도 일정하게 */
+.idx-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+/* 버튼이 늘어선 줄: 간격과 줄바꿈을 일정하게 */
+.sec-actions-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+</style>
+<style id="freeze-cols">
+/* ── 열 고정 (좌측 항목 칸 잠그기) ─────────────────────────────
+   가로로 스크롤해도 '무슨 항목인지'가 화면에서 사라지지 않게 한다.
+   헤더 행 고정(position:sticky top:0)은 이미 있었고, 여기에 좌측 열을 더한다.
+   왼쪽 위 모서리 칸은 두 축이 겹치므로 z-index 를 더 높인다. */
+.index-table.freeze-cols th:nth-child(1),.index-table.freeze-cols td:nth-child(1){position:sticky;left:0;z-index:6}
+.index-table.freeze-cols th:nth-child(2),.index-table.freeze-cols td:nth-child(2){position:sticky;left:var(--fz1,38px);z-index:6}
+.index-table.freeze-cols th:nth-child(3),.index-table.freeze-cols td:nth-child(3){position:sticky;left:var(--fz2,110px);z-index:6;box-shadow:2px 0 0 #e2e8ef}
+.index-table.freeze-cols thead th:nth-child(-n+3){z-index:26}
+.index-table.freeze-cols tbody td:nth-child(-n+3){background:#fff}
+.index-table.freeze-cols tbody tr.idx-sec-row td:nth-child(-n+3){background:#eef5f3}
+.index-table.freeze-cols tbody tr.idx-done td:nth-child(-n+3){background:#f3faf6}
+.index-table.freeze-cols tbody tr.idx-ck-all td:nth-child(-n+3){background:#eefaf4}
+.index-table.freeze-cols tbody tr:hover td:nth-child(-n+3){background:#f7faf9}
+
+.doc-table.freeze-cols th:nth-child(1),.doc-table.freeze-cols td:nth-child(1){position:sticky;left:0;z-index:6}
+.doc-table.freeze-cols th:nth-child(2),.doc-table.freeze-cols td:nth-child(2){position:sticky;left:var(--fz1,28px);z-index:6}
+.doc-table.freeze-cols th:nth-child(3),.doc-table.freeze-cols td:nth-child(3){position:sticky;left:var(--fz2,58px);z-index:6}
+.doc-table.freeze-cols th:nth-child(4),.doc-table.freeze-cols td:nth-child(4){position:sticky;left:var(--fz3,136px);z-index:6;box-shadow:2px 0 0 #e2e8ef}
+.doc-table.freeze-cols thead th:nth-child(-n+4){z-index:26}
+.doc-table.freeze-cols tbody td:nth-child(-n+4){background:#fff}
+.doc-table.freeze-cols tbody tr.row-selected td:nth-child(-n+4){background:#e0f5f0}
 </style>
 <style id="due-dashboard">
 /* 📅 마감 대시보드 */
@@ -1219,11 +1275,6 @@ const TMPL = {
     {name:'답변서 본문',     dtype:'doc', needVer:false},
     {name:'보완답변 접수증', dtype:'receipt', needVer:false},
   ]},
-  reply: { emoji:'📝', name:'보완답변', docs:[
-    {name:'보완답변 신청서(의뢰서)', dtype:'app', needVer:false},
-    {name:'답변서 본문',     dtype:'doc', needVer:false},
-    {name:'보완답변 접수증', dtype:'receipt', needVer:false},
-  ]},
   change: { emoji:'🔄', name:'변경보고', docs:[
     {name:'변경보고 신청서(의뢰서)',   dtype:'app',     needVer:false},
     {name:'연구계획서 (변경)', dtype:'doc',     needVer:true},
@@ -1241,11 +1292,6 @@ const TMPL = {
     {name:'중간보고서 신청서(의뢰서)', dtype:'app', needVer:false},
     {name:'중간보고서 본문',   dtype:'doc', needVer:false},
     {name:'중간보고 접수증',   dtype:'receipt', needVer:false},
-  ]},
-  unexpected: { emoji:'🚨', name:'예상하지 못한 문제 보고', docs:[
-    {name:'예상하지 못한 문제 보고 신청서(의뢰서)', dtype:'app', needVer:false},
-    {name:'문제 보고서 본문',               dtype:'doc', needVer:false},
-    {name:'예상하지 못한 문제 보고 접수증', dtype:'receipt', needVer:false},
   ]},
   safety: { emoji:'🛡️', name:'안전성 보고', docs:[
     {name:'안전성 보고 신청서(의뢰서)', dtype:'app', needVer:false},
@@ -1273,10 +1319,12 @@ const TMPL = {
     {name:'위반보고서 본문',   dtype:'doc', needVer:false},
     {name:'위반보고 접수증',   dtype:'receipt', needVer:false},
   ]},
-  problem: { emoji:'🚨', name:'문제보고', docs:[
-    {name:'문제보고 신청서(의뢰서)',   dtype:'app', needVer:false},
-    {name:'문제보고서 본문',   dtype:'doc', needVer:false},
-    {name:'문제보고 접수증',   dtype:'receipt', needVer:false},
+  // 문제보고: 신청서 + 접수증 2개.
+  // 접수증을 별도 발급하지 않는 기관도 있으므로, 그런 기관에서는 그 행을 N/A 로 둔다.
+  // ('예상하지 못한 문제 보고'는 문서 구성이 같아 이 섹션으로 합쳤다)
+  problem: { emoji:'❗', name:'문제보고', docs:[
+    {name:'문제보고 신청서(의뢰서)', dtype:'app',     needVer:false},
+    {name:'문제보고 접수증',         dtype:'receipt', needVer:false},
   ]},
   consent: { emoji:'✍️', name:'동의서 관리', docs:[
     {name:'재동의 면제 승인서',      dtype:'consent', needVer:false},
@@ -1295,7 +1343,7 @@ const STATUSES = [
 
 const DTYPE_INFO = {
   app:    {label:'신청서(의뢰서)', cls:'dt-app'},
-  req:    {label:'신청서(의뢰서)', cls:'dt-app'},
+  req:    {label:'신청서(의뢰서)', cls:'dt-app'},   // (구) 별칭 — 예전 데이터 호환용으로만 남김
   receipt:{label:'접수증',   cls:'dt-receipt'},
   doc:    {label:'제출 문서', cls:'dt-doc'},
   compare:{label:'변경대비표', cls:'dt-compare'},
@@ -2055,9 +2103,7 @@ function setupIhTopScroll(){
     if(!inner||!wrap||!table) return;
     const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
     setW();
-    let lock=false;
-    top.addEventListener('scroll',()=>{ if(lock)return; lock=true; wrap.scrollLeft=top.scrollLeft; lock=false; });
-    wrap.addEventListener('scroll',()=>{ if(lock)return; lock=true; top.scrollLeft=wrap.scrollLeft; lock=false; });
+    linkScroll(top, wrap);
     if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
   });
 }
@@ -2074,6 +2120,22 @@ function isValidYmd(y,m,d){
   return dt.getUTCFullYear()===y && dt.getUTCMonth()===m-1 && dt.getUTCDate()===d;
 }
 function ymd(y,m,d){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+/* 위쪽 가로 스크롤바 ↔ 표 본체 스크롤 동기화.
+   대입으로 생긴 scroll 이벤트가 되돌아와 서로를 밀어내는 것을 막으려면
+   다음 프레임까지 잠가야 한다 (동기적으로 풀면 아무 소용이 없다). */
+function linkScroll(a, b){
+  if(!a || !b || a._scrollLinked) return;
+  a._scrollLinked=b._scrollLinked=true;
+  let lock=false;
+  const mk=(from,to)=>()=>{
+    if(lock) return;
+    lock=true;
+    to.scrollLeft=from.scrollLeft;
+    requestAnimationFrame(()=>{ lock=false; });
+  };
+  a.addEventListener('scroll', mk(a,b), {passive:true});
+  b.addEventListener('scroll', mk(b,a), {passive:true});
+}
 function normDateStr(s){
   s=(s||'').trim(); if(!s) return s;
   const m=s.match(/^(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})[.일\s]*$/);
@@ -2209,7 +2271,7 @@ function renderContractList(code){
     const extra = isInit ? `
       <div class="contract-field">
         <label>IRB No.</label>
-        <input placeholder="예: 2024-08-001" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
+        <input placeholder="예: 2024-08-001" value="${esc(siteIrbNo(code))}" title="섹션의 🏥 IRB No. 와 같은 값이에요" onchange="setSiteIrbNo('${code}',this.value)" style="min-width:140px">
         <!-- 저장 키는 호환을 위해 contractNo 유지 -->
       </div>
       <div class="contract-field">
@@ -2536,8 +2598,19 @@ if(!window._dtPasteBound){
 function parseLocalDate(v){
   const t=String(v==null?'':v).trim();
   if(!t) return null;
-  const m=t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(t);
+  // 가장 흔한 형태
+  let m=t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  // 포털에서 복사해 넣은 값은 '2026.08.17', '2026년 8월 17일', '2026-08-17 접수' 처럼
+  // 구분자와 뒤에 붙은 말이 제각각이다. 문자열 안에서 날짜를 찾아낸다.
+  // (이걸 안 하면 계산이 조용히 null 이 되어 마감·알람에서 통째로 빠진다)
+  if(!m) m=t.match(/(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})/);
+  if(m){
+    if(!isValidYmd(m[1],m[2],m[3])) return null;
+    const d=new Date(+m[1],+m[2]-1,+m[3]);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  const d=new Date(t);
   if(isNaN(d)) return null;
   d.setHours(0,0,0,0);
   return d;
@@ -2787,16 +2860,13 @@ function getIndexRows(indexType){
   const tmpl=INDEX_TEMPLATES[tmplKey]||[];
   const storeKey=curSiteCode()+'::'+indexType+'__'+tmplKey; // 기관별 분리 저장
   if(!pd.indexes[storeKey]){
-    if(typeof isAdmin==='function' && isAdmin()){
-      // 관리자(본인): 회사 템플릿으로 시작
-      pd.indexes[storeKey]=tmpl.map(it=>({
-        n:it.n, t:it.t, h:!!it.h, sub:it.sub||null, ref:it.ref||'',
-        na:false, status:'pend', location:'', note:''
-      }));
-    } else {
-      // 일반 사용자: 빈 Index → 본인이 직접 항목 추가
-      pd.indexes[storeKey]=[];
-    }
+    // INDEX_TEMPLATES 는 현재 비어 있어 결과가 항상 [] 다.
+    // 예전에는 관리자/일반 사용자를 갈라 놨지만 양쪽 다 빈 배열을 만들고 있어
+    // 분기를 없앴다. 나중에 템플릿을 채우면 그대로 적용된다.
+    pd.indexes[storeKey]=tmpl.map(it=>({
+      n:it.n, t:it.t, h:!!it.h, sub:it.sub||null, ref:it.ref||'',
+      na:false, status:'pend', location:'', note:''
+    }));
   }
   return pd.indexes[storeKey];
 }
@@ -4491,9 +4561,7 @@ function setupDocTopScroll(){
     if(!inner||!wrap||!table) return;
     const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
     setW();
-    let lock=false;
-    top.addEventListener('scroll',()=>{ if(lock)return; lock=true; wrap.scrollLeft=top.scrollLeft; lock=false; });
-    wrap.addEventListener('scroll',()=>{ if(lock)return; lock=true; top.scrollLeft=wrap.scrollLeft; lock=false; });
+    linkScroll(top, wrap);
     top.style.top=topVal;
     if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
   });
@@ -4607,7 +4675,7 @@ function renderIndexBody(){
           &nbsp;·&nbsp; 완료 ${done}/${target.length} · 이슈 ${issue} · N/A ${naCount}
         </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div class="idx-toolbar">
         ${idxSelMode ? `
         <button class="idx-doselect-btn" onclick="bulkDelIndexSelected('${type}')" title="체크한 항목·섹션 삭제">🗑️ 선택 삭제 (${(getIndexRows(type).filter(r=>r.selected)).length})</button>
         <button class="idx-cancelsel-btn" onclick="toggleIdxSelMode('${type}')">취소</button>
@@ -4619,6 +4687,8 @@ function renderIndexBody(){
         ${CHK.length?`<button class="idx-ckcol-btn" onclick="clearIdxChecks('${type}')" title="이 Index의 모든 체크 표시를 해제 (칸은 그대로)">↺ 체크 초기화</button>`:''}
         <button class="idx-bulkdel-btn" onclick="toggleIdxSelMode('${type}')" title="항목을 체크해서 여러 개 삭제">✕ 선택 삭제</button>
         <button class="idx-clear-btn" onclick="clearIndex('${type}')" title="이 Index의 모든 항목 삭제">🗑️ 전체 비우기</button>
+        <button class="btn" onclick="fitIdxCols()" title="칸 비율은 그대로 두고 표 전체 너비를 화면에 맞춰요 (가로 스크롤 없애기)">↔ 화면 맞춤</button>
+        <button class="btn" onclick="toggleIdxFreeze()" title="가로로 스크롤해도 왼쪽 ✓ · No. · 문서명 칸이 따라다녀요">${idxFreeze?'🔒 열 고정 켬':'🔓 열 고정 끔'}</button>
         <button class="btn" onclick="toggleFilingCols()" title="이전·이번 Filing 칸 ${showFilingCols?'숨기기':'펼치기'}">${showFilingCols?'⊟ Filing 칸':'⊞ Filing 칸'}</button>
         ${naCount>0?`<button class="btn" onclick="toggleNaRows()" title="N/A 항목 ${showNaRows?'숨기기':'보기'}">${showNaRows?'⊟ N/A 숨기기':'⊞ N/A 보기'} (${naCount})</button>`:''}
         <button class="btn" onclick="importIndexCSV('${type}')" title="CSV 파일을 불러와 현재 Index에 추가">📤 CSV 불러오기</button>
@@ -4628,7 +4698,7 @@ function renderIndexBody(){
     </div>
     <div class="idx-split"><div class="idx-split-main">
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
-    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showNaRows?'':' hide-na'}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px">
+    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}${CHK.map(()=>`<col style="width:${IDX_CK_W}px">`).join('')}<col style="width:${IDX_CK_ADD_W}px"></colgroup>
       <thead><tr>
         <th>✓</th>
@@ -4671,14 +4741,26 @@ function setupIdxTopScroll(){
   if(!top||!inner||!wrap||!table) return;
   const setW=()=>{ inner.style.width=table.scrollWidth+'px'; };
   setW();
-  let lock=false;
-  top.addEventListener('scroll',()=>{ if(lock)return; lock=true; wrap.scrollLeft=top.scrollLeft; lock=false; });
-  wrap.addEventListener('scroll',()=>{ if(lock)return; lock=true; top.scrollLeft=wrap.scrollLeft; lock=false; });
+  linkScroll(top, wrap);
   const hdr=document.querySelector('.header');
   const setTop=()=>{ top.style.top=(hdr?hdr.offsetHeight:0)+'px'; };
   setTop();
   if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
-  window.addEventListener('resize',()=>{ setW(); setTop(); });
+  // 이 함수는 화면을 다시 그릴 때마다 호출된다.
+  // 예전에는 여기서 window 에 resize 리스너를 매번 새로 달아, 렌더 횟수만큼
+  // 핸들러가 쌓이고(수십~수백 개) 전부 낡은 DOM 을 붙잡고 있었다.
+  if(!window._idxTopScrollResizeBound){
+    window._idxTopScrollResizeBound=true;
+    window.addEventListener('resize',()=>{
+      const t=document.getElementById('idxTopScroll');
+      const i=document.getElementById('idxTopScrollInner');
+      const w=document.getElementById('idxTableWrap');
+      const tb=w&&w.querySelector('.index-table');
+      const h=document.querySelector('.header');
+      if(t) t.style.top=((h?h.offsetHeight:0))+'px';
+      if(i&&tb) i.style.width=tb.scrollWidth+'px';
+    });
+  }
 }
 function autoGrow(el){
   if(el.tagName!=='TEXTAREA') return;
@@ -4991,6 +5073,46 @@ function rowHasNote(row){ return !!((row.note&&row.note.trim())||(row.issueNote&
 function secNoteCount(sec){ return (sec.rows||[]).filter(rowHasNote).length; }
 let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols')==='1'; }catch(e){ return false; } })();
 let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'; }catch(e){ return false; } })();
+/* ━━━ 화면 맞춤 / 열 고정 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   두 표 모두 table-layout:fixed 에 칸 너비 합계를 px 로 박아 쓴다.
+   그래서 합계가 화면보다 넓으면 칸을 아무리 조절해도 가로 스크롤이 남았다.
+   '화면 맞춤'은 지금 보이는 칸들의 비율을 유지한 채 합계를 화면 폭에 맞춘다. */
+let idxFreeze=(function(){ try{ return localStorage.getItem('idxFreeze')!=='0'; }catch(e){ return true; } })();
+let secFreeze=(function(){ try{ return localStorage.getItem('secFreeze')!=='0'; }catch(e){ return true; } })();
+function toggleIdxFreeze(){ idxFreeze=!idxFreeze; try{ localStorage.setItem('idxFreeze', idxFreeze?'1':'0'); }catch(e){} renderBody(); }
+function toggleSecFreeze(){ secFreeze=!secFreeze; try{ localStorage.setItem('secFreeze', secFreeze?'1':'0'); }catch(e){} renderBody(); }
+
+// 비율은 유지하고 합계만 target 에 맞춘다. 최소 너비는 지키고,
+// 그래도 넘치면 가장 넓은 칸에서 초과분을 뺀다.
+function fitWidths(arr, idxs, target, min){
+  const cur=idxs.reduce((a,i)=>a+(arr[i]||0),0);
+  if(cur<=0 || target<=0) return;
+  const k=target/cur;
+  idxs.forEach(i=>{ arr[i]=Math.max(min, Math.round((arr[i]||0)*k)); });
+  let sum=idxs.reduce((a,i)=>a+arr[i],0);
+  if(sum>target){
+    const widest=idxs.slice().sort((a,b)=>arr[b]-arr[a])[0];
+    arr[widest]=Math.max(min, arr[widest]-(sum-target));
+  }
+}
+function fitIdxCols(){
+  const wrap=document.getElementById('idxTableWrap'); if(!wrap) return;
+  const type=curIndexType||'ISF';
+  const extra=idxCheckCols(type).length*IDX_CK_W+IDX_CK_ADD_W;
+  const avail=Math.max(360, wrap.clientWidth-2);
+  // 숨겨진 Filing 칸(6,7)은 폭을 차지하지 않으므로 대상에서 뺀다
+  const idxs=[0,1,2,3,4,5,6,7,8].filter(i=>showFilingCols || (i!==6 && i!==7));
+  fitWidths(idxColW, idxs, avail-extra, 44);
+  saveIdxColW(); renderBody();
+  showToastNow('✓ 칸 너비를 화면에 맞췄어요');
+}
+function fitSecCols(){
+  const wrap=document.querySelector('.table-wrap'); if(!wrap) return;
+  const avail=Math.max(360, wrap.clientWidth-2);
+  fitWidths(secColW, [0,1,2,3,4,5,6,7,8,9], avail, 34);
+  saveSecColW(); renderBody();
+  showToastNow('✓ 칸 너비를 화면에 맞췄어요');
+}
 function toggleNaRows(){ showNaRows=!showNaRows; idxJustNa=null; try{ localStorage.setItem('showNaRows', showNaRows?'1':'0'); }catch(e){} renderBody(); }
 
 /* ══════════ 다시 그릴 때 화면이 튀지 않게 (스크롤·포커스 유지) ══════════
@@ -5094,10 +5216,12 @@ function renderSection(code, sec){
     ${isOpen?renderSecAttachments(code,sec):''}
     ${isOpen?`<div class="sec-actions-row">
       <button class="sec-add-btn" onclick="startAddDoc('${code}','${sec.id}')">+ 문서 추가</button>
+      <button class="ver-toggle-btn" onclick="fitSecCols()" title="칸 비율은 그대로 두고 표 전체 너비를 화면에 맞춰요 (가로 스크롤 없애기)">↔ 화면 맞춤</button>
+      <button class="ver-toggle-btn" onclick="toggleSecFreeze()" title="가로로 스크롤해도 왼쪽 구분·문서명 칸이 따라다녀요">${secFreeze?'🔒 열 고정 켬':'🔓 열 고정 끔'}</button>
       <button class="ver-toggle-btn" onclick="toggleVerCols()" title="버전·Effective Date 칸 ${showVerCols?'숨기기':'펼치기'}">${showVerCols?'⊟ 버전·Eff':'⊞ 버전·Eff'}</button>
       <button class="ver-toggle-btn${showNoteCol?'':' note-collapsed'}" onclick="toggleNoteCol()" title="비고 칸 ${showNoteCol?'접기':'펼치기'}">${showNoteCol?'⊟ 비고':'⊞ 비고'}${(()=>{const n=secNoteCount(sec);return n?`<span class="note-alarm-badge" title="비고 내용 있는 문서 ${n}건">${n}</span>`:'';})()}</button>
     </div>`:''}
-    ${isOpen?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}${showNoteCol?'':' note-collapsed'}" style="width:${secTableWidth()}px">
+    ${isOpen?`<div class="doc-topscroll"><div class="doc-topscroll-inner" style="height:1px"></div></div><div class="table-wrap"><table class="doc-table${showVerCols?'':' hide-vercols'}${showNoteCol?'':' note-collapsed'}${secFreeze?' freeze-cols':''}" style="width:${secTableWidth()}px;${(function(){const d=secDisplayWidths();return `--fz1:${d[0]}px;--fz2:${d[0]+d[1]}px;--fz3:${d[0]+d[1]+d[2]}px`;})()}">
       ${secColgroup()}
       <thead><tr>
         <th><button class="bulk-del-th" onclick="bulkDelSelected('${code}','${sec.id}')" title="선택한 항목 일괄 삭제">✕</button></th>
@@ -5128,55 +5252,9 @@ function esc(s){return(s||'').toString()
   .replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function na(){return '<span class="na-cell">-</span>';}
 
-// ── 기관별 계약 정보 패널 렌더링 ───────────────────────────────────
+// (구) 계약 패널의 접힘 상태. 패널 자체는 제거됐지만 예전 데이터의 키를
+// remapSiteUiState 가 정리할 수 있도록 선언은 남겨 둔다.
 const contractPanelCollapsed={};
-function toggleContractPanel(code){
-  contractPanelCollapsed[code]=!contractPanelCollapsed[code];
-  renderBody();
-}
-function renderContractPanel(code){
-  const c=getSiteContract(code);
-  const isOpen=!contractPanelCollapsed[code];
-  return `<div class="contract-panel">
-    <div class="contract-panel-header" onclick="toggleContractPanel('${code}')">
-      <span class="contract-panel-chevron${isOpen?' open':''}">▶</span>
-      <span class="contract-panel-title">📄 계약 정보</span>
-      ${c.irbUrl?`<a href="${irbHref(c.irbUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:12.5px;color:var(--accent);font-weight:600;text-decoration:underline">🔗 IRB 바로가기</a>`:''}
-      ${c.contractDate?`<span style="font-size:12.5px;color:#787774">계약일: <b style="color:var(--accent)">${c.contractDate}</b></span>`:''}
-      ${c.contractNo?`<span style="font-size:12.5px;color:#787774;margin-left:8px">Contract No.: <b>${esc(c.contractNo)}</b></span>`:''}
-    </div>
-    ${isOpen?`<div class="contract-panel-body">
-      <div class="contract-field wide">
-        <label>🔗 IRB 포털 링크</label>
-        <input class="irb-url" placeholder="예: https://irb.hospital.or.kr" value="${esc(c.irbUrl||'')}" onchange="setSiteContract('${code}','irbUrl',this.value)">
-      </div>
-      <div class="contract-field">
-        <label>Contract No.</label>
-        <input placeholder="계약번호" value="${esc(c.contractNo||'')}" onchange="setSiteContract('${code}','contractNo',this.value)" style="min-width:140px">
-      </div>
-      <div class="contract-field">
-        <label>계약일 (시작일)</label>
-        <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(c.contractDate||'')}" onchange="setSiteContract('${code}','contractDate',this.value)" style="min-width:130px">
-      </div>
-      <div class="contract-field">
-        <label>직접비</label>
-        <input placeholder="예: 3,500,000원" value="${esc(c.amount||'')}" onchange="setSiteContract('${code}','amount',this.value)" style="min-width:130px">
-      </div>
-      <div class="contract-field">
-        <label>의뢰사</label>
-        <input placeholder="스폰서" value="${esc(c.sponsor||'')}" onchange="setSiteContract('${code}','sponsor',this.value)" style="min-width:130px">
-      </div>
-      <div class="contract-field">
-        <label>PI 이름</label>
-        <input placeholder="예: 홍길동" value="${esc(c.pi||'')}" onchange="setSiteContract('${code}','pi',this.value)" style="min-width:100px">
-      </div>
-      <div class="contract-field memo">
-        <label>비고 / 메모</label>
-        ${richField('contract',{code},'memo',c,'계약 관련 메모...','rich-box')}
-      </div>
-    </div>`:''}
-  </div>`;
-}
 function stCls(v){return STATUSES.find(s=>s.val===v)?.cls||'s-pend';}
 function stOpts(cur){return STATUSES.map(s=>`<option value="${s.val}"${cur===s.val?' selected':''}>${s.label}</option>`).join('');}
 
@@ -5204,22 +5282,29 @@ function setSecMeta(code,secId,field,val){
   if(!sec) return;
   const meta=ensureSecMeta(sec);
   meta[field]=val;
-  // IRB No.는 기관 단위로 하나 — 어느 섹션(초기심의/변경심의 등)에 입력해도 같은 기관의 모든 섹션에 동일하게 연동
-  if(field==='irbNo'){
-    (sections[code]||[]).forEach(sc=>{ ensureSecMeta(sc).irbNo=val; });
-  }
   saveData();
   renderBody();
 }
-// 같은 기관의 어느 섹션에든 IRB No.가 있으면 그 값을 돌려줌 (빈 섹션 표시용)
+/* IRB No. 는 기관에 하나뿐인 값인데 예전에는 두 곳에 따로 저장됐다.
+     · 계약 관리 카드  -> site.contract.contractNo
+     · 섹션 메타       -> sec.meta.irbNo (같은 기관의 모든 섹션에 복사)
+   같은 번호를 두 번 적어야 했고, 한쪽만 고치면 화면마다 다른 값이 보였다.
+   계약 쪽(site.contract.contractNo) 하나로 모으고,
+   예전에 섹션 메타에만 적어둔 값은 읽기 폴백으로 계속 보여 준다. */
 function siteIrbNo(code){
+  const c=getSiteContract(code);
+  if(c.contractNo && c.contractNo.trim()) return c.contractNo;
   const hit=(sections[code]||[]).find(sc=>sc.meta&&sc.meta.irbNo&&sc.meta.irbNo.trim());
   return hit?hit.meta.irbNo:'';
+}
+function setSiteIrbNo(code,val){
+  setSiteContract(code,'contractNo',val);   // 내부에서 saveData()
+  renderBody();                             // 계약 카드 쪽 표시도 같이 갱신
 }
 function renderSectionMeta(code,sec){
   const meta=ensureSecMeta(sec);
   return `<div class="sec-meta">
-    <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(meta.irbNo||siteIrbNo(code)||'')}" placeholder="예: 2024-08-001" title="기관 공통 — 어느 섹션에 입력해도 모든 섹션에 같이 적용돼요" onchange="setSecMeta('${code}','${sec.id}','irbNo',this.value)" style="width:160px;font-weight:600"></div>
+    <div class="meta-field meta-irbno"><span>🏥 IRB No.</span><input type="text" value="${esc(siteIrbNo(code))}" placeholder="예: 2024-08-001" title="기관에 하나뿐인 값이에요 — 여기서 고치면 '계약 관리'의 IRB No.도 같이 바뀝니다" onchange="setSiteIrbNo('${code}',this.value)" style="width:160px;font-weight:600"></div>
     <div class="meta-field"><span>CRA 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.craSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','craSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>PI 제출일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.piSubmitDate||''}" onchange="setSecMeta('${code}','${sec.id}','piSubmitDate',this.value)" style="width:150px"></div>
     <div class="meta-field"><span>접수일</span><input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${meta.receiptDate||''}" onchange="setSecMeta('${code}','${sec.id}','receiptDate',this.value)"></div>
@@ -5257,13 +5342,6 @@ function renderResubmits(code,sec){
     ${items}
     <button class="att-btn rs-add" onclick="addResubmit('${code}','${sec.id}')">+ 재제출 추가</button>
   </div>`;
-}
-function rowDateLinkHtml(sec,row){
-  const name=(row.name||'');
-  const shouldShow=name.includes('승인서') || name.toLowerCase().includes('approval');
-  if(!shouldShow) return na();
-  const meta=ensureSecMeta(sec);
-  return `<div class="linked-dates"><span class="linked-date">승인일 <b>${meta.approvalDate||'-'}</b></span><span class="linked-date">통지일 <b>${meta.noticeDate||'-'}</b></span></div>`;
 }
 
 function rowHtml(code,secId,idx,row,total){
@@ -5335,13 +5413,12 @@ function renderSecForm(){
       <button class="sec-type-btn" onclick="doAddSection('change')">🔄 변경보고</button>
       <button class="sec-type-btn" onclick="doAddSection('fundchange')">💰 연구비 변경보고</button>
       <button class="sec-type-btn" onclick="doAddSection('interim')">📊 중간보고</button>
-      <button class="sec-type-btn" onclick="doAddSection('unexpected')">🚨 예상하지 못한 문제 보고</button>
       <button class="sec-type-btn" onclick="doAddSection('safety')">🛡️ 안전성 보고</button>
       <button class="sec-type-btn" onclick="doAddSection('suspend')">⏸️ 중지보고</button>
       <button class="sec-type-btn" onclick="doAddSection('close')">🔚 종료보고</button>
       <button class="sec-type-btn" onclick="doAddSection('result')">📑 결과보고</button>
       <button class="sec-type-btn" onclick="doAddSection('violation')">⚠️ 위반보고</button>
-      <button class="sec-type-btn" onclick="doAddSection('problem')">🚨 문제보고</button>
+      <button class="sec-type-btn" onclick="doAddSection('problem')">❗ 문제보고</button>
       <button class="sec-type-btn" onclick="doAddSection('consent')">✍️ 동의서 관리</button>
     </div>
     <div class="sec-custom-row">
