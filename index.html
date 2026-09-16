@@ -425,6 +425,8 @@ tr:hover td{background:var(--bg)}
 .ipb-lbl{font-size:12.5px;color:#5a6b7d;font-weight:600;white-space:nowrap}
 .ipb-cred{width:126px;font-size:14px;border:1px solid #c5d9f0;border-radius:6px;padding:5px 8px;background:#fff;color:#37352f;outline:none}
 .ipb-cred:focus{border-color:var(--accent)}
+.ipb-eye{border:1px solid #c5d9f0;background:#fff;border-radius:6px;padding:4px 6px;font-size:13px;cursor:pointer;line-height:1;margin-left:-4px}
+.ipb-eye:hover{background:#eef4fb}
 .ipb-suggest{border:1px dashed #b8860b;background:#fffaf0;color:#8a6508;border-radius:6px;padding:4px 8px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 .ipb-suggest:hover{background:#fef3e2}
 .meta-report{background:var(--accent-xl);border-color:#bfe0d3}
@@ -829,9 +831,61 @@ body.sb-collapsed .sb-hover-zone{display:block}
 #appSidebar .tab:not(.active):hover,
 #appSidebar .protocol-tab:not(.active):hover{background:#eef1f5;box-shadow:none}
 </style>
+<style id="due-dashboard">
+/* 📅 마감 대시보드 */
+.due-sum{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.due-sum-card{background:#fff;border:1px solid #e9e9e7;border-radius:8px;padding:8px 14px;min-width:120px}
+.due-sum-card b{display:block;font-size:20px;font-weight:800}
+.due-sum-card span{font-size:12.5px;color:#787774}
+.due-sum-card.s-over{border-left:4px solid #c80e0e}.due-sum-card.s-over b{color:#c80e0e}
+.due-sum-card.s-warn{border-left:4px solid #b8860b}.due-sum-card.s-warn b{color:#b8860b}
+.due-sum-card.s-soon{border-left:4px solid #2b5c93}.due-sum-card.s-soon b{color:#2b5c93}
+.due-wrap{overflow:auto;max-height:62vh;border:1px solid #e9e9e7;border-radius:7px;background:#fff}
+.due-table{border-collapse:collapse;width:100%;font-size:13.5px}
+.due-table th,.due-table td{border-bottom:1px solid #f0f0ee;padding:8px 10px;text-align:left;vertical-align:top}
+.due-table thead th{background:var(--surf);font-size:12.5px;font-weight:700;position:sticky;top:0;z-index:2;border-bottom:1px solid #e9e9e7}
+.due-row{cursor:pointer}
+.due-row:hover{background:var(--accent-xl)}
+.due-when{white-space:nowrap}
+.due-date{font-size:11.5px;color:#9aa3b2;margin-top:2px}
+.due-chip{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+.due-chip.d-over{background:#fce8e8;color:#c80e0e}
+.due-chip.d-warn{background:#fef3e2;color:#b8860b}
+.due-chip.d-soon{background:#e8f0f9;color:#2b5c93}
+.due-chip.d-safe{background:#eef1f0;color:#6a7370}
+.due-kind{display:inline-block;border-radius:5px;padding:1px 7px;font-size:11.5px;font-weight:700;white-space:nowrap;background:#eef1f0;color:#5b6b80}
+.due-kind.k-exp{background:#fce8e8;color:#b31f14}
+.due-kind.k-silent{background:#fdeee2;color:#a4550c}
+.due-kind.k-pending{background:#fff7e0;color:#8a6a00}
+.due-kind.k-interim{background:#e6f4ea;color:#0d652d}
+.due-kind.k-doc{background:#f0ebfa;color:#5b4a86}
+.due-note{color:#787774;font-size:12.5px}
+.due-empty{padding:30px;text-align:center;color:#9aa3b2;font-size:15px;background:#fff;border:1px solid #e9e9e7;border-radius:7px}
+.due-sec-title{font-size:16.5px;font-weight:700;margin:20px 0 4px}
+.due-sec-desc{font-size:13px;color:#787774;margin-bottom:8px}
+.due-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.due-num{font-variant-numeric:tabular-nums;font-weight:700}
+.due-slow{color:#c80e0e}
+</style>
 </head>
 <body>
 <style>
+#lsBanner{position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#fdecea;border-top:2px solid #c0392b;
+  padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:#8c2016;
+  box-shadow:0 -4px 16px rgba(0,0,0,.12)}
+#lsBanner .cb-msg{flex:1;min-width:260px;line-height:1.5}
+#lsBanner .cb-btn{border:1px solid #c0392b;background:#fff;color:#c0392b;border-radius:7px;padding:7px 12px;
+  font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+#lsBanner .cb-btn:hover{background:#fbd9d4}
+#cloudBanner{position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#fff4e5;border-top:2px solid #e8892b;
+  padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:#7a3e00;
+  box-shadow:0 -4px 16px rgba(0,0,0,.12)}
+#cloudBanner .cb-msg{flex:1;min-width:260px;line-height:1.5}
+#cloudBanner .cb-btn{border:1px solid #e8892b;background:#fff;color:#a4550c;border-radius:7px;padding:7px 12px;
+  font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+#cloudBanner .cb-btn:hover{background:#ffe9cc}
+#cloudBanner .cb-danger{border-color:#c0392b;color:#c0392b}
+#cloudBanner .cb-danger:hover{background:#fdecea}
 #authGate{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center}
 .auth-card{background:#fff;border:1px solid #e9e9e7;border-radius:14px;padding:32px 34px;width:400px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.08);text-align:center}
 .auth-logo{font-size:23px;font-weight:700;color:var(--accent);margin-bottom:4px}
@@ -1383,13 +1437,57 @@ function savedToast(){
   const now=Date.now(); if(now-lastSaveToast<1000) return;
   lastSaveToast=now; showToastNow('✓ 저장되었습니다');
 }
+/* ━━━ 로컬 저장 용량 안전장치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   예전에는 saveData 안의 localStorage.setItem 에 try/catch 가 없었다.
+   용량이 차면 첫 줄에서 QuotaExceededError 가 터지면서
+   recordSnapshot() 도 scheduleCloudSave() 도 실행되지 않았다.
+   즉 로컬도 클라우드도 저장이 안 되는데 화면에는 아무 표시가 없었다.
+   게다가 같은 데이터를 v6 키에 한 번 더 쓰고, 스냅샷 20개가 각각 전체 사본이라
+   실사용량이 본체의 20배 이상으로 불어나 한도에 쉽게 닿았다. */
+function lsTrySet(key, val){
+  try{ localStorage.setItem(key, val); return true; }
+  catch(e){ return false; }
+}
+function trimSnapshots(keep){
+  try{
+    const arr=getSnapshots();
+    if(!arr.length) return false;
+    writeSnapshots(keep>0?arr.slice(-keep):[]);
+    return true;
+  }catch(e){ return false; }
+}
+function renderLsBanner(show){
+  let b=document.getElementById('lsBanner');
+  if(!show){ if(b) b.remove(); return; }
+  if(b) return;
+  b=document.createElement('div');
+  b.id='lsBanner';
+  b.innerHTML=`<span class="cb-msg">⚠️ 이 브라우저의 저장 공간이 가득 찼어요. <b>이 기기에는 저장하지 못했습니다.</b>
+    (클라우드 저장은 계속 시도해요 — 로그인 상태라면 자료는 지켜집니다)</span>
+    <button class="cb-btn" onclick="clearSnapshotsForSpace()">백업 시점 비우고 다시 저장</button>`;
+  document.body.appendChild(b);
+}
+function clearSnapshotsForSpace(){
+  if(!confirm('저장 공간을 확보하기 위해 이 기기의 백업 시점을 모두 비울까요?\n(클라우드에 저장된 현재 자료는 그대로입니다)')) return;
+  trimSnapshots(0);
+  saveData();
+}
+
 function saveData(){
   syncCurrentProtocolData();
-  localStorage.setItem(lsKeyV11(),JSON.stringify({protocols,protocolData,curProtocolId}));
-  // 기존 버전과 호환되도록 현재 프로토콜 데이터도 v6 키에 백업
-  localStorage.setItem(lsKeyV6(),JSON.stringify({sites,sections}));
+  const blob=JSON.stringify({protocols,protocolData,curProtocolId});
+  // 용량 초과 시: 스냅샷을 줄여 공간을 확보하고 단계적으로 재시도
+  let ok=lsTrySet(lsKeyV11(), blob);
+  if(!ok && trimSnapshots(5))  ok=lsTrySet(lsKeyV11(), blob);
+  if(!ok && trimSnapshots(0))  ok=lsTrySet(lsKeyV11(), blob);
+  renderLsBanner(!ok);
+  // 구버전 호환용 v6 백업은 '있으면 좋은' 사본이라 실패해도 무시한다
+  // (v11 이 있으면 load() 는 v6 를 읽지 않는다)
+  if(ok) lsTrySet(lsKeyV6(), JSON.stringify({sites,sections}));
   const el=document.getElementById('lastSaved');
   if(el) el.textContent=new Date().toLocaleString('ko-KR');
+  invalidateDueCache();   // 날짜를 고쳤을 수 있으므로 마감 계산 캐시를 버린다
+  // 로컬 저장이 실패해도 스냅샷·클라우드 저장은 반드시 시도한다
   recordSnapshot();
   scheduleCloudSave();
   savedToast();
@@ -1404,6 +1502,32 @@ function writeSnapshots(arr){
     try{ localStorage.setItem(snapKey(),JSON.stringify(arr.slice(Math.floor(arr.length/2)))); }catch(e2){}
   }
 }
+/* 백업 시점 보존 정책.
+   예전에는 '최신 20개'를 그대로 들고 있었는데, 45초 간격 제한과 맞물려
+   집중해서 편집하면 20 x 45초 = 약 15분치밖에 남지 않았다.
+   아침에 지운 기관을 오후에 알아차리면 복원 시점이 이미 밀려나 있었고,
+   삭제 확인창들은 전부 '백업 복원으로 되돌릴 수 있어요' 라고 안내하고 있었다.
+
+   이제 개수는 그대로 20개로 두되(저장 공간 압박은 늘리지 않음),
+   오래된 것일수록 성기게 솎아내 훨씬 긴 기간을 덮는다. */
+const SNAP_MAX=20;
+function snapMinGap(ageMs){
+  if(ageMs < 10*60*1000)     return 0;              // 최근 10분: 전부 보존
+  if(ageMs < 6*60*60*1000)   return 10*60*1000;     // 6시간 이내: 10분 간격
+  return 2*60*60*1000;                              // 그 이상: 2시간 간격
+}
+function thinSnapshots(arr){
+  const now=Date.now();
+  const out=[]; let last=null;
+  arr.forEach(s=>{
+    const ts=s.ts||0;
+    if(s.label){ out.push(s); last=ts; return; }     // 라벨 붙은 시점(복원 전 등)은 항상 보존
+    const gap=snapMinGap(now-ts);
+    if(last===null || ts-last>=gap){ out.push(s); last=ts; }
+  });
+  while(out.length>SNAP_MAX) out.shift();
+  return out;
+}
 function recordSnapshot(force){
   try{
     const now=Date.now();
@@ -1415,8 +1539,7 @@ function recordSnapshot(force){
       if(last && (now-(last.ts||0))<45000) return;     // 45초 내 반복 저장이면 skip
     }
     arr.push({ts:now, data:blob, label:force||''});
-    if(arr.length>20) arr=arr.slice(arr.length-20);
-    writeSnapshots(arr);
+    writeSnapshots(thinSnapshots(arr));
   }catch(e){}
 }
 function snapCounts(blob){
@@ -1455,7 +1578,8 @@ function openRestoreModal(){
   m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeRestoreModal()">
     <div class="snap-modal">
       <h3>⏱ 백업 시점 복원 <span style="font-size:14px;color:#9aa3b2;font-weight:400">(최근 ${arr.length}개)</span></h3>
-      <div class="snap-desc">원하는 시점을 선택하면 그때 데이터로 되돌려요. <b>복원 직전 상태도 자동 백업</b>되니 안심하세요 🙂</div>
+      <div class="snap-desc">원하는 시점을 선택하면 그때 데이터로 되돌려요. <b>복원 직전 상태도 자동 백업</b>되니 안심하세요 🙂<br>
+        <b>이 백업은 지금 쓰는 브라우저에만</b> 저장돼요 — 다른 PC·폰에는 없어요.</div>
       <div class="snap-list">${list}</div>
       <div class="snap-acts"><button class="snap-cancel" onclick="closeRestoreModal()">닫기</button></div>
     </div>
@@ -1483,13 +1607,94 @@ function scheduleCloudSave(){
   cloudSaveTimer=setTimeout(saveToCloud,400);
 }
 
+/* ━━━ 클라우드 저장 안전장치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   예전 동작: 로그인 → 로컬 캐시로 화면을 먼저 그림 → 클라우드에서 덮어씀.
+   그런데 클라우드 읽기가 실패하면 catch 에서 조용히 넘어갔고,
+   saveToCloud 는 버전 확인 없이 통째로 upsert 했다.
+   그래서 '새 PC / 캐시 삭제 / 잠깐 끊긴 네트워크' 상태에서 한 글자만 입력해도
+   빈 데이터가 클라우드를 덮어써 전체가 날아갈 수 있었다.
+   스냅샷 백업은 localStorage 에만 있어서 새 기기에는 복원할 것도 없었다.
+
+   이제: 클라우드에서 '제대로 읽은 적이 있을 때만' 쓴다.
+   추가로 다른 기기가 먼저 저장했는지(updated_at)도 확인해 덮어쓰기를 막는다. */
+let cloudState='unknown';   // 'unknown' | 'loaded' | 'failed' | 'conflict'
+let cloudRev=null;          // 마지막으로 내가 읽거나 쓴 updated_at
+
+function setCloudState(st){ cloudState=st; renderCloudBanner(); }
+
+function renderCloudBanner(){
+  let b=document.getElementById('cloudBanner');
+  const bad=(cloudState==='failed'||cloudState==='conflict');
+  if(!bad){ if(b) b.remove(); return; }
+  if(!b){
+    b=document.createElement('div');
+    b.id='cloudBanner';
+    document.body.appendChild(b);
+  }
+  const msg = cloudState==='failed'
+    ? '⚠️ 클라우드에서 자료를 불러오지 못했어요. 지금 저장하면 클라우드 자료를 덮어쓸 수 있어 <b>자동 저장을 멈췄습니다</b>. 입력한 내용은 이 브라우저에 보관 중이에요.'
+    : '⚠️ <b>다른 기기에서 이 트래커를 수정했어요.</b> 서로 덮어쓰지 않도록 자동 저장을 멈췄습니다.';
+  b.innerHTML=`<span class="cb-msg">${msg}</span>
+    <button class="cb-btn" onclick="cloudReload()">클라우드 자료 다시 불러오기</button>
+    <button class="cb-btn cb-danger" onclick="cloudForceOverwrite()">이 기기 내용으로 덮어쓰기</button>`;
+}
+
+// 클라우드 최신본을 다시 받아온다 (현재 화면 상태는 먼저 스냅샷으로 보존)
+async function cloudReload(){
+  if(!window.supabaseClient || !CLOUD_ID) return;
+  recordSnapshot('클라우드 재동기화 전');
+  try{
+    const res=await window.supabaseClient.from('irb_tracker')
+      .select('data,updated_at').eq('id',CLOUD_ID).maybeSingle();
+    if(res.error) throw res.error;
+    if(res.data && res.data.data){
+      applyCloudData(res.data.data);
+      cloudRev=res.data.updated_at||null;
+      persistLocal(); normalizeSectionOrdinals(); render();
+    } else {
+      cloudRev=null;
+    }
+    setCloudState('loaded');
+    showToastNow('✓ 클라우드 자료를 다시 불러왔어요');
+  }catch(e){
+    setCloudState('failed');
+    alert('다시 불러오기에 실패했어요: '+(e.message||e));
+  }
+}
+
+// 사용자가 명시적으로 '내 것이 맞다'고 판단했을 때만 덮어쓴다
+async function cloudForceOverwrite(){
+  if(!confirm('클라우드에 있는 자료를 이 기기의 내용으로 덮어쓸까요?\n\n다른 기기에서 한 작업이 있다면 사라집니다. 되돌릴 수 없어요.')) return;
+  cloudRev=null;                 // 버전 확인을 건너뛰고 강제로 쓴다
+  setCloudState('loaded');
+  await saveToCloud();
+  showToastNow('✓ 이 기기 내용으로 저장했어요');
+}
+
 async function saveToCloud(){
   if(!window.supabaseClient || !CLOUD_ID) return;
+  // 클라우드를 한 번도 제대로 못 읽었으면 절대 쓰지 않는다 (통째 소실 방지)
+  if(cloudState!=='loaded'){ renderCloudBanner(); return; }
   syncCurrentProtocolData();
+  // 다른 기기가 먼저 저장했는지 확인. (확인 자체가 실패하는 건 저장을 막지 않음)
+  try{
+    const chk=await window.supabaseClient.from('irb_tracker')
+      .select('updated_at').eq('id',CLOUD_ID).maybeSingle();
+    if(!chk.error && chk.data && cloudRev && chk.data.updated_at && chk.data.updated_at!==cloudRev){
+      setCloudState('conflict');
+      return;
+    }
+  }catch(e){ console.warn('클라우드 버전 확인 실패(저장은 계속):',e); }
+  const now=new Date().toISOString();
   const {error}=await window.supabaseClient
     .from('irb_tracker')
-    .upsert({id:CLOUD_ID,data:{protocols,protocolData,curProtocolId},updated_at:new Date().toISOString()});
-  if(error) console.error('Supabase 저장 실패:',error);
+    .upsert({id:CLOUD_ID,data:{protocols,protocolData,curProtocolId},updated_at:now});
+  if(error){
+    console.error('Supabase 저장 실패:',error);
+    setCloudState('failed');
+    return;
+  }
+  cloudRev=now;
 }
 
 function countProtocolRows(data){
@@ -1517,7 +1722,24 @@ function countProtocolRows(data){
   return count;
 }
 
+// 외부에서 들어온 데이터(클라우드·인계·파일 가져오기) 안의 서식 HTML 을 한 번 씻어낸다.
+// 저장 경로(richCommit)만 sanitize 하면 '남이 만든 데이터'에는 적용된 적이 없게 된다.
+function sanitizeDataHtmlFields(node, depth){
+  depth=depth||0;
+  if(!node || typeof node!=='object' || depth>14) return;
+  if(Array.isArray(node)){ node.forEach(x=>sanitizeDataHtmlFields(x, depth+1)); return; }
+  Object.keys(node).forEach(k=>{
+    const v=node[k];
+    if(typeof v==='string'){
+      if(/Html$/.test(k) && v) node[k]=sanitizeNoteHtml(v);
+    } else if(v && typeof v==='object'){
+      sanitizeDataHtmlFields(v, depth+1);
+    }
+  });
+}
+
 function applyCloudData(d){
+  try{ sanitizeDataHtmlFields(d); }catch(e){ console.warn('데이터 정화 실패:',e); }
   if(d.protocols){
     protocols=d.protocols||[]; protocolData=d.protocolData||{};
     curProtocolId=d.curProtocolId||protocols[0]?.id||null;
@@ -1538,18 +1760,27 @@ function persistLocal(){
 async function syncUserCloud(user){
   if(!window.supabaseClient || !user) return;
   try{
-    const res=await window.supabaseClient.from('irb_tracker').select('data').eq('id',user.id).maybeSingle();
-    if(res && res.data && res.data.data){
+    const res=await window.supabaseClient.from('irb_tracker')
+      .select('data,updated_at').eq('id',user.id).maybeSingle();
+    if(res.error) throw res.error;          // 조용히 넘기면 빈 데이터로 덮어쓰게 된다
+    if(res.data && res.data.data){
       // 내 데이터가 클라우드에 있음 → 그대로 사용
       applyCloudData(res.data.data);
+      cloudRev=res.data.updated_at||null;
+      setCloudState('loaded');
       persistLocal(); normalizeSectionOrdinals(); render();
       return;
     }
-    // 신규 사용자 → 확인창 없이 빈 템플릿으로 시작 (내 id로 빈 행 생성)
+    // 클라우드에 행이 없는 게 확인된 경우에만 신규 사용자로 간주 (읽기 성공 = 안전)
+    cloudRev=null;
+    setCloudState('loaded');
     persistLocal();
     await saveToCloud();
     render();
-  }catch(e){ console.warn('syncUserCloud 오류:',e); }
+  }catch(e){
+    console.warn('syncUserCloud 오류:',e);
+    setCloudState('failed');   // 자동 저장 중단 + 배너 표시
+  }
 }
 
 function initSite(code){
@@ -1650,6 +1881,16 @@ const contractListCollapsed={};
 function toggleContractList(code){ contractListCollapsed[code]=!contractListCollapsed[code]; renderBody(); }
 // ── IRB 포털 바 (계약 관리 위 상단) : 링크·R-bay·CRA ID/PW 메모 ──
 function extUrl(u){ u=(u||'').trim(); if(!u) return ''; return /^https?:\/\//i.test(u)?u:'https://'+u; }
+// 포털 PW 칸은 기본적으로 가려 둔다 (어깨너머 노출 · 화면 공유 · 스크린샷 대비).
+// 저장 자체는 여전히 평문이므로 근본 대책은 아니다 - SECURITY-TODO.md 참고.
+function togglePwVisible(btn){
+  const inp=btn.previousElementSibling;
+  if(!inp || inp.tagName!=='INPUT') return;
+  const show=(inp.type==='password');
+  inp.type=show?'text':'password';
+  btn.textContent=show?'🙈':'👁';
+  btn.title=show?'비밀번호 가리기':'비밀번호 보기';
+}
 function renderIrbPortalBar(code){
   const c=getSiteContract(code);
   const url=(c.irbUrl||'').trim();
@@ -1661,7 +1902,7 @@ function renderIrbPortalBar(code){
     <span class="ipb-lbl">CRA ID</span>
     <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.craId||'')}" onchange="setSiteContract('${code}','craId',this.value)">
     <span class="ipb-lbl">PW</span>
-    <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.craPw||'')}" onchange="setSiteContract('${code}','craPw',this.value)">
+    <input class="ipb-cred" type="password" autocomplete="off" placeholder="PW 메모" title="주의: 이 값은 암호화되지 않고 그대로 저장돼요" value="${esc(c.craPw||'')}" onchange="setSiteContract('${code}','craPw',this.value)"><button type="button" class="ipb-eye" onclick="togglePwVisible(this)" title="비밀번호 보기">👁</button>
   </div>
   ${renderCtcPortalBar(code)}${renderPharmPortalBar(code)}${renderHiddenPortalChips(code)}`;
 }
@@ -1688,7 +1929,7 @@ function renderPharmPortalBar(code){
     <span class="ipb-lbl">CRA ID</span>
     <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.pharmId||'')}" onchange="setSiteContract('${code}','pharmId',this.value)">
     <span class="ipb-lbl">PW</span>
-    <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.pharmPw||'')}" onchange="setSiteContract('${code}','pharmPw',this.value)">
+    <input class="ipb-cred" type="password" autocomplete="off" placeholder="PW 메모" title="주의: 이 값은 암호화되지 않고 그대로 저장돼요" value="${esc(c.pharmPw||'')}" onchange="setSiteContract('${code}','pharmPw',this.value)"><button type="button" class="ipb-eye" onclick="togglePwVisible(this)" title="비밀번호 보기">👁</button>
     <button class="ipb-hide" onclick="setSiteContract('${code}','pharmHidden',true)" title="이 기관은 약국 포털 없음 — 바 숨기기">✕ 숨김</button>
   </div>`;
 }
@@ -1704,7 +1945,7 @@ function renderCtcPortalBar(code){
     <span class="ipb-lbl">CRA ID</span>
     <input class="ipb-cred" placeholder="ID 메모" value="${esc(c.ctcId||'')}" onchange="setSiteContract('${code}','ctcId',this.value)">
     <span class="ipb-lbl">PW</span>
-    <input class="ipb-cred" placeholder="PW 메모" value="${esc(c.ctcPw||'')}" onchange="setSiteContract('${code}','ctcPw',this.value)">
+    <input class="ipb-cred" type="password" autocomplete="off" placeholder="PW 메모" title="주의: 이 값은 암호화되지 않고 그대로 저장돼요" value="${esc(c.ctcPw||'')}" onchange="setSiteContract('${code}','ctcPw',this.value)"><button type="button" class="ipb-eye" onclick="togglePwVisible(this)" title="비밀번호 보기">👁</button>
     <button class="ipb-hide" onclick="setSiteContract('${code}','ctcHidden',true)" title="이 기관은 CTC 포털 없음 — 바 숨기기">✕ 숨김</button>
   </div>`;
 }
@@ -1820,11 +2061,26 @@ function setupIhTopScroll(){
     if(window.ResizeObserver){ try{ new ResizeObserver(setW).observe(table); }catch(e){} }
   });
 }
+// 달력에 실제로 존재하는 날짜인지 검사한다.
+// (예전에는 형식만 맞추고 값은 안 봐서 2025-13-45 같은 값이 그대로 저장됐고,
+//  그 뒤 new Date() 가 Invalid Date 가 되면서 D-day · 정렬 · 유효기간 알람이
+//  조용히 틀린 결과를 냈다)
+function isValidYmd(y,m,d){
+  y=+y; m=+m; d=+d;
+  if(!(y>=1900 && y<=2200)) return false;
+  if(!(m>=1 && m<=12)) return false;
+  if(!(d>=1 && d<=31)) return false;
+  const dt=new Date(Date.UTC(y,m-1,d));
+  return dt.getUTCFullYear()===y && dt.getUTCMonth()===m-1 && dt.getUTCDate()===d;
+}
+function ymd(y,m,d){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 function normDateStr(s){
   s=(s||'').trim(); if(!s) return s;
   const m=s.match(/^(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})[.일\s]*$/);
   if(!m) return s;
-  return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  // 존재하지 않는 날짜는 멋대로 고치지 않고 입력한 그대로 둔다 (사용자가 오타를 알아채도록)
+  if(!isValidYmd(m[1],m[2],m[3])) return s;
+  return ymd(m[1],+m[2],+m[3]);
 }
 // 붙여넣은 표를 "있는 그대로" 파싱: 제목 줄 = 컬럼, 나머지 = 데이터
 function splitCells(l){ let c=l.split('\t'); if(c.length<2) c=l.trim().split(/\s{2,}/); return c.map(x=>x.trim()); }
@@ -2059,28 +2315,91 @@ function focusIrbField(code){
     if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}
   },60);
 }
+// ── 기관코드로 키가 걸린 모든 저장소 목록 ────────────────────────
+// 기관 데이터는 여러 곳에 '기관코드'를 키로 흩어져 저장된다.
+// 코드 변경(renameSiteCode)·삭제(deleteSite) 때 여기를 한 군데서 처리하지 않으면
+// 체크 칸·방문 이력·유효기간 메모가 조용히 유실되거나 유령 데이터로 남는다.
+//   pd.indexes           '기관코드::타입__템플릿키'
+//   pd.idxChecks         '기관코드::타입__템플릿키'
+//   pd.idxVisits         '기관코드::타입__템플릿키'
+//   pd.siteCustomIndexes '기관코드'
+//   pd.siteIndexLabels   '기관코드'
+//   pd.verMaster.cells   '기관코드|문서id'
+function siteKeyedStores(pd){
+  if(!pd) return {prefixed:[], direct:[], piped:[]};
+  return {
+    prefixed:[pd.indexes, pd.idxChecks, pd.idxVisits].filter(Boolean),   // code::...
+    direct:[pd.siteCustomIndexes, pd.siteIndexLabels].filter(Boolean),   // code
+    piped:[pd.verMaster && pd.verMaster.cells].filter(Boolean)           // code|docId
+  };
+}
+// 기관코드로 걸린 모든 저장소에서 oldCode 를 newCode 로 옮긴다.
+// newCode 가 null 이면 삭제.
+function remapSiteKeys(pd, oldCode, newCode){
+  const st=siteKeyedStores(pd);
+  st.prefixed.forEach(map=>{
+    Object.keys(map).forEach(k=>{
+      if(k.indexOf(oldCode+'::')!==0) return;
+      const rest=k.slice(oldCode.length+2);
+      if(newCode) map[newCode+'::'+rest]=map[k];
+      delete map[k];
+    });
+  });
+  st.direct.forEach(map=>{
+    if(map[oldCode]===undefined) return;
+    if(newCode) map[newCode]=map[oldCode];
+    delete map[oldCode];
+  });
+  st.piped.forEach(map=>{
+    Object.keys(map).forEach(k=>{
+      if(k.indexOf(oldCode+'|')!==0) return;
+      const rest=k.slice(oldCode.length+1);
+      if(newCode) map[newCode+'|'+rest]=map[k];
+      delete map[k];
+    });
+  });
+}
+// 화면 상태(접힘·정렬 등) 맵도 같이 옮김 — 데이터는 아니지만 안 옮기면 화면이 튐
+function remapSiteUiState(oldCode, newCode){
+  [contractListCollapsed,contractPanelCollapsed,irbHistOpen,ihSort,siteInfoOpen].forEach(m=>{
+    if(!m || m[oldCode]===undefined) return;
+    if(newCode) m[newCode]=m[oldCode];
+    delete m[oldCode];
+  });
+  // collapsed 는 '기관코드'+'섹션id' 를 이어붙인 키라 접두어로 찾는다
+  Object.keys(collapsed).forEach(k=>{
+    if(k.indexOf(oldCode+'sec_')!==0) return;
+    const rest=k.slice(oldCode.length);
+    if(newCode) collapsed[newCode+rest]=collapsed[k];
+    delete collapsed[k];
+  });
+}
+
+// 기관코드는 onclick="switchSite('${code}')" 처럼 인라인 핸들러 문자열 안에
+// 그대로 박힌다. 따옴표·역슬래시·꺾쇠가 섞이면 그 기관의 모든 버튼과 입력이
+// JS 문법 오류로 통째로 죽어버리므로, 저장 전에 미리 걸러낸다.
+function normSiteCode(v){
+  return String(v==null?'':v).replace(/["'`\\<>&]/g,'').trim().slice(0,20);
+}
 function renameSiteCode(code){
   const site=sites.find(s=>s.code===code);
   if(!site) return;
   const v=prompt('기관 No.(코드)를 입력하세요\n예: 010, 005', site.code);
   if(v===null) return;
-  const nc=v.trim();
+  const nc=normSiteCode(v);
   if(!nc){ alert('기관 No.는 비울 수 없어요.'); return; }
+  if(nc!==v.trim()){ alert(`기관 No.에 쓸 수 없는 문자를 빼고 '${nc}' 로 저장할게요.\n(따옴표 " ' \` 와 \\ < > & 는 화면이 깨져서 쓸 수 없어요)`); }
   if(nc===code) return;
   if(sites.some(s=>s.code===nc)){ alert(`'${nc}' 코드는 이미 다른 기관이 쓰고 있어요.`); return; }
   // 1) 기관 객체
   site.code=nc;
   // 2) 섹션(IRB 문서표)
   if(sections[code]!==undefined){ sections[nc]=sections[code]; delete sections[code]; }
-  // 3) Index (ISF/PSF/TMF) — 'code::type__tmpl' 키
-  const pd=protocolData[curProtocolId];
-  if(pd&&pd.indexes){
-    Object.keys(pd.indexes).forEach(k=>{
-      if(k.startsWith(code+'::')){ pd.indexes[nc+'::'+k.slice(code.length+2)]=pd.indexes[k]; delete pd.indexes[k]; }
-    });
-  }
-  // 4) 화면 상태(접힘/정렬 등)
-  [contractListCollapsed,contractPanelCollapsed,irbHistOpen,ihSort].forEach(m=>{ if(m&&m[code]!==undefined){ m[nc]=m[code]; delete m[code]; } });
+  // 3) 기관코드로 키가 걸린 나머지 저장소 전부
+  //    (Index · 체크 칸 · 방문 대조 · 커스텀 Index 이름 · 버전로그 셀)
+  remapSiteKeys(protocolData[curProtocolId], code, nc);
+  // 4) 화면 상태
+  remapSiteUiState(code, nc);
   if(curSite===code) curSite=nc;
   saveData(); renderTabs(); renderBody();
   showToastNow(`✓ 기관 No.를 ${code} → ${nc} 로 바꿨어요`);
@@ -2167,9 +2486,13 @@ if(!window._dtHoldBound){
 function extractDate(s){
   s=(s||'').trim(); if(!s) return '';
   const n=normDateStr(s);
-  if(/^\d{4}-\d{2}-\d{2}$/.test(n)) return n;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(n)){
+    const p=n.split('-');
+    return isValidYmd(p[0],p[1],p[2]) ? n : '';
+  }
   const m=s.match(/(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})/);
-  if(m) return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  // 붙여넣기 경로: 존재하지 않는 날짜면 아무것도 넣지 않는다 (엉뚱한 값이 계산에 섞이는 걸 차단)
+  if(m && isValidYmd(m[1],m[2],m[3])) return ymd(m[1],+m[2],+m[3]);
   return '';
 }
 // 날짜칸 전역 붙여넣기 처리 (14개 칸 + 앞으로 추가될 칸까지 자동 적용)
@@ -2205,11 +2528,27 @@ if(!window._dtPasteBound){
     el.readOnly=true; el.classList.remove('idx-editing');
   }, true);
 }
+// 'YYYY-MM-DD' 를 '그 지역의 자정' 으로 읽는다.
+// new Date('2026-09-16') 은 UTC 자정으로 해석되어 한국(UTC+9)에서는 9시간 어긋난다.
+// 그래서 예전 calcDday 는 오늘 마감인 항목을 'D-1' 로 표시했다.
+// (같은 파일의 expState / interimSuggestDate 는 이미 지역시간으로 읽고 있어서
+//  세 곳의 계산 방식이 서로 달랐다 — 여기서 맞춘다)
+function parseLocalDate(v){
+  const t=String(v==null?'':v).trim();
+  if(!t) return null;
+  const m=t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(t);
+  if(isNaN(d)) return null;
+  d.setHours(0,0,0,0);
+  return d;
+}
+// NOTE: 현재 이 함수를 쓰는 화면은 없다 (문서별 마감일 입력 UI 가 아직 없음).
+// 나중에 마감 기능을 붙일 때 틀린 날짜 계산을 물려받지 않도록 고쳐만 둔다.
 function calcDday(deadline){
-  if(!deadline)return{days:null,cls:'',txt:''};
+  const ddl=parseLocalDate(deadline);
+  if(!ddl)return{days:null,cls:'',txt:''};
   const today=new Date();today.setHours(0,0,0,0);
-  const ddl=new Date(deadline);
-  const diff=Math.ceil((ddl-today)/(1000*60*60*24));
+  const diff=Math.round((ddl-today)/(1000*60*60*24));
   let cls='deadline-safe',txt='';
   if(diff<0){cls='deadline-over';txt='기한경과';}
   else if(diff===0){cls='deadline-warn';txt='오늘';}
@@ -3006,11 +3345,28 @@ function setVisitItemSt(type,itemId,st){
   it.ts = it.st ? todayStr() : null;              // 체크한 날짜 자동 기록
   saveData(); renderBody();
 }
-function setVisitItemMemo(type,itemId,val){
+/* 메모는 oninput(=키 입력마다) 으로 들어온다.
+   예전에는 글자 하나마다 saveData() 가 돌면서
+   전체 데이터 JSON.stringify 2회(저장 + 스냅샷 비교) + localStorage 쓰기 2회가
+   반복돼, 자료가 커지면 타이핑이 눈에 띄게 끊겼다.
+   값은 메모리에 즉시 반영하고(데이터 유실 없음) '저장'만 미룬다. */
+let _viMemoSaveTimer=null;
+function flushVisitMemoSave(){
+  if(!_viMemoSaveTimer) return;
+  clearTimeout(_viMemoSaveTimer); _viMemoSaveTimer=null;
+  try{ saveData(); }catch(e){}
+}
+function setVisitItemMemo(type,itemId,val,immediate){
   const v=curVisit(type); if(!v) return;
   const it=v.items.find(x=>x.id===itemId); if(!it) return;
-  it.memo=val; saveData();                        // 입력 중 포커스 유지를 위해 다시 그리지 않음
+  it.memo=val;                                    // 입력 중 포커스 유지를 위해 다시 그리지 않음
+  clearTimeout(_viMemoSaveTimer);
+  if(immediate){ _viMemoSaveTimer=null; saveData(); return; }
+  _viMemoSaveTimer=setTimeout(()=>{ _viMemoSaveTimer=null; saveData(); }, 600);
 }
+// 탭을 닫거나 숨길 때 미뤄둔 저장을 흘려보낸다
+window.addEventListener('pagehide', flushVisitMemoSave);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushVisitMemoSave(); });
 /* 메모 칸: 내용에 맞춰 자동으로 늘어남 (직접 끌어서 조절한 높이는 그대로 유지) */
 function viMemoGrow(ta){
   if(ta.dataset.manual==='1') return;
@@ -3096,7 +3452,7 @@ function visitPanelHtml(type,rows){
         style="${it.memoH?`height:${it.memoH}px`:''}" data-manual="${it.memoH?'1':'0'}"
         oninput="viMemoGrow(this);setVisitItemMemo('${type}','${it.id}',this.value)"
         onpointerdown="viMemoDown(this)" onmouseup="viMemoResized('${type}','${it.id}',this)"
-        onchange="setVisitItemMemo('${type}','${it.id}',this.value)">${escHtml(it.memo||'')}</textarea>
+        onchange="setVisitItemMemo('${type}','${it.id}',this.value,true)">${escHtml(it.memo||'')}</textarea>
       ${it.memoH?`<div class="vi-memo-foot"><button class="vi-memo-rst" onclick="viMemoResetH('${type}','${it.id}',this)" title="메모 칸 높이를 자동으로 되돌리기">↺ 높이 자동</button></div>`:''}
     </div>`;
   }).join('') : `<div class="vi-empty">담긴 항목이 없어요.<br>아래 버튼으로 Index에서 가져오거나,<br>표의 <b>📋 이번 방문에 담기</b>를 눌러보세요.</div>`;
@@ -3141,24 +3497,34 @@ function visitPanelHtml(type,rows){
     </div>
   </div>`;
 }
+// - CSV 공용 헬퍼 -------------------------------------------------
+// RFC 4180: 모든 칸을 큰따옴표로 감싸고, 값 안의 큰따옴표는 두 번 반복해 이스케이프.
+// (빠뜨리면 문서명에 " 가 하나만 들어가도 그 줄 이후 컬럼이 전부 밀림)
+function csvQ(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+// 줄바꿈이 든 값은 한 줄로 눕혀서 내보냄 (엑셀에서 행이 쪼개지는 것 방지)
+function csvQ1(v){ return csvQ(String(v==null?'':v).replace(/\r?\n/g,' ')); }
+function downloadCSV(csv, filename){
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);   // 객체 URL 회수 (메모리 누수 방지)
+}
 function exportVisitCSV(type){
   const v=curVisit(type); if(!v){ alert('회차가 없어요.'); return; }
   const prev=prevVisitOf(type,v);
   const cur=getCurProtocol();
-  const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
   let csv='\uFEFF';
-  csv+=`Protocol,${q(cur?.protocolNo||cur?.name||'')}\n`;
-  csv+=`Site,${q(curSiteCode())}\nIndex,${type}\n방문,${q(v.label)},${q(v.date)}\n\n`;
-  csv+='No,항목,이번 결과,체크일,메모,지난 결과\n';
+  csv+='Protocol,'+csvQ1(cur?.protocolNo||cur?.name||'')+'\n';
+  csv+='Site,'+csvQ1(curSiteCode())+'\nIndex,'+csvQ1(type)+'\n방문,'+csvQ1(v.label)+','+csvQ1(v.date)+'\n\n';
+  csv+=['No','항목','이번 결과','체크일','메모','지난 결과'].map(csvQ).join(',')+'\n';
   v.items.forEach(it=>{
     const pv=prev?prev.items.find(x=>(it.no&&x.no===it.no)||x.text===it.text):null;
-    csv+=`${q(it.no)},${q(it.text)},${q(VI_LABEL[it.st||''])},${q(it.ts||'')},${q(it.memo)},${q(pv?VI_LABEL[pv.st||'']:'')}\n`;
+    csv+=[it.no, it.text, VI_LABEL[it.st||''], it.ts||'', it.memo, pv?VI_LABEL[pv.st||'']:'']
+           .map(csvQ1).join(',')+'\n';
   });
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`${(cur?.protocolNo||'protocol')}_${curSiteCode()}_${type}_${v.label}.csv`;
-  a.click();
+  downloadCSV(csv, `${(cur?.protocolNo||'protocol')}_${curSiteCode()}_${type}_${v.label}.csv`);
 }
 
 function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
@@ -3370,6 +3736,7 @@ function renderTabs(){
     `<div class="tab idx-add-tab" onclick="addCustomIndex()" title="새 Index 만들기">+ Index</div>`;
   document.getElementById('tabsWrap').innerHTML=
     `<div class="tab home-tab${curView==='home'?' active':''}" onclick="switchHome()">🏠 홈</div>`+
+    (function(){ const n=dueAlarmCount(); return `<div class="tab home-tab${curView==='due'?' active':''}" onclick="switchDue()">📅 마감${n?`<span class="vlog-badge">${n}</span>`:''}</div>`; })()+
     (function(){ const n=vlogAlarmCount(); return `<div class="tab home-tab${curView==='verlog'?' active':''}" onclick="switchVerLog()">🔔 버전 로그${n?`<span class="vlog-badge">${n}</span>`:''}</div>`; })()+
     `<div style="width:1px;background:#e9e9e7;margin:6px 6px"></div>`+
     sites.map(s=>{
@@ -3542,6 +3909,252 @@ function verAlertTip(code,row){
   }catch(e){}
   return '';
 }
+/* ━━━━━━━━━━━━ 📅 마감 대시보드 ━━━━━━━━━━━━
+   전 과제 · 전 기관을 가로질러 "오늘 챙겨야 할 것"을 한 화면에 모은다.
+
+   왜 필요했나:
+   - approvalEndDate(IRB 승인 종료일)를 입력받고 있었지만, 이 값을 쓰는 곳은
+     중간보고 '보고 가능일' 제안 한 군데뿐이었고 만료 알람은 전혀 없었다.
+     승인 유효기간이 지나면 그 기관의 연구가 그 순간 중단된다.
+   - craSubmitDate / receiptDate / approvalDate 도 기록만 하고 계산은 없었다.
+     "오늘 어느 IRB에 전화해야 하나"를 알려면 기관을 하나씩 열어봐야 했다.
+   새로 입력받는 값은 없다. 이미 있는 데이터를 모아서 계산만 한다. */
+const DUE_UNANSWERED_DAYS=30;       // 접수 후 이 일수를 넘기면 '무응답'
+const DUE_PENDING_RECEIPT_DAYS=14;  // 제출 후 이 일수까지 접수가 안 되면 '접수 대기'
+const DUE_HORIZON=90;               // 며칠 앞까지 볼 것인가
+const DUE_OLD_LIMIT=365;            // 이보다 오래 지난 '경과'는 기본 숨김 (종료된 과제가 계속 쌓이는 것 방지)
+let dueShowOld=false;
+
+function dueToday(){ const t=new Date(); t.setHours(0,0,0,0); return t; }
+function dueInfo(dateStr){
+  const d=parseLocalDate(dateStr); if(!d) return null;
+  const days=Math.round((d-dueToday())/86400000);
+  const cls = days<0?'d-over' : days<=30?'d-warn' : days<=DUE_HORIZON?'d-soon' : 'd-safe';
+  const txt = days<0?('기한 경과 '+(-days)+'일') : (days===0?'오늘':'D-'+days);
+  return {days, cls, txt};
+}
+function daysSince(dateStr){
+  const d=parseLocalDate(dateStr); if(!d) return null;
+  return Math.round((dueToday()-d)/86400000);
+}
+function daysBetween(a,b){
+  const x=parseLocalDate(a), y=parseLocalDate(b);
+  if(!x||!y) return null;
+  return Math.round((y-x)/86400000);
+}
+function median(arr){
+  if(!arr.length) return null;
+  const v=arr.slice().sort((a,b)=>a-b), m=Math.floor(v.length/2);
+  return v.length%2 ? v[m] : Math.round((v[m-1]+v[m])/2);
+}
+// 전 과제 × 전 기관 × 전 섹션 순회 (현재 화면의 편집분도 포함되도록 먼저 동기화)
+function eachSection(fn){
+  syncCurrentProtocolData();
+  (protocols||[]).forEach(p=>{
+    const pd=protocolData[p.id]; if(!pd) return;
+    (pd.sites||[]).forEach(site=>{
+      ((pd.sections||{})[site.code]||[]).forEach(sec=>fn(p, site, sec, pd));
+    });
+  });
+}
+function protoLabel(p){ return p.protocolNo||p.projectName||p.name||'과제'; }
+
+function dueItems(){
+  const out=[];
+  // 승인 유효기간은 섹션마다 따로 적히지만(초기심의·1차 변경보고·2차 변경보고 …)
+  // 그 기관에서 '지금 유효한' 것은 가장 나중 날짜 하나다.
+  // 섹션 수만큼 같은 경고가 뜨면 화면이 쓸모없어지므로 기관당 1건으로 합친다.
+  // (interimSuggestDate 도 같은 기준으로 최신 종료일을 쓴다)
+  const approvalBySite={};
+  eachSection((p,site,sec)=>{
+    const m=sec.meta||{};
+    const base={pid:p.id, pname:protoLabel(p), code:site.code, sname:site.name||'', sec:sec.title||''};
+    // ① IRB 승인 유효기간 만료 — 놓치면 연구가 그 순간 중단되는 항목
+    if(m.approvalEndDate){
+      const key=p.id+'|'+site.code;
+      const prev=approvalBySite[key];
+      if(!prev || m.approvalEndDate>prev.date)
+        approvalBySite[key]=Object.assign({}, base, {date:m.approvalEndDate});
+    }
+    // ② 중간보고 보고 가능일
+    if(sec.type==='interim' && m.reportableDate){
+      const i=dueInfo(m.reportableDate);
+      if(i && i.days<=DUE_HORIZON)
+        out.push(Object.assign({}, base, {kind:'중간보고 가능', kcls:'k-interim', date:m.reportableDate, info:i, note:i.days<=0?'지금 보고할 수 있어요':''}));
+    }
+    // ③ 접수는 됐는데 승인이 안 떨어진 건
+    if(m.receiptDate && !m.approvalDate){
+      const n=daysSince(m.receiptDate);
+      if(n!=null && n>=DUE_UNANSWERED_DAYS)
+        out.push(Object.assign({}, base, {kind:'승인 무응답', kcls:'k-silent', date:m.receiptDate,
+          info:{days:-n, cls:'d-over', txt:'접수 후 '+n+'일'}, note:'IRB에 진행 상황 확인'}));
+    }
+    // ④ 제출했는데 접수가 안 된 건
+    const sub=m.craSubmitDate||m.piSubmitDate;
+    if(sub && !m.receiptDate){
+      const n=daysSince(sub);
+      if(n!=null && n>=DUE_PENDING_RECEIPT_DAYS)
+        out.push(Object.assign({}, base, {kind:'접수 대기', kcls:'k-pending', date:sub,
+          info:{days:-n, cls:'d-warn', txt:'제출 후 '+n+'일'}, note:'접수 여부 확인'}));
+    }
+  });
+  Object.keys(approvalBySite).forEach(k=>{
+    const a=approvalBySite[k];
+    const i=dueInfo(a.date);
+    if(i && i.days<=DUE_HORIZON)
+      out.push(Object.assign({}, a, {kind:'IRB 승인 만료', kcls:'k-exp', info:i, note:'지속심의 · 연장 신청 준비'}));
+  });
+  // ⑤ 문서 유효기간 (버전 로그의 기준문서 + 기관별 셀)
+  (protocols||[]).forEach(p=>{
+    const pd=protocolData[p.id]; if(!pd||!pd.verMaster) return;
+    const pname=protoLabel(p);
+    (pd.verMaster.docs||[]).forEach(doc=>{
+      if(!doc.expiry) return;
+      const i=dueInfo(doc.expiry);
+      if(i && i.days<=DUE_HORIZON)
+        out.push({pid:p.id, pname, code:'', sname:'(과제 공통)', sec:'버전 로그',
+                  kind:'문서 유효기간', kcls:'k-doc', date:doc.expiry, info:i, note:doc.name||''});
+    });
+    Object.keys(pd.verMaster.cells||{}).forEach(k=>{
+      const cell=pd.verMaster.cells[k]; if(!cell||!cell.expiry) return;
+      const i=dueInfo(cell.expiry); if(!i||i.days>DUE_HORIZON) return;
+      const code=k.split('|')[0];
+      const doc=(pd.verMaster.docs||[]).find(d=>d.id===k.slice(code.length+1));
+      const site=(pd.sites||[]).find(x=>x.code===code);
+      out.push({pid:p.id, pname, code, sname:site?(site.name||''):'', sec:'버전 로그',
+                kind:'문서 유효기간', kcls:'k-doc', date:cell.expiry, info:i, note:doc?doc.name:''});
+    });
+  });
+  out.sort((a,b)=>a.info.days-b.info.days);   // 급한 것부터
+  return out;
+}
+// 탭 배지가 매 렌더마다 전체를 훑지 않도록 짧게 캐시 (saveData 에서 무효화)
+let _dueCache=null, _dueCacheAt=0;
+function invalidateDueCache(){ _dueCacheAt=0; }
+function dueItemsCached(){
+  const now=Date.now();
+  if(_dueCache && now-_dueCacheAt<1500) return _dueCache;
+  _dueCache=dueItems(); _dueCacheAt=now;
+  return _dueCache;
+}
+function dueVisible(items){
+  return dueShowOld ? items : items.filter(x=>x.info.days>=-DUE_OLD_LIMIT);
+}
+function dueAlarmCount(){
+  try{ return dueVisible(dueItemsCached()).filter(x=>x.info.days<=30).length; }catch(e){ return 0; }
+}
+
+/* 기관별 처리 소요일 — 제출→접수, 접수→승인 중앙값과 재제출 횟수.
+   "이 기관은 얼마나 걸리나 / 보완이 잦은가" 를 다음 스터디 일정 예측에 쓴다. */
+function turnaroundStats(){
+  const by={};
+  eachSection((p,site,sec)=>{
+    const m=sec.meta||{};
+    const key=site.code+'|'+(site.name||'');
+    if(!by[key]) by[key]={code:site.code, name:site.name||'', sub2rec:[], rec2app:[], resub:0, done:0};
+    const b=by[key];
+    const sub=m.craSubmitDate||m.piSubmitDate;
+    const a=daysBetween(sub, m.receiptDate);       if(a!=null && a>=0) b.sub2rec.push(a);
+    const c=daysBetween(m.receiptDate, m.approvalDate); if(c!=null && c>=0) b.rec2app.push(c);
+    if(m.approvalDate){ b.done++; b.resub+=((m.resubmits||[]).length); }
+  });
+  return Object.keys(by).map(k=>by[k])
+    .filter(b=>b.sub2rec.length||b.rec2app.length)
+    .sort((x,y)=>(median(y.rec2app)||0)-(median(x.rec2app)||0));
+}
+
+function switchDue(){
+  curView='due'; curIndexType=null;
+  addingDoc=null; showSecForm=false; searchTerm='';
+  renderTabs(); renderBody();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleDueOld(){ dueShowOld=!dueShowOld; renderTabs(); renderBody(); }  // 탭 배지도 같이 갱신
+// 대시보드에서 해당 과제·기관으로 바로 이동
+function gotoDue(pid, code){
+  if(pid && pid!==curProtocolId){
+    syncCurrentProtocolData();
+    curProtocolId=pid;
+    bindCurrentProtocol();
+  }
+  if(code){ curSite=code; curView='site'; openSiteInfo(code); }
+  else { curView='home'; }
+  addingDoc=null; showSecForm=false; searchTerm='';
+  saveData(); render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderDueBody(){
+  const wrap=document.getElementById('bodyWrap');
+  const all=dueItemsCached();
+  const items=dueVisible(all);
+  const hiddenN=all.length-items.length;
+  const over=items.filter(x=>x.info.days<0).length;
+  const d30 =items.filter(x=>x.info.days>=0&&x.info.days<=30).length;
+  const d90 =items.filter(x=>x.info.days>30).length;
+
+  const rows=items.map(x=>`
+    <tr class="due-row" data-pid="${esc(x.pid)}" data-code="${esc(x.code)}"
+        onclick="gotoDue(this.dataset.pid,this.dataset.code)" title="클릭하면 해당 과제·기관으로 이동해요">
+      <td class="due-when"><span class="due-chip ${x.info.cls}">${esc(x.info.txt)}</span><div class="due-date">${esc(x.date||'')}</div></td>
+      <td><span class="due-kind ${x.kcls}">${esc(x.kind)}</span></td>
+      <td>${esc(x.pname)}</td>
+      <td>${x.code?esc('['+x.code+'] '):''}${esc(x.sname)}</td>
+      <td>${esc(x.sec)}</td>
+      <td class="due-note">${esc(x.note||'')}</td>
+    </tr>`).join('');
+
+  const st=turnaroundStats();
+  const statRows=st.map(b=>{
+    const a=median(b.sub2rec), c=median(b.rec2app);
+    const avgRe=b.done?(b.resub/b.done):0;
+    return `<tr>
+      <td>[${esc(b.code)}] ${esc(b.name)}</td>
+      <td class="due-num">${a==null?'-':a+'일'}<span style="font-weight:400;color:#9aa3b2;font-size:11.5px"> (${b.sub2rec.length}건)</span></td>
+      <td class="due-num${(c!=null&&c>=30)?' due-slow':''}">${c==null?'-':c+'일'}<span style="font-weight:400;color:#9aa3b2;font-size:11.5px"> (${b.rec2app.length}건)</span></td>
+      <td class="due-num">${b.done?avgRe.toFixed(1)+'회':'-'}</td>
+      <td class="due-num">${b.done}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:18.5px;font-weight:700">📅 마감 · 지연</div>
+        <div style="font-size:13.5px;color:#787774;margin-top:2px">
+          모든 과제 · 모든 기관을 한 번에 봅니다. 이미 입력해 둔 날짜로 계산해요 (새로 적을 건 없어요).
+        </div>
+      </div>
+    </div>
+    <div class="due-sum">
+      <div class="due-sum-card s-over"><b>${over}</b><span>기한 경과 · 지연</span></div>
+      <div class="due-sum-card s-warn"><b>${d30}</b><span>30일 이내</span></div>
+      <div class="due-sum-card s-soon"><b>${d90}</b><span>90일 이내</span></div>
+    </div>
+    <div class="due-toolbar">
+      <button class="btn" onclick="toggleDueOld()" title="1년 넘게 지난 항목은 종료된 과제일 가능성이 커서 기본으로 숨겨요">
+        ${dueShowOld?'⊟ 오래된 경과 숨기기':'⊞ 오래된 경과 보기'}${hiddenN?` (${hiddenN})`:''}
+      </button>
+      <span style="font-size:12.5px;color:#9aa3b2">
+        기준 — 승인 만료·문서 유효기간: 90일 전부터 / 승인 무응답: 접수 후 ${DUE_UNANSWERED_DAYS}일 / 접수 대기: 제출 후 ${DUE_PENDING_RECEIPT_DAYS}일
+      </span>
+    </div>
+    ${items.length?`<div class="due-wrap"><table class="due-table">
+      <thead><tr><th>기한</th><th>종류</th><th>과제</th><th>기관</th><th>섹션</th><th>메모</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`
+      :`<div class="due-empty">지금 챙길 항목이 없어요 👍<br>
+        <span style="font-size:13px">IRB 승인 기간 · 접수일 · 승인일을 적어두면 여기에 자동으로 모여요.</span></div>`}
+
+    <div class="due-sec-title">기관별 처리 소요일</div>
+    <div class="due-sec-desc">승인까지 끝난 건으로 계산한 중앙값이에요. 다음 스터디 일정을 잡거나, 어느 기관이 오래 걸리는지 볼 때 씁니다.</div>
+    ${st.length?`<div class="due-wrap" style="max-height:40vh"><table class="due-table">
+      <thead><tr><th>기관</th><th>제출 → 접수</th><th>접수 → 승인</th><th>평균 재제출</th><th>승인 완료 건수</th></tr></thead>
+      <tbody>${statRows}</tbody></table></div>`
+      :`<div class="due-empty">아직 계산할 자료가 없어요.<br>
+        <span style="font-size:13px">섹션의 <b>CRA 제출일 · 접수일 · IRB 승인일</b>을 채우면 기관별 소요일이 쌓여요.</span></div>`}
+  `;
+}
+
 function switchVerLog(){
   curView='verlog'; curIndexType=null;
   addingDoc=null; showSecForm=false; searchTerm='';
@@ -3825,6 +4438,7 @@ function renderHomeBody(){
 
 function renderBody(){
   if(curView==='home'){ renderHomeBody(); return; }
+  if(curView==='due'){ renderDueBody(); return; }
   if(curView==='verlog'){ renderVerLogBody(); return; }
   if(curView==='index'){ renderIndexBody(); return; }
   const wrap=document.getElementById('bodyWrap');
@@ -4075,9 +4689,17 @@ function autoGrow(el){
 // 저장: noteHtml(서식 포함) + note(순수 텍스트 — 검색/CSV/알람 호환)
 function escHtml2(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function noteToHtml(row){ return fieldHtml(row,'note'); }
+// 위험한 구성요소가 들어 있는지 빠르게 판별 (매 렌더마다 도는 경로라 정규식으로 1차 선별)
+const RICH_UNSAFE=/<\s*(script|iframe|object|embed|style|link|meta|svg|img|video|audio|form|input|button|a)\b|\son\w+\s*=|javascript:|data:text\/html/i;
 function fieldHtml(obj,field){
   if(!obj) return '';
-  if(obj[field+'Html']) return obj[field+'Html'];
+  const h=obj[field+'Html'];
+  if(h){
+    // richCommit 은 '내가 저장할 때' 만 sanitize 한다.
+    // 인계·가져오기·클라우드로 들어온 서식 HTML 은 한 번도 검사된 적이 없으므로
+    // 렌더 직전에 한 번 더 막는다. 정상 데이터는 정규식만 타고 지나간다.
+    return RICH_UNSAFE.test(h) ? sanitizeNoteHtml(h) : h;
+  }
   return escHtml2(obj[field]||'').replace(/\n/g,'<br>');
 }
 // 서식 가능한 칸 만들기. kind/args 로 저장 대상 객체를 찾고 field(텍스트)+fieldHtml(서식)에 저장
@@ -4238,6 +4860,20 @@ function importIndexCSV(type){
           }
         }
         const stMap={'미확인':'pend','진행중':'wip','완료':'ok','이슈':'issue'};
+        // ── 섹션 헤더 판정 준비 ──────────────────────────────────
+        // 예전 규칙은 "다른 칸이 다 비었고 No.가 정수면 섹션 헤더"였는데,
+        // 빈 양식 CSV(= No.+문서명만 있고 나머지 공란)를 불러오면 모든 줄이
+        // 섹션 헤더로 바뀌어 문서 항목이 하나도 안 생겼음.
+        // 이 앱의 번호 규칙(섹션=1, 그 안의 항목=1.1)을 근거로 바꾼다:
+        //   · 파일에 점 번호(1.1 같은)가 하나도 없으면 = 평면 번호 → 섹션 없음
+        //   · 점 번호가 있으면, 정수 No. 중 자기 하위 항목을 가진 것만 섹션
+        const allNos=[];
+        for(let i=start;i<rows.length;i++){
+          const rr=rows[i]; if(!rr) continue;
+          allNos.push(String(rr[0]||'').trim());
+        }
+        const hasDotted=allNos.some(x=>/^\d+\.\d/.test(x));
+        const hasChild=x=>allNos.some(y=>y.indexOf(x+'.')===0);
         const newRows=[];
         for(let i=start;i<rows.length;i++){
           const r=rows[i]; if(!r || r.every(c=>!String(c).trim())) continue;
@@ -4253,7 +4889,7 @@ function importIndexCSV(type){
           else if(na.toUpperCase()==='NA') naType='NA';
           if(!title && !no) continue;
           const otherEmpty=![na,status,loc,prev,thisF,note,effDate,fileName].some(c=>c);
-          const isHeader=otherEmpty && /^\d+$/.test(no) && !!title;
+          const isHeader=hasDotted && otherEmpty && /^\d+$/.test(no) && !!title && hasChild(no);
           if(isHeader){
             newRows.push({n:no, t:title, h:true, custom:true});
           } else {
@@ -4286,7 +4922,7 @@ function openCsvImportModal(){
   const p=pendingCsvImport; if(!p) return;
   let m=document.getElementById('csvImportModal');
   if(!m){ m=document.createElement('div'); m.id='csvImportModal'; document.body.appendChild(m); }
-  const cntTxt=`항목 ${p.itemN}개${p.secN?` · 섹션 ${p.secN}개`:''}`;
+  const cntTxt=`항목 ${p.itemN}개${p.secN?` · 섹션 ${p.secN}개`:' · 섹션 없음(전부 항목으로 인식)'}`;
   m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeCsvImportModal()">
     <div class="snap-modal" style="width:420px">
       <h3>📥 CSV 불러오기</h3>
@@ -4324,22 +4960,24 @@ function exportIndexCSV(type){
   const rows=getIndexRows(type);
   const cur=getCurProtocol();
   let csv='\uFEFF';
-  csv+=`Protocol,${(cur?.protocolNo||cur?.name||'').replace(/,/g,' ')}\n`;
-  csv+=`Index,${type}\n\n`;
+  csv+='Protocol,'+csvQ1(cur?.protocolNo||cur?.name||'')+'\n';
+  csv+='Index,'+csvQ1(type)+'\n\n';
   const ckCols=idxCheckCols(type);
-  csv+='No,Title,NA,Status,Location/FileName,PrevFiling,ThisFiling,Note,EffDate,FileName'+ckCols.map(c=>','+(c.label||'').replace(/,/g,' ')).join('')+'\n';
+  csv+=['No','Title','NA','Status','Location/FileName','PrevFiling','ThisFiling','Note','EffDate','FileName']
+         .concat(ckCols.map(c=>c.label||'')).map(csvQ1).join(',')+'\n';
   const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
   rows.forEach(r=>{
-    if(r.h){ csv+=`${r.n},"${r.t}",,,,,,,,`+ckCols.map(()=>',').join('')+`\n`; return; }
-    const q=s=>`"${(s||'').replace(/"/g,'""')}"`;
+    if(r.h){ // 섹션 헤더 줄: No + 제목만 채우고 나머지는 빈 칸
+      csv+=[r.n, r.t].concat(new Array(8+ckCols.length).fill('')).map(csvQ1).join(',')+'\n';
+      return;
+    }
     const naOut=r.naType||(r.na?'NA':'');
-    csv+=`${r.n},${q(r.t)},${naOut},${r.na?'':stLabel[r.status]||''},${q(r.location)},${q(r.prevFiling)},${q(r.thisFiling)},${q(r.note)},${q(r.effDate)},${q(r.fileName)}`+ckCols.map(c=>','+((r.chk&&r.chk[c.id])?'O':'')).join('')+`\n`;
+    csv+=[r.n, r.t, naOut, r.na?'':(stLabel[r.status]||''), r.location, r.prevFiling,
+          r.thisFiling, r.note, r.effDate, r.fileName]
+           .concat(ckCols.map(c=>(r.chk&&r.chk[c.id])?'O':''))
+           .map(csvQ1).join(',')+'\n';
   });
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`${(cur?.protocolNo||'protocol')}_${type}_Index.csv`;
-  a.click();
+  downloadCSV(csv, `${(cur?.protocolNo||'protocol')}_${type}_Index.csv`);
 }
 // ── 문서 표 컬럼 폭 (드래그로 조절, 모든 섹션 공통 적용) ──
 const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,200];
@@ -4448,7 +5086,7 @@ function renderSection(code, sec){
     <div class="sec-header" onclick="toggleSec('${code}','${sec.id}')">
       <span class="sec-grip" title="드래그하여 순서 변경" onclick="event.stopPropagation()">⠿</span>
       <span class="chevron${isOpen?' open':''}">▶</span>
-      <span class="sec-title">${sec.title}</span>
+      <span class="sec-title">${esc(sec.title)}</span>
       <span class="sec-badge ${bc}">${done}/${tot}</span>
       <button class="sec-del-btn" onclick="event.stopPropagation();delSection('${code}','${sec.id}')" title="섹션 삭제">✕</button>
     </div>
@@ -4463,7 +5101,7 @@ function renderSection(code, sec){
       ${secColgroup()}
       <thead><tr>
         <th><button class="bulk-del-th" onclick="bulkDelSelected('${code}','${sec.id}')" title="선택한 항목 일괄 삭제">✕</button></th>
-        <th><input type="checkbox" id="selectAllCb" onchange="const code=getCurSite();const sec=getSec(code,curSecId);if(sec){const all=sec.rows.every(r=>r.selected);sec.rows.forEach(r=>r.selected=!all);saveData();renderBody();}"></th>
+        <th><input type="checkbox" id="selectAllCb_${sec.id}" ${sec.rows.length&&sec.rows.every(r=>r.selected)?'checked':''} title="이 섹션의 모든 문서 선택 / 해제" onchange="toggleSelectAll('${code}','${sec.id}')"></th>
         <th title="문서 종류 (신청서·의뢰서·동의서·통지서 등). 추가할 때 선택해요.">구분<span class="col-rsz" data-ci="2"></span></th>
         <th title="문서 이름. 더블클릭하면 이름을 수정할 수 있어요.">문서명<span class="col-rsz" data-ci="3"></span></th>
         <th title="TMF(Trial Master File)에 보관된 실제 파일명을 적어요.">TMF 파일명<span class="col-rsz" data-ci="4"></span></th>
@@ -4482,7 +5120,12 @@ function renderSection(code, sec){
   </div>`;
 }
 
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+// 화면에 넣기 전 이스케이프. & " 만 처리하던 탓에 '<' 가 그대로 흘러 들어가
+// 문서명에 < 가 있으면 그 부분이 통째로 사라졌고(예: Protocol <Amendment 3>),
+// 남이 만든 데이터를 렌더할 때 스크립트가 심길 수도 있었다. 5종 전부 처리한다.
+function esc(s){return(s||'').toString()
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function na(){return '<span class="na-cell">-</span>';}
 
 // ── 기관별 계약 정보 패널 렌더링 ───────────────────────────────────
@@ -4630,7 +5273,6 @@ function rowHtml(code,secId,idx,row,total){
   const hidden=!matchSearch(row.name);
   const upDisabled=idx===0?'disabled':'';
   const downDisabled=idx===total-1?'disabled':'';
-  const dday=calcDday(row.deadline);
   const histTxt=row.history&&row.history.length>0?`<span class="history-icon" onclick="showHistory('${code}','${secId}',${idx})">📋</span>`:'';
   return `<tr class="${hidden?'row-hidden':''}${row.selected?' row-selected':''}">
     <td style="width:22px"><button class="del-btn" onclick="delRow('${code}','${secId}',${idx})" title="삭제">✕</button></td>
@@ -4741,6 +5383,16 @@ function onSelChange(sel,code,secId,idx){
 let suppressSecClick=false;
 // ━━━━━━━━━━━━ 첨부파일 (Supabase Storage) ━━━━━━━━━━━━
 const ATTACH_BUCKET='attachments';
+// 첨부 링크는 사용자가 prompt 로 직접 붙여넣는 값이라 스킴 검증이 필요하다.
+// javascript: / data:text/html / vbscript: 는 클릭 한 번에 스크립트가 도는 경로.
+// http(s) 만 허용하고, 스킴이 없으면 https:// 를 붙인다. 그 외는 거절('').
+function safeUrl(u){
+  const v=String(u==null?'':u).trim();
+  if(!v) return '';
+  if(/^https?:\/\//i.test(v)) return v;
+  if(/^[a-z][a-z0-9+.-]*:/i.test(v)) return '';   // 다른 스킴은 허용하지 않음
+  return 'https://'+v;                            // 스킴 없는 주소는 https 로
+}
 function attToast(msg){
   let t=document.getElementById('attToast');
   if(!t){ t=document.createElement('div'); t.id='attToast';
@@ -4751,15 +5403,44 @@ function attToast(msg){
 function safeName(n){ return String(n||'file').replace(/[^\w.\-가-힣]/g,'_'); }
 async function uploadToBucket(file, prefix){
   if(!window.supabaseClient){ alert('클라우드(Supabase) 연결이 안 돼 있어 파일 업로드를 할 수 없어요. 링크 첨부는 가능해요.'); return null; }
-  const path=prefix+'/'+Date.now()+'_'+safeName(file.name);
+  if(!CLOUD_ID){ alert('로그인 상태에서만 파일을 올릴 수 있어요.'); return null; }
+  // 경로 맨 앞에 사용자 id 를 둔다: 'u/<내 id>/...'
+  // 예전에는 sec/{기관코드}/... 로 시작해서 사용자 구분이 없었고,
+  // 그 탓에 스토리지 권한을 '로그인한 사람 전체' 단위로밖에 걸 수 없었다.
+  // (= 다른 가입자도 내 첨부를 읽을 수 있는 구조)
+  const path='u/'+CLOUD_ID+'/'+prefix+'/'+Date.now()+'_'+safeName(file.name);
   attToast('업로드 중… '+file.name);
   try{
     const {error}=await window.supabaseClient.storage.from(ATTACH_BUCKET).upload(path, file, {upsert:false, contentType:file.type||undefined});
     if(error){ attToast(''); alert('업로드 실패: '+error.message+'\n\nSupabase에 attachments 버킷과 업로드 권한이 설정돼 있는지 확인해주세요.'); return null; }
-    const {data}=window.supabaseClient.storage.from(ATTACH_BUCKET).getPublicUrl(path);
     attToast('✅ 업로드 완료'); setTimeout(()=>attToast(''),1200);
-    return {id:makeId('att'), kind:'file', name:file.name, url:data.publicUrl, path:path, size:file.size};
+    // 공개 URL(getPublicUrl)은 저장하지 않는다.
+    // 임상시험 문서(승인서·동의서·계획서)가 주소만 알면 로그인 없이 열리기 때문.
+    // 경로만 남기고, 열 때마다 짧게 유효한 서명 URL 을 즉석에서 발급한다.
+    return {id:makeId('att'), kind:'file', name:file.name, url:'', path:path, size:file.size};
   }catch(e){ attToast(''); alert('업로드 중 오류: '+e.message); return null; }
+}
+// 첨부 파일 다운로드: 클릭 시점에 60초짜리 서명 URL 을 받아서 연다.
+// path 가 있으면 항상 서명 URL 을 쓰므로, 버킷을 비공개로 바꿔도 예전 첨부까지 그대로 열린다.
+async function attDownload(el){
+  const span=el.closest && el.closest('.att-chip'); if(!span) return;
+  const path=span.dataset.path||'';
+  const name=span.dataset.name||'file';
+  if(path && window.supabaseClient){
+    try{
+      const {data,error}=await window.supabaseClient.storage
+        .from(ATTACH_BUCKET).createSignedUrl(path, 60, {download:name});
+      if(error) throw error;
+      window.open(data.signedUrl,'_blank','noopener');
+      return;
+    }catch(e){
+      alert('다운로드 링크를 만들지 못했어요: '+(e.message||e)+'\n\nSupabase Storage 의 attachments 버킷 읽기 권한을 확인해주세요.');
+      return;
+    }
+  }
+  const legacy=safeUrl(span.dataset.url||'');   // path 가 없던 예전 첨부 호환
+  if(!legacy){ alert('다운로드 주소를 찾을 수 없어요.'); return; }
+  window.open(legacy,'_blank','noopener');
 }
 async function removeFromBucket(att){
   if(att && att.kind==='file' && att.path && window.supabaseClient){
@@ -4770,24 +5451,24 @@ let attClickTimer=null;
 function attChipHtml(scope,a,b,att){
   const isLink=att.kind==='link';
   const delCall = scope==='sec' ? `secDelAtt('${a}','${b}','${att.id}')` : `idxDelAtt('${a}',${b},'${att.id}')`;
-  const dataAttrs=`data-scope="${scope}" data-a="${esc(String(a))}" data-b="${esc(String(b))}" data-attid="${att.id}" data-url="${esc(att.url)}"`;
+  const url=safeUrl(att.url);   // 예전에 저장된 값도 렌더 시점에 한 번 더 거른다
+  const dataAttrs=`data-scope="${scope}" data-a="${esc(String(a))}" data-b="${esc(String(b))}" data-attid="${att.id}" data-url="${esc(url)}" data-path="${esc(att.path||'')}" data-name="${esc(att.name||'')}"`;
   if(isLink){
     return `<span class="att-chip link" ${dataAttrs} ondblclick="attEditStart(this)" title="클릭: 열기 · 더블클릭: 수정/복사">
       <span class="att-link-text" onclick="event.stopPropagation();attLinkClick(this)">🔗 ${esc(att.name)}</span>
       <button onclick="event.stopPropagation();${delCall}" title="첨부 삭제">✕</button>
     </span>`;
   }
-  // 파일: 클릭 시 다운로드 (Supabase ?download 파라미터로 강제 다운로드)
-  const dlUrl=att.url + (att.url.includes('?')?'&':'?') + 'download';
+  // 파일: 클릭하는 순간 서명 URL 을 발급받아 연다 (주소를 문서에 남기지 않음)
   return `<span class="att-chip file" ${dataAttrs} title="클릭하여 다운로드">
-    <a href="${esc(dlUrl)}" download="${esc(att.name)}" onclick="event.stopPropagation()">📎 ${esc(att.name)}</a>
+    <a href="#" onclick="event.preventDefault();event.stopPropagation();attDownload(this)">📎 ${esc(att.name)}</a>
     <button onclick="event.stopPropagation();${delCall}" title="첨부 삭제">✕</button>
   </span>`;
 }
 function attLinkClick(el){
   // 단일 클릭=열기, 더블클릭=수정 구분
   if(attClickTimer){ return; }
-  const span=el.closest('.att-chip'); const url=span&&span.dataset.url;
+  const span=el.closest('.att-chip'); const url=safeUrl(span&&span.dataset.url);
   attClickTimer=setTimeout(()=>{ attClickTimer=null; if(url) window.open(url,'_blank','noopener'); }, 240);
 }
 function attEditStart(span){
@@ -4807,7 +5488,12 @@ function attSetUrl(scope,a,b,attId,url){
   const arr = scope==='sec' ? getSecAtt(a,b) : getIdxAtt(a, +b);
   const att=arr.find(x=>x.id===attId);
   if(!att) return;
-  att.url=String(url||'').trim();
+  const safe=safeUrl(url);
+  if(String(url||'').trim() && !safe){
+    alert('이 주소는 링크로 넣을 수 없어요.\nhttp:// 또는 https:// 주소만 사용할 수 있어요.');
+    renderBody(); return;
+  }
+  att.url=safe;
   saveData(); renderBody();
 }
 
@@ -4820,9 +5506,11 @@ async function secUploadFile(code,secId,inputEl){
   if(att){ getSecAtt(code,secId).push(att); saveData(); renderBody(); }
 }
 function secAddLink(code,secId){
-  const url=prompt('링크(URL)를 붙여넣어 주세요\n예: 구글드라이브/SharePoint 파일 링크'); if(!url) return;
+  const raw=prompt('링크(URL)를 붙여넣어 주세요\n예: 구글드라이브/SharePoint 파일 링크'); if(!raw) return;
+  const url=safeUrl(raw);
+  if(!url){ alert('이 주소는 링크로 넣을 수 없어요.\nhttp:// 또는 https:// 주소만 사용할 수 있어요.'); return; }
   const name=prompt('표시할 이름', (url.split('/').pop()||'링크').slice(0,60))||url;
-  getSecAtt(code,secId).push({id:makeId('att'),kind:'link',name:name.trim(),url:url.trim()});
+  getSecAtt(code,secId).push({id:makeId('att'),kind:'link',name:name.trim(),url:url});
   saveData(); renderBody();
 }
 async function secDelAtt(code,secId,id){
@@ -4851,9 +5539,11 @@ async function idxUploadFile(indexType,idx,inputEl){
   if(att){ getIdxAtt(indexType,idx).push(att); saveData(); renderBody(); }
 }
 function idxAddLink(indexType,idx){
-  const url=prompt('링크(URL)를 붙여넣어 주세요'); if(!url) return;
+  const raw=prompt('링크(URL)를 붙여넣어 주세요'); if(!raw) return;
+  const url=safeUrl(raw);
+  if(!url){ alert('이 주소는 링크로 넣을 수 없어요.\nhttp:// 또는 https:// 주소만 사용할 수 있어요.'); return; }
   const name=prompt('표시할 이름', (url.split('/').pop()||'링크').slice(0,60))||url;
-  getIdxAtt(indexType,idx).push({id:makeId('att'),kind:'link',name:name.trim(),url:url.trim()});
+  getIdxAtt(indexType,idx).push({id:makeId('att'),kind:'link',name:name.trim(),url:url});
   saveData(); renderBody();
 }
 async function idxDelAtt(indexType,idx,id){
@@ -5082,40 +5772,60 @@ function switchSite(code){curView='site';curSite=code;addingDoc=null;showSecForm
 function openSiteModal(){document.getElementById('siteModal').classList.add('show');document.getElementById('siteCodeInput').focus();}
 function closeSiteModal(){document.getElementById('siteModal').classList.remove('show');document.getElementById('siteCodeInput').value='';document.getElementById('siteNameInput').value='';}
 function addSite(){
-  const code=document.getElementById('siteCodeInput').value.trim();
+  const rawCode=document.getElementById('siteCodeInput').value.trim();
+  const code=normSiteCode(rawCode);
   const name=document.getElementById('siteNameInput').value.trim();
   if(!code||!name){alert('기관 코드와 기관명을 모두 입력해주세요');return;}
+  if(code!==rawCode){ alert(`기관 코드에 쓸 수 없는 문자를 빼고 '${code}' 로 저장할게요.\n(따옴표 " ' \` 와 \\ < > & 는 화면이 깨져서 쓸 수 없어요)`); }
   if(sites.find(s=>s.code===code)){alert('이미 존재하는 기관 코드입니다');return;}
   sites.push({code,name,contractNo:'',contractDate:'',contractAmount:'',sponsor:'',piName:'',contractNote:''}); initSite(code); curSite=code;
   saveData(); closeSiteModal(); render();
 }
 function deleteSite(code){
-  if(!confirm('"'+code+'" 기관을 삭제할까요? 모든 데이터가 삭제됩니다.')) return;
+  const site=sites.find(s=>s.code===code);
+  const label=site?(code+' '+(site.name||'')).trim():code;
+  if(!confirm('"'+label+'" 기관을 삭제할까요?\n\n문서표 · Index · 체크 칸 · 방문 이력 · 계약 정보가 모두 지워져요.\n(⏱ 백업 복원으로 되돌릴 수 있어요)')) return;
   sites=sites.filter(s=>s.code!==code);
   delete sections[code];
+  // 기관코드로 키가 걸린 나머지 저장소도 같이 정리한다.
+  // 안 지우면 유령 데이터로 남았다가, 나중에 같은 코드로 기관을 다시 만들 때
+  // 예전 Index·체크 칸·방문 이력이 그대로 되살아나 다른 기관 데이터와 섞였음.
+  remapSiteKeys(protocolData[curProtocolId], code, null);
+  remapSiteUiState(code, null);
   curSite=sites[0]?.code||null;
   saveData(); render();
 }
 
 function exportCSV(){
-  let csv='\uFEFFContract No.(프로토콜),Project,Protocol No.,Sponsor,Study Type,기관코드,기관명,기관Contract No.,계약일,계약금액,의뢰사(기관),PI,계약비고,섹션,문서명,구분,TMF파일명,서버 내 파일명,버전,Master Ver.,Site Ver.,Effective Date,상태,승인서 승인일,승인서 통지일,CRA 제출일,PI 제출일,접수일,승인일,비고\n';
+  const head=['Contract No.(프로토콜)','Project','Protocol No.','Sponsor','Study Type',
+    '기관코드','기관명','기관Contract No.','계약일','계약금액','의뢰사(기관)','PI','계약비고',
+    '섹션','문서명','구분','TMF파일명','서버 내 파일명','버전','Master Ver.','Site Ver.',
+    'Effective Date','상태','승인서 승인일','승인서 통지일','CRA 제출일','PI 제출일',
+    '접수일','승인일','비고'];
+  let csv='\uFEFF'+head.map(csvQ).join(',')+'\n';
   protocols.forEach(protocol=>{
     const pdata=protocolData[protocol.id]||{sites:[],sections:{}};
     (pdata.sites||[]).forEach(site=>{
       (pdata.sections?.[site.code]||[]).forEach(sec=>{
         const meta=ensureSecMeta(sec);
-        sec.rows.forEach(r=>{
+        (sec.rows||[]).forEach(r=>{
           const st=STATUSES.find(s=>s.val===r.status)?.label||'';
           const isApproval=(r.name||'').includes('승인서') || (r.name||'').toLowerCase().includes('approval');
-          csv+=`"${(protocol.contractNo||'').replace(/"/g,'""')}","${(protocol.projectName||'').replace(/"/g,'""')}","${(protocol.protocolNo||protocol.name||'').replace(/"/g,'""')}","${(protocol.sponsor||'').replace(/"/g,'""')}","${(protocol.studyType||'').replace(/"/g,'""')}","${site.code}","${site.name}","${(site.contractNo||'').replace(/"/g,'""')}","${site.contractDate||''}","${(site.contractAmount||'').replace(/"/g,'""')}","${(site.sponsor||'').replace(/"/g,'""')}","${(site.piName||'').replace(/"/g,'""')}","${(site.contractNote||'').replace(/\n/g,' ').replace(/"/g,'""')}","${sec.title}","${r.name}","${DTYPE_INFO[r.dtype]?.label||''}","${r.tmfName||''}","${r.serverFileName||''}","${r.ver||''}","${r.masterVer||''}","${r.siteVer||''}","${r.effectiveDate||''}","${st}","${isApproval?(meta.approvalDate||''):''}","${isApproval?(meta.noticeDate||''):''}","${meta.craSubmitDate||''}","${meta.piSubmitDate||''}","${r.receiptDate||''}","${r.approveDate||''}","${(r.note||'').replace(/"/g,'""')}"\n`;
+          csv+=[
+            protocol.contractNo, protocol.projectName, protocol.protocolNo||protocol.name,
+            protocol.sponsor, protocol.studyType,
+            site.code, site.name, site.contractNo, site.contractDate, site.contractAmount,
+            site.sponsor, site.piName, site.contractNote,
+            sec.title, r.name, DTYPE_INFO[r.dtype]?.label||'',
+            r.tmfName, r.serverFileName, r.ver, r.masterVer, r.siteVer, r.effectiveDate, st,
+            isApproval?meta.approvalDate:'', isApproval?meta.noticeDate:'',
+            meta.craSubmitDate, meta.piSubmitDate, r.receiptDate, r.approveDate, r.note
+          ].map(csvQ1).join(',')+'\n';
         });
       });
     });
   });
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download='IRB_Tracker_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
+  downloadCSV(csv, 'IRB_Tracker_'+new Date().toISOString().slice(0,10)+'.csv');
 }
 
 document.getElementById('siteNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSite();});
@@ -5144,6 +5854,8 @@ function applySiteImport(data){
   if(!data || data.type!=='irb-tracker-site-import'){
     alert('이 트래커용 가져오기 파일이 아니에요.'); return;
   }
+  // 파일은 외부 입력이다 — 서식 HTML 을 먼저 씻어낸다
+  try{ sanitizeDataHtmlFields(data); }catch(e){ console.warn('가져오기 데이터 정화 실패:',e); }
   const site=data.site||null;
   const hasIndexes=Array.isArray(data.indexes)&&data.indexes.length>0;
   if(!site && !hasIndexes){ alert('가져올 기관 또는 Index 데이터가 없어요.'); return; }
@@ -5210,11 +5922,15 @@ function applySiteImport(data){
   }
 
   // 4) Index 가져오기 (ISF/PSF/TMF)
-  if(hasIndexes){
+  // Index 는 기관별로 저장된다 (키: '기관코드::타입__템플릿키').
+  // 저장 키를 직접 조립하면 읽는 쪽(getIndexRows)과 어긋나므로,
+  // 반드시 읽기와 같은 indexStoreKey() 를 써서 키를 만든다.
+  if(hasIndexes && !curSite){
+    alert('Index 를 담을 기관이 없어요.\n기관을 먼저 추가한 뒤 다시 가져와주세요.');
+  } else if(hasIndexes){
     data.indexes.forEach(ix=>{
       const it=ix.indexType||'TMF';
-      const tk=ix.templateKey||(it+'_PMS');
-      const storeKey=it+'__'+tk;
+      const storeKey=indexStoreKey(it);
       const rows=(ix.rows||[]).map(r=>({
         n:r.n||'', t:r.t||'', h:!!r.h, sub:r.sub||null, ref:r.ref||'',
         na:!!r.na, status:r.status||'pend', location:r.location||'', note:r.note||''
@@ -5226,8 +5942,14 @@ function applySiteImport(data){
       }
       if(overwrite){
         protocolData[target.id].indexes[storeKey]=rows;
+        // 기본 3종(ISF/PSF/TMF)이 아닌 이름이면 이 기관의 커스텀 Index 탭으로 등록해야
+        // 탭이 생기고 사용자가 열어볼 수 있다
+        if(!['ISF','PSF','TMF'].includes(it)){
+          const customs=siteCustomIndexes();
+          if(!customs.includes(it)) customs.push(it);
+        }
         const cnt=rows.filter(r=>!r.h).length;
-        summary+=`\n${it} Index: ${cnt}개 항목`;
+        summary+=`\n${it} Index: ${cnt}개 항목 (기관 ${curSiteCode()})`;
         if(!site){ curView='index'; curIndexType=it; }
       }
     });
@@ -5358,6 +6080,7 @@ function authShowGate(){
   authMsg('');
   // 이전 사용자 데이터가 화면에 남지 않도록 비우기
   curUserId=null; CLOUD_ID=null;
+  cloudRev=null; setCloudState('unknown');
   protocols=[]; protocolData={}; sites=[]; sections={}; curProtocolId=null; curSite=null;
   render();
 }
@@ -5438,6 +6161,8 @@ let curUserEmail='';
 // 받은 자료를 기존 데이터에 '추가/병합' (덮어쓰기 X, 이름 겹치면 (인계됨))
 function mergeHandoffData(payload){
   if(!payload) return 0;
+  // 인계 자료는 '남이 만든 데이터'다 — 서식 HTML 을 그대로 렌더하면 안 된다
+  try{ sanitizeDataHtmlFields(payload); }catch(e){ console.warn('인계 자료 정화 실패:',e); }
   let inProtocols, inData;
   if(payload.protocols){ inProtocols=payload.protocols||[]; inData=payload.protocolData||{}; }
   else { const pid='leg'; inProtocols=[{id:pid,name:'인계 자료'}]; inData={[pid]:{sites:payload.sites||[],sections:payload.sections||{},indexes:{}}}; }
@@ -5458,6 +6183,18 @@ function mergeHandoffData(payload){
   });
   return added;
 }
+// 인계 자료에서 빼고 보낼 항목 (포털 비밀번호)
+const HANDOFF_STRIP_KEYS=['craPw','ctcPw','pharmPw'];
+function stripSecrets(node, depth){
+  depth=depth||0;
+  if(!node || typeof node!=='object' || depth>14) return;
+  if(Array.isArray(node)){ node.forEach(x=>stripSecrets(x, depth+1)); return; }
+  Object.keys(node).forEach(k=>{
+    if(HANDOFF_STRIP_KEYS.indexOf(k)>=0){ delete node[k]; return; }
+    const v=node[k];
+    if(v && typeof v==='object') stripSecrets(v, depth+1);
+  });
+}
 async function handoffSend(){
   if(!window.supabaseClient){ alert('로그인 상태에서만 사용할 수 있어요.'); return; }
   const raw=prompt('자료를 넘길 상대방의 이메일을 입력하세요.\n(상대가 이 트래커에 가입한 이메일이어야 받을 수 있어요)');
@@ -5465,10 +6202,13 @@ async function handoffSend(){
   const email=(raw||'').trim().toLowerCase();
   if(!/^.+@.+\..+$/.test(email)){ alert('이메일 형식이 올바르지 않아요.'); return; }
   if(email===curUserEmail){ alert('본인에게는 넘길 수 없어요.'); return; }
-  if(!confirm(email+' 님에게 현재 트래커 자료 전체를 넘길까요?\n\n· 상대가 수락하면 상대 트래커에 "추가"됩니다 (덮어쓰기 아님)\n· 겹치는 과제는 (인계됨)으로 따로 보관돼요')) return;
+  if(!confirm(email+' 님에게 현재 트래커 자료 전체를 넘길까요?\n\n· 상대가 수락하면 상대 트래커에 "추가"됩니다 (덮어쓰기 아님)\n· 겹치는 과제는 (인계됨)으로 따로 보관돼요\n· 포털 비밀번호(IRB·CTC·약국)는 빼고 보내요 — 상대가 직접 발급받아야 해요')) return;
   try{
     syncCurrentProtocolData();
-    const payload={protocols,protocolData,curProtocolId};
+    // 깊은 복사본을 만들어 비밀번호를 지운 뒤 전송한다.
+    // (내 화면의 원본 데이터는 그대로 두어야 하므로 반드시 복사본에서 지운다)
+    const payload=JSON.parse(JSON.stringify({protocols,protocolData,curProtocolId}));
+    stripSecrets(payload);
     const {error}=await window.supabaseClient.from('handoffs').insert({from_email:curUserEmail||'', to_email:email, payload:payload, status:'pending'});
     if(error){ alert('전송 실패: '+error.message); return; }
     showToastNow('✓ '+email+' 님에게 자료를 보냈어요');
