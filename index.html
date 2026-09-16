@@ -5365,7 +5365,7 @@ function rowHtml(code,secId,idx,row,total){
       </div>
     </td>
     <td>${searchTerm.trim()?`<span class="doc-name-display">${highlight(row.name)}</span>`:richField('sec',{code,sec:secId,idx},'name',row,'문서명','rich-docname')}${histTxt}</td>
-    <td>${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</td>
+    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</div></div></td>
     <td>${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
@@ -6816,6 +6816,974 @@ authInit();
   badge();
   window.memoToggle=toggle;   // 필요하면 콘솔/버튼에서 호출 가능
 })();
+</script>
+
+
+<style>
+/* ═════ TMF Namer ═════ */
+.tmfn-open{border:1px solid #dfe6e2;background:#f4f8f6;border-radius:5px;font-size:12px;line-height:1;padding:3px 4px;cursor:pointer;flex:none;margin-top:2px}
+.tmfn-open:hover{background:#e3efe7}
+#tmfnOverlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:99990;display:none;align-items:flex-start;justify-content:center;padding:4vh 14px;overflow:auto}
+#tmfnModal{--line:#dde3df;--surface:#fff;--surface2:#f2f5f3;--ink:#243029;--muted:#65756c;
+  --accent:#2F7A46;--accent-ink:#fff;--accent-soft:#E3EFE5;--qual:#2B6E8A;--date:#A16A10;--sfx:#7A7466;--idx:#7A5FA0;--focus:#2F7A46;
+  background:var(--surface);color:var(--ink);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);
+  width:min(920px,100%);max-height:92vh;overflow:auto;padding:18px 20px;font-size:14px;text-align:left}
+#tmfnModal .tmfn-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+#tmfnModal .tmfn-head h3{margin:0;font-size:17px}
+#tmfnModal select.study{font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px}
+#tmfnModal .chip{font-size:11.5px;color:var(--muted);background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+#tmfnModal .tmfn-x{margin-left:auto;border:none;background:none;font-size:18px;cursor:pointer;color:var(--muted)}
+#tmfnModal .tmfn-cols{display:grid;grid-template-columns:minmax(280px,330px) 1fr;gap:16px;align-items:start}
+@media (max-width:760px){#tmfnModal .tmfn-cols{grid-template-columns:1fr}}
+#tmfnModal .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+#tmfnModal label.f{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:3px}
+#tmfnModal .field{margin-bottom:11px}
+#tmfnModal .field .hint{font-size:11.5px;color:var(--date);margin-top:2px;font-weight:500}
+#tmfnModal input[type=text],#tmfnModal input[type=date],#tmfnModal input[type=number],#tmfnModal select{width:100%;font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:7px;padding:6px 9px;box-sizing:border-box}
+#tmfnModal select.study{width:auto}
+#tmfnModal .checkline{display:flex;align-items:center;gap:7px;margin-bottom:11px;font-size:13px}
+#tmfnModal .checkline input{accent-color:var(--accent);width:auto}
+#tmfnModal .preview-label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+#tmfnModal .fname{font-family:Consolas,'IBM Plex Mono',monospace;font-size:13.5px;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;word-break:break-all;line-height:1.55;min-height:20px}
+#tmfnModal .seg-site{color:var(--accent);font-weight:700}
+#tmfnModal .seg-doc{color:var(--ink)}
+#tmfnModal .seg-qual{color:var(--qual)}
+#tmfnModal .seg-date{color:var(--date);font-weight:700}
+#tmfnModal .seg-sfx{color:var(--sfx)}
+#tmfnModal .seg-idx{color:var(--idx);font-weight:700}
+#tmfnModal .legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+#tmfnModal .pv-block+.pv-block{margin-top:12px}
+#tmfnModal .pv-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+#tmfnModal button.primary{font:inherit;font-weight:700;font-size:12.5px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:7px;padding:6px 13px;cursor:pointer}
+#tmfnModal button.mini{padding:4px 10px;font-size:12px}
+#tmfnModal .toast{font-size:12.5px;color:var(--accent);font-weight:700;opacity:0;transition:opacity .25s}
+#tmfnModal .toast.show{opacity:1}
+#tmfnModal .example{margin-top:12px;font-size:11.5px;color:var(--muted)}
+#tmfnModal .example .ex-title{font-weight:700;margin-bottom:3px}
+#tmfnModal .example code{font-family:Consolas,monospace;font-size:11px;background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;display:inline-block;margin:1px 0;word-break:break-all}
+#tmfnModal .recent{margin-top:12px}
+#tmfnModal .recent h3{font-size:11.5px;font-weight:700;color:var(--muted);margin:0 0 6px;text-transform:uppercase}
+#tmfnModal .recent ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+#tmfnModal .recent li{display:flex;gap:8px;align-items:center}
+#tmfnModal .recent li code{font-family:Consolas,monospace;font-size:11px;color:var(--muted);word-break:break-all;flex:1}
+#tmfnModal .recent li button{border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:10.5px;border-radius:5px;padding:1px 7px;cursor:pointer}
+#tmfnModal .tmfn-insert{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+#tmfnModal .tmfn-insert button.alt{font:inherit;font-weight:600;font-size:12.5px;background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 13px;cursor:pointer}
+#tmfnModal button,#tmfnModal .pv-head,#tmfnModal .legend,#tmfnModal .preview-label,#tmfnModal label.f,#tmfnModal .checkline label{-webkit-user-select:none;user-select:none}
+</style>
+
+<div id="tmfnOverlay" onclick="if(event.target===this)this.style.display='none'">
+ <div id="tmfnModal">
+  <div class="tmfn-head">
+    <h3>🏷️ TMF Namer</h3>
+    <select class="study" id="study" aria-label="과제 선택">
+      <option value="bis">BIS · CartiLife PMS</option>
+      <option value="cvf">CVF · Tavneos PMS</option>
+      <option value="cbr">CBR · Afstyla PMS</option>
+    </select>
+    <span class="chip" id="chipProtocol"></span>
+    <span class="chip" id="chipBase"></span>
+    <button class="tmfn-x" onclick="document.getElementById('tmfnOverlay').style.display='none'" title="닫기">✕</button>
+  </div>
+  <div class="tmfn-cols">
+    <div class="panel">
+      <div class="field"><label class="f" for="doctype">문서 유형</label><select id="doctype"></select></div>
+      <div id="fields"></div>
+    </div>
+    <div>
+      <div class="panel">
+        <div id="previewBlocks"></div>
+        <div class="legend">
+          <span><b class="seg-idx">■</b> Index</span><span><b class="seg-site">■</b> 사이트</span><span><b>■</b> 문서명</span>
+          <span><b class="seg-qual">■</b> 상세</span><span><b class="seg-date">■</b> 날짜</span><span><b class="seg-sfx">■</b> 접미사</span>
+        </div>
+        <div class="tmfn-insert">
+          <button class="primary" onclick="tmfnInsert(false)">이 행 '파일명'에 입력</button>
+          <button class="alt" onclick="tmfnInsert(true)">Index 포함으로 입력</button>
+          <span class="toast" id="toast">복사됐어요</span>
+        </div>
+        <div class="example" id="example"></div>
+      </div>
+      <div class="recent panel" id="recentPanel" hidden style="margin-top:12px"><h3>최근 생성</h3><ul id="recentList"></ul></div>
+    </div>
+  </div>
+  <div hidden id="tab-gen"></div><div hidden id="tab-rules"></div><div hidden id="tab-fix"></div>
+  <div hidden id="rules-bis"></div><div hidden id="rules-cvf"></div><div hidden id="rules-cbr"></div>
+  <div hidden id="fix-bis"></div><div hidden id="fix-cvf"></div><div hidden id="fix-cbr"></div>
+ </div>
+</div>
+<script>
+
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+function today(){var d=new Date();return d.toISOString().slice(0,10)}
+function ymd(iso){return iso?iso.replace(/-/g,""):""}
+function ymdSp(iso){if(!iso)return"";var p=iso.split("-");return p[0]+" "+p[1]+p[2]}
+function dMon(iso){
+  if(!iso)return"";
+  var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var p=iso.split("-");return p[2]+m[+p[1]-1]+p[0];
+}
+function pad3(s){s=(s||"").replace(/\D/g,"");return s?s.padStart(3,"0").slice(-3):""}
+function pad2(s){s=(s||"").replace(/\D/g,"");return s?String(+s).padStart(2,"0"):""}
+function ord(n){n=+n||1;var t=n%100;if(t>=11&&t<=13)return n+"th";var u=n%10;return n+(u===1?"st":u===2?"nd":u===3?"rd":"th")}
+
+/* shared state */
+var v={site:"030",csite:"01",date:today(),date2:today(),date3:today(),event:"Amend",seq:"1",kind:"Approval",corrective:false,setMode:false,
+  additional:false,addN:"1",sameDay:"",sameDayU:"",attach:"none",attachN:"2",cattach:"none",
+  role:"PI",crole:"PI",name:"",initials:"",teamRole:"CRA",hours:"4",certVer:"(V3.0)",pptVer:"1.0",
+  masterVer:"3.3",masterDate:"2025-12-18",siteVer:"3.3",subj:"01",saeKind:"Initial",fuN:"1",
+  cKind:"Initial",cSeq:"1",visitType:"SMV",visitNo:"1",visitDoc:"report",signed:true,amendRep:false,
+  ssvDoc:"SSVR",sivDoc:"SIVR",csivDoc:"SIVR",csmvDoc:"report",setupDoc:"CV",cstaffDoc:"CV",
+  logDoc:"ICF Tracking Log",people:"",desc:"",ntfSeq:"",teamDoc:"cv",cteamDoc:"cv",
+  psrDoc:"report",psrN:"1",corrTopic:"",feasMode:"sel",hosp:"",mtgAmend:false,idxOv:"",
+  icfPop:"Adult",validOn:false,vfrom:today(),vto:today(),rangeOn:false,trCourse:"",person:"",engName:"",
+  bStaffDoc:"CV",bTeamDoc:"cv",bVisitDoc:"report",bsite:"001"};
+try{var saved=JSON.parse(localStorage.getItem("tmfnSites")||"{}");["site","csite","bsite"].forEach(function(k){if(saved[k])v[k]=saved[k]});}catch(e){}
+
+function F(key,type,label,opt){return Object.assign({key:key,type:type,label:label},opt||{})}
+var siteF=F("site","text","사이트 번호 (3자리)",{placeholder:"030"});
+var csiteF=F("csite","text","사이트 번호 (2자리)",{placeholder:"01"});
+function dateF(label,hint){return F("date","date",label||"문서 일자",{hint:hint})}
+function P(t,c){return[t,c]}
+function joinParts(parts){return parts.map(function(p){return p[0]}).join("")}
+
+/* ---------- BIS types ---------- */
+var IRB_EVENTS=[["Initial","Initial (최초)"],["Amend","Amend (변경)"],["Interim","Interim (중간·지속심의)"],["Completion","Completion (종료)"],["Result","Result (결과보고)"],["None Compliance","None Compliance"],["SAE","SAE"],["SAE Linelisting","SAE Linelisting (타기관 안전성 정보)"],["Corrective","Corrective"],["Other","Other"]];
+var NO_SEQ={"Initial":1,"Completion":1,"Result":1};
+
+var BIS_TYPES=[
+{id:"irb",group:"IRB (Zone 5)",label:"IRB 제출/승인 (5.1–5.4)",
+ fields:function(){
+   var f=[siteF,
+     F("event","select","심의 유형",{options:IRB_EVENTS})];
+   if(!NO_SEQ[v.event])f.push(F("seq","number","차수",{min:1}));
+   f.push(F("setMode","check","세트 생성 — Approval + Submission(+첨부) 한 번에"));
+   if(v.setMode){
+     if(v.event==="Initial")f.push(F("corrective","check","보완(Corrective) 재제출 건"));
+     f.push(F("mtgHere","checkStore","이 기관은 평가록 발행 — 세트에 Mtg minutes 포함 (기관별로 기억돼요)"));
+     f.push(F("date","date","Approval 날짜 = IRB 심사일"));
+     if(mtgHas())f.push(F("date3","date","평가록 날짜 = IRB 심의일"));
+     f.push(F("date2","date","Submission 날짜 = PI 신청일"));
+     f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["range","Attachment1~N (묶음 표기)"],["each","Attachment1 ~ N 개별 목록"],["one","Attachment n (1건)"]]}));
+     if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
+     return f;
+   }
+   f.push(F("kind","select","문서 종류",{options:[["Submission","Submission"],["Approval","Approval"],["Conditional Approval","Conditional Approval"],["Mtg minutes","Mtg minutes (평가록)"]]}));
+   if(v.event==="Initial")f.push(F("corrective","check","보완(Corrective) 재제출 건"));
+   var isSub=v.kind==="Submission",isMtg=v.kind==="Mtg minutes";
+   f.push(dateF(isSub?"날짜 = PI 신청일":isMtg?"날짜 = IRB 심의일":"날짜 = IRB 심사일",
+     isSub?"Submission 파일의 날짜는 IRB 접수일이 아니라 PI가 신청한 날이에요":isMtg?"평가록 날짜는 IRB 심의일이에요":"Approval 파일의 날짜는 결과통지 수령일이 아니라 IRB 심사일이에요"));
+   if(isSub)f.push(F("sameDay","select","동일 건 복수 제출 (#)",{options:["","#1","#2","#3"]}));
+   f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["one","Attachment n (1건)"],["range","Attachment 1~N (묶음 표기)"],["each","Attachment1 ~ N 개별 목록"]]}));
+   if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
+   return f;},
+ _mk:function(kind,dateIso){
+   var p=[P(pad3(v.site),"seg-site"),P(" ","seg-doc")];
+   var ev=v.event+(NO_SEQ[v.event]?"":" "+(v.seq||"1"));
+   p.push(P(ev+" ","seg-qual"));
+   p.push(P(kind,"seg-doc"));
+   if(v.corrective&&v.event==="Initial")p.push(P("_Corrective","seg-qual"));
+   p.push(P("_"+ymd(dateIso),"seg-date"));
+   return p;},
+ copySep:function(){return v.setMode?", ":"\n"},
+ buildList:function(){
+   var n=Math.max(1,+v.attachN||1),i;
+   if(v.setMode){
+     var out=[this._mk("Approval",v.date)];
+     if(mtgHas())out.push(this._mk("Mtg minutes",v.date3));
+     out.push(this._mk("Submission",v.date2));
+     var sub=this._mk("Submission",v.date2);
+     if(v.attach==="range")out.push(sub.concat([P("_Attachment1~"+n,"seg-sfx")]));
+     else if(v.attach==="one")out.push(sub.concat([P("_Attachment"+n,"seg-sfx")]));
+     else if(v.attach==="each")for(i=1;i<=n;i++)out.push(sub.concat([P("_Attachment"+i,"seg-sfx")]));
+     return out;
+   }
+   if(v.attach!=="each")return null;
+   var base=this.build().filter(function(p){return p[0].indexOf("_Attachment")!==0});
+   var out2=[];
+   for(i=1;i<=n;i++)out2.push(base.concat([P("_Attachment"+i,"seg-sfx")]));
+   return out2;},
+ build:function(){
+   if(v.setMode)return this._mk("Approval",v.date);
+   var p=[P(pad3(v.site),"seg-site"),P(" ","seg-doc")];
+   var ev=v.event+(NO_SEQ[v.event]?"":" "+(v.seq||"1"));
+   p.push(P(ev+" ","seg-qual"));
+   p.push(P(v.kind,"seg-doc"));
+   if(v.sameDay&&v.kind==="Submission")p.push(P(" "+v.sameDay,"seg-qual"));
+   if(v.corrective&&v.event==="Initial")p.push(P("_Corrective","seg-qual"));
+   p.push(P("_"+ymd(v.date),"seg-date"));
+   if(v.attach==="one")p.push(P("_Attachment"+(v.attachN||1),"seg-sfx"));
+   if(v.attach==="range")p.push(P("_Attachment1~"+(v.attachN||2),"seg-sfx"));
+   return p;},
+ ex:["030 Amend 5 Approval_20250904","036 Initial Submission #1_20250822","027 Amend 1 Conditional Approval_20250624","034 Amend 5 Submission_20260408_Attachment1~8","030 Amend 2 Mtg minutes_20250508 (평가록)"]},
+{id:"irblist",group:"IRB (Zone 5)",label:"IRB member list (5.5)",
+ fields:function(){return[siteF,dateF("위촉/개정 일자")]},
+ build:function(){return[P(pad3(v.site),"seg-site"),P(" IRB member list","seg-doc"),P("_"+ymd(v.date),"seg-date")]},
+ ex:["027 IRB member list_20260401","030 IRB member list_20260316"]},
+{id:"icf",group:"필수문서 (Zone 3)",label:"ICF 사이트 버전 (3.4)",
+ fields:function(){return[
+   F("masterVer","text","마스터 버전",{placeholder:"3.3"}),
+   F("masterDate","date","마스터 버전 일자"),
+   siteF,
+   F("siteVer","text","사이트 버전",{placeholder:"3.3"}),
+   F("date","date","사이트 버전 IRB 승인일",{hint:"이 날짜만 DDMonYYYY 형식으로 들어가요 (예: 09Feb2026)"})]},
+ build:function(){return[
+   P("ICF","seg-doc"),P("_V"+(v.masterVer||"")+"_"+ymd(v.masterDate),"seg-qual"),
+   P("_Site No. ","seg-doc"),P(pad3(v.site),"seg-site"),
+   P("_ver"+(v.siteVer||""),"seg-qual"),P("_"+dMon(v.date),"seg-date")]},
+ ex:["ICF_V3.3_20251218_Site No. 030_ver3.3_09Feb2026"]},
+{id:"sae",group:"안전성 (Zone 8)",label:"SAE Report (8.4)",
+ fields:function(){
+   var f=[siteF,F("subj","text","대상자 번호",{placeholder:"01"}),
+     F("saeKind","select","보고 구분",{options:["Initial","FU"]})];
+   if(v.saeKind==="FU")f.push(F("fuN","number","FU 차수",{min:1}));
+   f.push(dateF("보고 일자"));return f;},
+ build:function(){
+   var k=v.saeKind==="FU"?"FU#"+(v.fuN||1):"Initial";
+   return[P("SAE Report","seg-doc"),P("_"+pad2(v.site)+"-"+(v.subj||"01"),"seg-site"),
+     P("_"+k,"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["SAE Report_27-01_FU#2_20250430","SAE Report_30-07_Initial_20250226"],
+ note:"이 유형만 사이트번호가 2자리로 파일명 안에 들어가고 앞에 3자리 접두어를 붙이지 않아요"},
+{id:"contract",group:"계약 (Zone 10)",label:"Contract (10.1)",
+ fields:function(){
+   var f=[siteF,F("cKind","select","계약 구분",{options:["Initial","Amend"]})];
+   if(v.cKind==="Amend")f.push(F("cSeq","number","변경 차수",{min:1}));
+   f.push(dateF("체결 일자"));return f;},
+ build:function(){
+   var k=v.cKind==="Amend"?"Amend "+(v.cSeq||1):"Initial";
+   return[P("Contract","seg-doc"),P("_","seg-doc"),P(pad3(v.site),"seg-site"),
+     P("_"+k,"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["Contract_032_Amend 2_20260128"]},
+{id:"ssv",group:"Site Selection (15.1)",label:"SSV 문서",
+ fields:function(){
+   var f=[siteF,F("ssvDoc","select","세부 문서",{options:["Feasibility Questionnaire","SSV PPT","SSVR","SSV Confirmation Letter","SSV Follow-up Letter","SSVR_Correspondence"]})];
+   if(v.ssvDoc==="SSV PPT")f.push(F("pptVer","text","PPT 버전 (비우면 생략)",{placeholder:"1.0"}));
+   if(v.ssvDoc==="SSVR")f.push(F("signed","check","서명 최종본 (_Signed_F)"));
+   f.push(dateF());return f;},
+ build:function(){
+   var p=[P(pad3(v.site),"seg-site"),P(" "+v.ssvDoc,"seg-doc")];
+   if(v.ssvDoc==="SSV PPT"&&(v.pptVer||"").trim())p.push(P("_V"+v.pptVer.trim(),"seg-qual"));
+   p.push(P("_"+ymd(v.date),"seg-date"));
+   if(v.ssvDoc==="SSVR"&&v.signed)p.push(P("_Signed_F","seg-sfx"));
+   return p;},
+ ex:["038 SSVR_20250709_Signed_F","046 SSV Confirmation Letter_20250818"]},
+{id:"setup",group:"Site Set-Up (15.2)",label:"사이트 인력 문서 (CV·GCP·개인정보동의·e-Training)",
+ fields:function(){
+   var f=[siteF,
+     F("setupDoc","select","세부 문서",{options:[["CV","CV"],["GCP","GCP 인증서"],["ICDPI","개인정보 제공 동의 (Informed Consent for Disclosure)"],["cube","cubeCDMS e-Training certificate"],["ecrf","eCRF e-Training certificate"],["deleg","Signature/Delegation Form"]]})];
+   if(v.setupDoc==="cube"||v.setupDoc==="ecrf")f.push(F("certVer","select","교육 버전",{options:[["(cubeCDMS)","(cubeCDMS)"],["(V3.0)","(V3.0)"],["(V4.0)","(V4.0)"]]}));
+   if(v.setupDoc!=="deleg"){f.push(F("role","select","역할",{options:["PI","SI","Sub-I","CRC"]}));f.push(F("name","text","이름",{placeholder:"홍길동"}));}
+   f.push(dateF());return f;},
+ build:function(){
+   var names={CV:"CV",GCP:"GCP",ICDPI:"Informed Consent for Disclosure of Personel Information",
+     cube:"cubeCDMS e-Training certificate"+v.certVer,ecrf:"eCRF e-Training certificate"+v.certVer,
+     deleg:"Study Personnel SignatureDelegation Form"};
+   var p=[P(pad3(v.site),"seg-site"),P(" "+names[v.setupDoc],"seg-doc")];
+   if(v.setupDoc!=="deleg")p.push(P("_"+v.role+" "+(v.name||"이름"),"seg-qual"));
+   p.push(P("_"+ymd(v.date),"seg-date"));return p;},
+ ex:["030 CV_PI 이동원_20250226","044 cubeCDMS e-Training certificate(V3.0)_CRC 오유림_20251118"],
+ note:"'Personel'은 트래커 원문 표기예요(바른 철자는 Personal) — 진행 중 스터디는 기존 표기 유지"},
+{id:"siv",group:"Site Initiation (15.3)",label:"SIV 문서",
+ fields:function(){
+   var f=[siteF,F("sivDoc","select","세부 문서",{options:["SIV PPT","SIVR","SIV Confirmation Letter","SIV Follow-up Letter","SIVR_Correspondence"]})];
+   if(v.sivDoc==="SIV PPT")f.push(F("pptVer","text","PPT 버전 (비우면 생략)",{placeholder:"2.0"}));
+   if(v.sivDoc==="SIVR")f.push(F("signed","check","서명 최종본 (_Signed_F)"));
+   f.push(dateF());return f;},
+ build:function(){
+   var p=[P(pad3(v.site),"seg-site"),P(" "+v.sivDoc,"seg-doc")];
+   if(v.sivDoc==="SIV PPT"&&(v.pptVer||"").trim())p.push(P("_V"+v.pptVer.trim(),"seg-qual"));
+   p.push(P("_"+ymd(v.date),"seg-date"));
+   if(v.sivDoc==="SIVR"&&v.signed)p.push(P("_Signed_F","seg-sfx"));
+   return p;},
+ ex:["038 SIVR_20251015_Signed_F","040 SIV Confirmation Letter_20251103"]},
+{id:"visit",group:"Study Conduct (15.4)",label:"모니터링/종료 방문 (SMV·SCV)",
+ fields:function(){
+   var f=[siteF,F("visitType","select","방문 종류",{options:[["SMV","SMV (모니터링, 차수 있음)"],["SCV","SCV (종료, 차수 없음)"]]})];
+   if(v.visitType==="SMV")f.push(F("visitNo","number","방문 차수",{min:1}));
+   f.push(F("visitDoc","select","세부 문서",{options:[["conf","Confirmation Letter"],["fu","Follow-up Letter"],["report","방문 보고서 (SMVR/SCVR)"],["corr","보고서 Correspondence"]]}));
+   if(v.visitDoc==="report"){f.push(F("signed","check","서명 최종본 (_Signed_F)"));
+     if(v.signed)f.push(F("amendRep","check","개정 서명본 (_Signed_Amend_F)"));}
+   f.push(dateF(v.visitDoc==="report"?"방문 일자":"발송 일자"));return f;},
+ build:function(){
+   var smv=v.visitType==="SMV",n=smv?" #"+(v.visitNo||1):"";
+   var visit=smv?"SMV":"SCV",report=smv?"SMVR":"SCVR";
+   var p=[P(pad3(v.site),"seg-site")];
+   if(v.visitDoc==="conf"){p.push(P(" "+visit,"seg-doc"),P(n,"seg-qual"),P(" Confirmation Letter","seg-doc"),P("_"+ymd(v.date),"seg-date"));}
+   else if(v.visitDoc==="fu"){p.push(P(" "+visit,"seg-doc"),P(n,"seg-qual"),P(" Follow-up Letter","seg-doc"),P("_"+ymd(v.date),"seg-date"));}
+   else if(v.visitDoc==="report"){p.push(P(" "+report,"seg-doc"),P(n,"seg-qual"),P("_"+ymd(v.date),"seg-date"));if(v.signed)p.push(P(v.amendRep?"_Signed_Amend_F":"_Signed_F","seg-sfx"));}
+   else{p.push(P(" "+report,"seg-doc"),P(n,"seg-qual"),P("_Correspondence","seg-doc"),P("_"+ymd(v.date),"seg-date"));}
+   return p;},
+ ex:["032 SMVR #1_20251110_Signed_F","024 SMVR #1_20250409_Signed_Amend_F","024 SMV #2 Confirmation Letter_20260303","022 SCVR_20250917_Signed_F"]},
+{id:"corr",group:"Study Conduct (15.4)",label:"Correspondence (교신기록)",
+ fields:function(){return[siteF,dateF("교신 일자"),F("sameDay","select","같은 날 복수 건 (#)",{options:["","#1","#2","#3"]})]},
+ build:function(){
+   var p=[P(pad3(v.site),"seg-site"),P(" Correspondence","seg-doc"),P("_"+ymd(v.date),"seg-date")];
+   if(v.sameDay)p.push(P(" "+v.sameDay,"seg-qual"));return p;},
+ ex:["024 Correspondence_20251024 #1","024 Correspondence_20251024 #2"]},
+{id:"tr",group:"Study Conduct (15.4)",label:"Training Record",
+ fields:function(){return[siteF,F("people","text","참석 인력 (역할 이름, 쉼표 구분 — 비우면 생략)",{placeholder:"PI 박도영, CRC 은민희"}),dateF("교육 일자")]},
+ build:function(){
+   var p=[P(pad3(v.site),"seg-site"),P(" Training Record","seg-doc")];
+   if(v.people)p.push(P("_"+v.people,"seg-qual"));
+   p.push(P("_"+ymd(v.date),"seg-date"));return p;},
+ ex:["027 Training Record_PI 박도영, Sub-I 임수민, CRC 은민희_20250407"]},
+{id:"ntf",group:"Study Conduct (15.4)",label:"Note to File",
+ fields:function(){return[siteF,dateF("작성 일자"),
+   F("subj","text","대상자 번호 (해당 시, 예: 24-01)",{placeholder:""}),
+   F("desc","text","사유 (해당 시)",{placeholder:"Follow-up 기간동안 AE 없음"}),
+   F("ntfSeq","select","같은 날 복수 건",{options:["","_1","_2","_3"]})]},
+ build:function(){
+   var p=[P(pad3(v.site),"seg-site"),P(" Note to File","seg-doc"),P("_"+ymd(v.date),"seg-date")];
+   if(v.subj)p.push(P("_"+v.subj,"seg-qual"));
+   if(v.desc)p.push(P("_"+v.desc,"seg-qual"));
+   if(v.ntfSeq)p.push(P(v.ntfSeq,"seg-sfx"));return p;},
+ ex:["024 Note to File_20250409_24-01_Follow-up 기간동안 AE 없음","008 Note to File_20251105_1"]},
+{id:"log",group:"Study Conduct (15.4)",label:"각종 Log · Delivery receipt",
+ fields:function(){return[siteF,
+   F("logDoc","select","세부 문서",{options:["ICF Tracking Log","Subject Enrollment Log","Subject Informed Consent Log","PD tracking log","PD Report Form","SAE tracking log","Site Visit Log","Delivery receipt"]}),
+   dateF("기준 일자")]},
+ build:function(){return[P(pad3(v.site),"seg-site"),P(" "+v.logDoc,"seg-doc"),P("_"+ymd(v.date),"seg-date")]},
+ ex:["030 ICF tracking log_20260629","038 Delivery receipt_20251015"]},
+{id:"team",group:"스터디팀 (Zone 1)",label:"스터디팀 문서 (CV·GCP·e-Training·Training Log)",
+ fields:function(){
+   var f=[F("teamDoc","select","세부 문서",{options:[["cv","Curriculum Vitae"],["gcp","GCP Training Certificate"],["cube","cubeCDMS e-Training certificate"],["tlog","Training Log (CO)"]]}),
+     F("initials","text","이니셜",{placeholder:"YJK"})];
+   if(v.teamDoc==="gcp"){f.push(F("hours","number","교육 시간 (hrs)",{min:1}));f.push(F("sameDayU","select","같은 날 복수 건",{options:["","_1","_2"]}));}
+   if(v.teamDoc==="cube")f.push(F("certVer","select","교육 버전",{options:[["(cubeCDMS)","cubeCDMS"],["(V3.0)","V3.0"],["(V4.0)","V4.0"]]}));
+   f.push(dateF());return f;},
+ build:function(){
+   var ini=v.initials||"YJK";
+   if(v.teamDoc==="cv")return[P("Curriculum Vitae","seg-doc"),P("_"+ini,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   if(v.teamDoc==="gcp"){var h=+(v.hours||4);
+     var gp=[P("GCP Training Certificate","seg-doc"),P("_"+ini,"seg-qual"),P("_"+ymd(v.date),"seg-date"),P("_"+h+(h===1?"hr":"hrs"),"seg-sfx")];
+     if(v.sameDayU)gp.push(P(v.sameDayU,"seg-sfx"));return gp;}
+   if(v.teamDoc==="cube")return[P("cubeCDMS e-Training certificate","seg-doc"),P("_"+v.certVer.replace(/[()]/g,""),"seg-qual"),P("_"+ini,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   return[P("Training Log_CO","seg-doc"),P("_"+ini,"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["Curriculum Vitae_YJK_20251106","cubeCDMS e-Training certificate_V4.0_YJK_20260310"],
+ note:"GCP 인증서는 트래커에서 CRA마다 스타일이 달라요 — 여기서는 통일 권장안으로 생성해요"}
+];
+
+/* ---------- CVF types ---------- */
+var CVF_IRB_EVENTS=[["Initial","Initial (최초)"],["Amend","Amend (변경)"],["Interim","Interim (연차)"],["Completion","Completion (종료)"],["Result","Result (결과보고)"],["None Compliance","None Compliance"],["Other","Other"]];
+
+var CVF_TYPES=[
+{id:"cirb",group:"IRB (Zone 5)",label:"IRB 제출/승인 (5.1–5.4)",
+ fields:function(){
+   var f=[csiteF,
+     F("event","select","심의 유형",{options:CVF_IRB_EVENTS})];
+   if(!NO_SEQ[v.event])f.push(F("seq","number","차수",{min:1}));
+   f.push(F("setMode","check","세트 생성 — Approval + Submission(+첨부) 한 번에"));
+   if(v.setMode){
+     f.push(F("mtgHere","checkStore","이 기관은 평가록 발행 — 세트에 Mtg minutes 포함 (기관별로 기억돼요)"));
+     f.push(F("date","date","Approval 날짜 = IRB 심사일"));
+     if(mtgHas())f.push(F("date3","date","평가록 날짜 = IRB 심의일"));
+     f.push(F("date2","date","Submission 날짜 = PI 신청일"));
+     f.push(F("cattach","select","첨부(Attachment)",{options:[["none","없음"],["one","_Attachment (1건)"],["each","Attachment1 ~ N 개별 목록"]]}));
+     if(v.cattach==="each")f.push(F("attachN","number","첨부 개수 (N)",{min:1}));
+     return f;
+   }
+   f.push(F("kind","select","문서 종류",{options:["Submission","Approval","Conditional Approval","Mtg minutes"]}));
+   if(v.kind==="Submission"){f.push(F("additional","check","추가(Additional) 제출 건"));if(v.additional)f.push(F("addN","number","Additional 차수",{min:1}));}
+   var isSub=v.kind==="Submission";
+   f.push(dateF(isSub?"날짜 = PI 신청일":"날짜 = IRB 심사일",
+     isSub?"Submission 파일의 날짜는 IRB 접수일이 아니라 PI가 신청한 날이에요":"Approval 파일의 날짜는 결과통지 수령일이 아니라 IRB 심사일이에요"));
+   f.push(F("sameDayU","select","같은 날 복수 건",{options:["","_1","_2","_3"]}));
+   f.push(F("cattach","select","첨부(Attachment)",{options:[["none","없음"],["one","_Attachment (1건)"],["each","Attachment1 ~ N 개별 목록"]]}));
+   if(v.cattach==="each")f.push(F("attachN","number","첨부 개수 (N)",{min:1}));
+   return f;},
+ _mk:function(kind,dateIso){
+   var p=[];
+   var ev=v.event+(NO_SEQ[v.event]?"":" "+(v.seq||"1"));
+   p.push(P(ev+" ","seg-qual"));
+   p.push(P(kind,"seg-doc"));
+   p.push(P("_"+pad2(v.csite),"seg-site"));
+   p.push(P("_"+ymd(dateIso),"seg-date"));
+   return p;},
+ copySep:function(){return v.setMode?", ":"\n"},
+ buildList:function(){
+   var n=Math.max(1,+v.attachN||1),i;
+   if(v.setMode){
+     var out=[this._mk("Approval",v.date)];
+     if(mtgHas())out.push(this._mk("Mtg minutes",v.date3));
+     out.push(this._mk("Submission",v.date2));
+     var sub=this._mk("Submission",v.date2);
+     if(v.cattach==="one")out.push(sub.concat([P("_Attachment","seg-sfx")]));
+     else if(v.cattach==="each")for(i=1;i<=n;i++)out.push(sub.concat([P("_Attachment"+i,"seg-sfx")]));
+     return out;
+   }
+   if(v.cattach!=="each")return null;
+   var base=this.build().filter(function(p){return p[0]!=="_Attachment"});
+   var out2=[];
+   for(i=1;i<=n;i++)out2.push(base.concat([P("_Attachment"+i,"seg-sfx")]));
+   return out2;},
+ build:function(){
+   if(v.setMode)return this._mk("Approval",v.date);
+   var p=[];
+   var ev=v.event+(NO_SEQ[v.event]?"":" "+(v.seq||"1"));
+   p.push(P(ev+" ","seg-qual"));
+   p.push(P(v.kind,"seg-doc"));
+   if(v.additional&&v.kind==="Submission")p.push(P("_Additional "+(v.addN||1),"seg-qual"));
+   p.push(P("_"+pad2(v.csite),"seg-site"));
+   p.push(P("_"+ymd(v.date),"seg-date"));
+   if(v.sameDayU)p.push(P(v.sameDayU,"seg-qual"));
+   if(v.cattach==="one")p.push(P("_Attachment","seg-sfx"));
+   return p;},
+ ex:["5.1 Initial Submission_04_20241010_2","5.1 Amend 2 Approval_03_20250114_1","5.1 Initial Conditional Approval_02_20240924","5.1 Initial Submission_Additional 1_03_20241014"],
+ note:"폴더 저장용에는 Index No.가 자동으로 앞에 붙고, ZIP 보관용에는 빠져요. 5.2~5.4는 아직 실제 파일이 없어 Initial 패턴을 준용해요"},
+{id:"cirbmember",group:"IRB (Zone 5)",label:"IRB Member (5.5)",
+ fields:function(){return[csiteF,dateF("위촉/개정 일자")]},
+ build:function(){return[P("IRB Member","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_"+ymd(v.date),"seg-date")]},
+ ex:["IRB Member_01_20250301","IRB Member_02_20250701"]},
+{id:"cstaff",group:"사이트 인력 (15.1)",label:"사이트 인력 문서 (CV·GCP)",
+ fields:function(){return[csiteF,
+   F("cstaffDoc","select","세부 문서",{options:["CV","GCP"]}),
+   F("crole","select","역할",{options:["PI","SI","SC"]}),
+   F("name","text","이름",{placeholder:"홍길동"}),
+   dateF(),
+   F("sameDayU","select","같은 날 복수 건",{options:["","_1","_2","_3"]})]},
+ build:function(){
+   var p=[P(v.cstaffDoc,"seg-doc"),P("_"+pad2(v.csite),"seg-site"),
+     P("_"+v.crole+"_"+(v.name||"이름"),"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   if(v.sameDayU)p.push(P(v.sameDayU,"seg-qual"));return p;},
+ ex:["CV_01_PI_한승혁_20241213","GCP_03_SC_정선옥_20240510_1"],
+ note:"역할은 PI / SI / SC (BIS의 CRC 대신 SC). 구분자는 언더스코어로 통일 권장"},
+{id:"csiv",group:"방문 (15.1–15.2)",label:"SIV 문서",
+ fields:function(){return[csiteF,
+   F("csivDoc","select","세부 문서",{options:[["conf","SIV Confirm Letter"],["fu","SIV FU Letter"],["SIVR","SIVR"],["corr","SIVR Correspondence"]]}),
+   dateF()]},
+ build:function(){
+   var p=[];
+   if(v.csivDoc==="conf")p.push(P("SIV Confirm Letter","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_"+ymd(v.date),"seg-date"));
+   else if(v.csivDoc==="fu")p.push(P("SIV FU Letter","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_"+ymd(v.date),"seg-date"));
+   else if(v.csivDoc==="SIVR")p.push(P("SIVR","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_"+ymd(v.date),"seg-date"));
+   else p.push(P("SIVR","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_Correspondence","seg-doc"),P("_"+ymd(v.date),"seg-date"));
+   return p;},
+ ex:["SIV Confirm Letter_01_20241210","SIVR_01_20241213","SIVR_01_Correspondence_20241223"],
+ note:"CVF는 Confirm·FU 축약형을 써요 (BIS는 Confirmation·Follow-up 풀네임)"},
+{id:"csmv",group:"방문 (15.1–15.2)",label:"SMV 문서 (차수 있음)",
+ fields:function(){
+   var f=[csiteF,F("visitNo","number","방문 차수",{min:1}),
+     F("csmvDoc","select","세부 문서",{options:[["conf","SMV_Confirm Letter"],["fu","SMV_FU Letter"],["report","SMVR (방문 보고서)"]]})];
+   if(v.csmvDoc==="report")f.push(F("amendRep","check","보고서 개정본 (_Amendment)"));
+   f.push(dateF(v.csmvDoc==="report"?"방문 일자":"발송 일자"));return f;},
+ build:function(){
+   var n="_#"+(v.visitNo||1);
+   var p=[];
+   if(v.csmvDoc==="conf")p.push(P("SMV_Confirm Letter","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P(n,"seg-qual"),P("_"+ymd(v.date),"seg-date"));
+   else if(v.csmvDoc==="fu")p.push(P("SMV_FU Letter","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P(n,"seg-qual"),P("_"+ymd(v.date),"seg-date"));
+   else{p.push(P("SMVR","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P(n,"seg-qual"),P("_"+ymd(v.date),"seg-date"));if(v.amendRep)p.push(P("_Amendment","seg-sfx"));}
+   return p;},
+ ex:["SMV_Confirm Letter_01_#2_20260610","SMVR_03_#2_20260623_Amendment","SMVR_08_#1_20260617"]},
+{id:"csvl",group:"방문 (15.1–15.2)",label:"Site Visit Log",
+ fields:function(){return[csiteF,dateF()]},
+ build:function(){return[P("Site Visit Log","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_"+ymd(v.date),"seg-date")]},
+ ex:["Site Visit Log_01_20260828"]},
+{id:"ccontract",group:"계약 (Zone 10)",label:"Contract (10.1)",
+ fields:function(){
+   var f=[csiteF,F("cKind","select","계약 구분",{options:["Initial","Amend"]})];
+   if(v.cKind==="Amend")f.push(F("cSeq","number","변경 차수",{min:1}));
+   f.push(dateF("체결 일자"));return f;},
+ build:function(){
+   var k=v.cKind==="Amend"?"Amend "+(v.cSeq||1):"Initial";
+   return[P("Contract","seg-doc"),P("_"+pad2(v.csite),"seg-site"),P("_"+k,"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["Contract_02_Initial_20250307"]},
+{id:"cfeas",group:"Site Selection (Zone 2)",label:"Feasibility Questionnaire",
+ fields:function(){
+   var f=[F("feasMode","select","사이트 구분",{options:[["sel","선정 사이트 (S번호)"],["non","미선정 사이트 (병원명)"]]})];
+   if(v.feasMode==="sel")f.push(csiteF);
+   f.push(dateF());
+   if(v.feasMode==="non")f.push(F("hosp","text","병원명 (담당자 있으면 _이름 추가)",{placeholder:"서울아산병원"}));
+   return f;},
+ build:function(){
+   if(v.feasMode==="sel")return[P("Feasibility Questionnaire","seg-doc"),P("_S"+pad2(v.csite),"seg-site"),P("_"+ymd(v.date),"seg-date")];
+   return[P("Feasibility Questionnaire","seg-doc"),P("_"+ymd(v.date),"seg-date"),P("_"+(v.hosp||"병원명"),"seg-qual")];},
+ ex:["Feasibility Questionnaire_S07_20250318","Feasibility Questionnaire_20241016_신촌세브란스_이상원"]},
+{id:"ccorr",group:"프로젝트 (Zone 2)",label:"프로젝트 Correspondence (2.10)",
+ fields:function(){return[dateF("교신 일자",'날짜가 "YYYY MMDD" 공백형으로 들어가요'),
+   F("corrTopic","text","주제 (필수, 사이트 관련은 (S05) 병기)",{placeholder:"site ICF(S05)"})]},
+ build:function(){return[P("Correspondence","seg-doc"),P("_"+ymdSp(v.date),"seg-date"),P("_"+(v.corrTopic||"주제"),"seg-qual")]},
+ ex:["Correspondence_2024 1022_site ICF(S05)","Correspondence_2026 0616_transportation costs"]},
+{id:"cpsr",group:"프로젝트 (Zone 2)",label:"Project Status Report (2.10)",
+ fields:function(){return[
+   F("psrDoc","select","세부 문서",{options:[["report","Report 본문"],["corr","발송 Correspondence"]]}),
+   F("psrN","number","회차",{min:1}),
+   dateF("발행/발송 일자")]},
+ build:function(){
+   if(v.psrDoc==="report")return[P("Project Status Report","seg-doc"),P("_V1.0","seg-qual"),P("_"+ord(v.psrN),"seg-qual"),P("_"+ymdSp(v.date),"seg-date")];
+   return[P("Project Status Report Correspondence","seg-doc"),P("_#"+(v.psrN||1),"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["Project Status Report_V1.0_21st_2026 0422","Project Status Report Correspondence_#21_20260422"],
+ note:"Report 본문은 공백형 날짜+서수, Correspondence는 #번호+압축 날짜예요. 서수는 바른 표기(11th)로 생성해요"},
+{id:"cmtg",group:"프로젝트 (Zone 2)",label:"Monthly Meeting Minutes (2.6)",
+ fields:function(){return[dateF("회의 일자"),F("mtgAmend","check","개정본 (_Amend)")]},
+ build:function(){
+   var p=[P("Tavneos PMS_Monthly Meeting Minutes","seg-doc"),P("_"+ymdSp(v.date),"seg-date")];
+   if(v.mtgAmend)p.push(P("_Amend","seg-sfx"));return p;},
+ ex:["Tavneos PMS_Monthly Meeting Minutes_2024 1128_Amend"]},
+{id:"cteam",group:"스터디팀 (Zone 1)",label:"스터디팀 문서 (CV·GCP·종사자교육)",
+ fields:function(){
+   var f=[F("cteamDoc","select","세부 문서",{options:[["cv","Curriculum Viate (CV)"],["gcp","GCP Training Certif."],["worker","종사자교육 Certif."]]})];
+   if(v.cteamDoc==="cv")f.push(F("teamRole","select","직책",{options:["CPM","CRA","PM"]}));
+   f.push(F("initials","text","이니셜",{placeholder:"MJK"}));
+   f.push(dateF("문서 일자",'날짜가 "YYYY MMDD" 공백형으로 들어가요'));return f;},
+ build:function(){
+   var ini=v.initials||"MJK";
+   if(v.cteamDoc==="cv")return[P("Curriculum Viate","seg-doc"),P("_"+v.teamRole+" "+ini,"seg-qual"),P("_"+ymdSp(v.date),"seg-date")];
+   if(v.cteamDoc==="gcp")return[P("GCP Training Certif.","seg-doc"),P("_"+ini,"seg-qual"),P("_"+ymdSp(v.date),"seg-date")];
+   return[P("종사자교육 Certif.","seg-doc"),P("_"+ini,"seg-qual"),P("_"+ymdSp(v.date),"seg-date")];},
+ ex:["Curriculum Viate_CPM TRK_2023 0817","GCP Training Certif._MJK_2026 0304","종사자교육 Certif._MJK_2026 0319"],
+ note:"'Viate'는 오철자지만 기존 파일 전체가 이 표기라 스터디 내 일관성을 위해 유지해요"}
+];
+
+/* ---------- CBR types ---------- */
+var bsiteF=F("bsite","text","사이트 번호 (3자리)",{placeholder:"001"});
+var CBR_IRB_EVENTS=[["Amend","Amend (변경)"],["Annual","Annual (연차)"],["Completion","Completion (종료)"],["Initial","Initial (최초)"],["Result","Result (결과보고)"],["Other","Other"]];
+
+var CBR_TYPES=[
+{id:"birb",group:"IRB (Zone 5)",label:"IRB 제출/승인 (5.1–5.3)",
+ fields:function(){
+   var f=[bsiteF,
+     F("event","select","심의 유형",{options:CBR_IRB_EVENTS})];
+   if(!NO_SEQ[v.event])f.push(F("seq","number","차수",{min:1}));
+   f.push(F("setMode","check","세트 생성 — Approval + Submission(+첨부) 한 번에"));
+   if(v.setMode){
+     f.push(F("corrective","check","보완(Corrective) 건"));
+     f.push(F("mtgHere","checkStore","이 기관은 평가록 발행 — 세트에 Mtg minutes 포함 (기관별로 기억돼요)"));
+     f.push(F("date","date","Approval 날짜"));
+     if(mtgHas())f.push(F("date3","date","평가록 날짜"));
+     f.push(F("date2","date","Submission 날짜 = IRB 접수일",{hint:"Afstyla는 전 사이트 IRB 접수일 기준이에요 (BIS·CVF의 PI 신청일과 다름)"}));
+     f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["each","Attachment #1~N 개별 목록"],["one","Attachment #n (1건)"]]}));
+     if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
+     return f;
+   }
+   f.push(F("kind","select","문서 종류",{options:["Submission","Approval","Mtg minutes"]}));
+   f.push(F("corrective","check","보완(Corrective) 건"));
+   f.push(dateF(v.kind==="Submission"?"Submission 날짜 = IRB 접수일":"문서 일자",
+     v.kind==="Submission"?"Afstyla는 전 사이트 IRB 접수일 기준이에요 (BIS·CVF의 PI 신청일과 다름)":"Approval 날짜 기준은 아직 미확인이에요"));
+   if(v.kind==="Submission"){
+     f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["one","Attachment #n (1건)"],["each","Attachment #1~N 개별 목록"]]}));
+     if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
+   }
+   return f;},
+ _mk:function(kind,dateIso,attachNo){
+   var p=[P(pad3(v.bsite),"seg-site")];
+   var ev=v.event+(NO_SEQ[v.event]?"":" "+(v.seq||"1"));
+   p.push(P("_"+ev,"seg-qual"));
+   var k=(v.corrective?"Corrective ":"")+kind;
+   if(attachNo)k=k+" Attachment #"+attachNo;
+   p.push(P("_"+k,"seg-doc"));
+   p.push(P("_"+ymd(dateIso),"seg-date"));
+   return p;},
+ copySep:function(){return v.setMode?", ":"\n"},
+ buildList:function(){
+   var n=Math.max(1,+v.attachN||1),i;
+   if(v.setMode){
+     var out=[this._mk("Approval",v.date)];
+     if(mtgHas())out.push(this._mk("Mtg minutes",v.date3));
+     out.push(this._mk("Submission",v.date2));
+     if(v.attach==="one")out.push(this._mk("Submission",v.date2,n));
+     else if(v.attach==="each")for(i=1;i<=n;i++)out.push(this._mk("Submission",v.date2,i));
+     return out;
+   }
+   if(v.kind==="Submission"&&v.attach==="each"){
+     var out2=[];
+     for(i=1;i<=n;i++)out2.push(this._mk("Submission",v.date,i));
+     return out2;
+   }
+   return null;},
+ build:function(){
+   if(v.setMode)return this._mk("Approval",v.date);
+   if(v.kind==="Submission"&&v.attach==="one")return this._mk("Submission",v.date,Math.max(1,+v.attachN||1));
+   return this._mk(v.kind,v.date);},
+ ex:["001_Amend 1_Submission_20240327","001_Amend 1_Approval_20240405","001_Amend 2_Submission Attachment #1_20240902","006_Annual 1_Corrective Submission_20240514"],
+ note:"CBR은 심의유형이 언더스코어로 분리되고(Amend 1_Submission) 첨부는 Attachment #n 개별 번호예요. 날짜 기준(신청/심사일)은 확인 필요"},
+
+{id:"bmember",group:"IRB (Zone 5)",label:"IRB Member list (5.6)",
+ fields:function(){
+   var f=[bsiteF,
+     F("rangeStore","checkStore","이 기관은 임기기간(시작~종료)으로 표기 — 기관별로 기억돼요",{get:rangeHas,set:rangeSet}),
+     dateF(rangeHas()?"임기 시작일":"위촉/개정 일자")];
+   if(rangeHas())f.push(F("vto","date","임기 종료일"));
+   return f;},
+ build:function(){
+   var p=[P(pad3(v.bsite),"seg-site"),P("_IRB Member list","seg-doc"),P("_"+ymd(v.date),"seg-date")];
+   if(rangeHas())p.push(P("~"+ymd(v.vto),"seg-date"));
+   return p;},
+ ex:["001_IRB Member list_20230901~20250228 (세브란스: 임기기간)","003_IRB Member list_20220111"],
+ note:"세브란스(001)는 임기기간(시작~종료)으로 이름 지어요 — 체크하면 그 기관으로 기억돼요. 트래커 셀에는 'IRB Member'로 축약돼 있었는데 실제 파일명 기준(IRB Member list)으로 생성해요"},
+
+{id:"bicf",group:"필수문서 (Zone 3)",label:"ICF 사이트 버전 (3.4)",
+ fields:function(){
+   var f=[bsiteF,
+     F("icfPop","select","대상",{options:["Adult","Children(7-11yr old)","Children(0-6yr old)","Children(7-15yr old)","Children(8~12yr old)"]}),
+     F("masterVer","text","마스터 버전",{placeholder:"3.0"}),
+     F("siteVer","text","사이트 버전",{placeholder:"2.0"}),
+     dateF("버전 일자"),
+     F("validOn","check","유효기간 표기 (_Valid 시작~종료)")];
+   if(v.validOn){f.push(F("vfrom","date","유효 시작일"));f.push(F("vto","date","유효 종료일"));}
+   return f;},
+ build:function(){
+   var p=[P(pad3(v.bsite),"seg-site"),P(" ICF "+v.icfPop,"seg-doc"),
+     P("_V"+(v.masterVer||"")+"_V"+(v.siteVer||""),"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   if(v.validOn)p.push(P("_Valid "+ymd(v.vfrom)+"~"+ymd(v.vto),"seg-sfx"));
+   return p;},
+ ex:["001 ICF Adult_V3.0_V2.0_20250710_Valid 20251028~20261027","008 ICF Children(7-11yr old)_V1.0_V1.0_20221020"]},
+
+{id:"bcontract",group:"계약 (Zone 10)",label:"Contracts (10.1)",
+ fields:function(){
+   var f=[bsiteF,F("cKind","select","계약 구분",{options:["Initial","Amend"]})];
+   if(v.cKind==="Amend")f.push(F("cSeq","number","변경 차수",{min:1}));
+   f.push(dateF("체결 일자"));return f;},
+ build:function(){
+   var k=v.cKind==="Amend"?"Amend "+(v.cSeq||1):"Initial";
+   return[P(pad3(v.bsite),"seg-site"),P("_Contracts","seg-doc"),P("_"+k,"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["001_Contracts_Amend 2_20250917","008_Contracts_Amend 1_20240514"],
+ note:"CBR은 복수형 Contracts로 써요"},
+
+{id:"bstaff",group:"사이트 인력 (15.2)",label:"사이트 인력 문서 (CV·GCP·개인정보동의)",
+ fields:function(){return[bsiteF,
+   F("bStaffDoc","select","세부 문서",{options:[["CV","CV"],["GCP","GCP Certif."],["IC","IC_Disclosure of Personal Information (개인정보동의)"]]}),
+   F("crole","select","역할",{options:["PI","SI","Sub-I","SC"]}),
+   F("name","text","이름",{placeholder:"홍길동"}),
+   dateF()]},
+ build:function(){
+   var names={CV:"CV",GCP:"GCP Certif.",IC:"IC_Disclosure of Personal Information"};
+   return[P(pad3(v.bsite),"seg-site"),P("_"+names[v.bStaffDoc],"seg-doc"),
+     P("_"+v.crole+" "+(v.name||"이름"),"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["001_CV_PI 한승민_20240711","003_GCP Certif._Sub-I 김지윤_20250118","001_IC_Disclosure of Personal Information_SC 변은민_20240327"],
+ note:"역할은 PI / SI / Sub-I / SC. GCP 날짜가 연도만인 기존 파일이 있지만 전체 날짜 권장"},
+
+{id:"btr",group:"사이트 인력 (15.2)",label:"Training Record",
+ fields:function(){return[bsiteF,
+   F("trCourse","text","교육명",{placeholder:"PRT V2.1 / ECG V4.0 / Label(20250612)"}),
+   F("person","text","인력 (역할 이름 — 비우면 생략)",{placeholder:"PI 한승민"}),
+   dateF("교육 일자")]},
+ build:function(){
+   var p=[P(pad3(v.bsite),"seg-site"),P("_Training Record","seg-doc"),P("_"+(v.trCourse||"교육명"),"seg-qual")];
+   if(v.person)p.push(P("_"+v.person,"seg-qual"));
+   p.push(P("_"+ymd(v.date),"seg-date"));return p;},
+ ex:["001_Training Record_PRT V2.1_PI 한승민_20240711","004_Training Record_ECG V4.0_20250428","001_Training Record_Label(20250612)_20251029"]},
+
+{id:"bvisit",group:"방문·교신 (15.4)",label:"모니터링 방문 (SMV·SMVR)",
+ fields:function(){
+   var f=[bsiteF,F("visitNo","number","방문 차수",{min:1}),
+     F("bVisitDoc","select","세부 문서",{options:[["conf","SMV_Confirmation Letter"],["fu","SMV_Follow-up Letter"],["report","SMVR (방문 보고서)"],["corr","SMVR_Correspondence"]]})];
+   if(v.bVisitDoc==="report")f.push(F("signed","check","서명 최종본 (_Signed_F)"));
+   f.push(dateF(v.bVisitDoc==="report"?"방문 일자":"발송 일자"));return f;},
+ build:function(){
+   var o=ord(v.visitNo||1);
+   var p=[P(pad3(v.bsite),"seg-site"),P("_"+o+" ","seg-qual")];
+   if(v.bVisitDoc==="conf")p.push(P("SMV_Confirmation Letter","seg-doc"),P("_"+ymd(v.date),"seg-date"));
+   else if(v.bVisitDoc==="fu")p.push(P("SMV_Follow-up Letter","seg-doc"),P("_"+ymd(v.date),"seg-date"));
+   else if(v.bVisitDoc==="report"){p.push(P("SMVR","seg-doc"),P("_"+ymd(v.date),"seg-date"));if(v.signed)p.push(P("_Signed_F","seg-sfx"));}
+   else p.push(P("SMVR_Correspondence","seg-doc"),P("_"+ymd(v.date),"seg-date"));
+   return p;},
+ ex:["003_2nd SMVR_20241107_Signed_F","001_1st SMV_Confirmation Letter_20240709","007_1st SMVR_Correspondence_20250922"]},
+
+{id:"bcorr",group:"방문·교신 (15.4)",label:"Correspondence (교신기록)",
+ fields:function(){return[bsiteF,dateF("교신 일자")]},
+ build:function(){return[P(pad3(v.bsite),"seg-site"),P(" Correspondence","seg-doc"),P("_"+ymd(v.date),"seg-date")]},
+ ex:["001 Correspondence_20241031","008 Correspondence_20250714"],
+ note:"CBR에서 이 유형만 사이트 뒤가 언더스코어가 아니라 공백이에요 (트래커 관찰 기준)"},
+
+{id:"bdeliv",group:"방문·교신 (15.4)",label:"Delivery receipt",
+ fields:function(){return[bsiteF,dateF("수령 일자")]},
+ build:function(){return[P(pad3(v.bsite),"seg-site"),P("_Delivery receipt","seg-doc"),P("_"+ymd(v.date),"seg-date")]},
+ ex:["001_Delivery receipt_20250904"]},
+
+{id:"bteam",group:"스터디팀 (Zone 1)",label:"스터디팀 문서 (영문 이름)",
+ fields:function(){
+   var f=[F("bTeamDoc","select","세부 문서",{options:[["cv","Curriculum Vitae (_Signed_F)"],["gcp","GCP Training Certificate"],["crp","Clinical Research Professional Training Certificate"],["cube","cubeCDMS e-Training certificate"],["pv","Certificate_CSL PV Training"]]}),
+     F("engName","text","영문 이름",{placeholder:"Yujin Kim"})];
+   if(v.bTeamDoc==="cube")f.push(F("certVer","select","교육 버전",{options:[["(V2.0)","V2.0"],["(V3.0)","V3.0"],["(V4.0)","V4.0"],["(V4.1)","V4.1"],["(V5.0)","V5.0"]]}));
+   f.push(dateF());return f;},
+ build:function(){
+   var nm=v.engName||"Yujin Kim";
+   if(v.bTeamDoc==="cv")return[P("Curriculum Vitae","seg-doc"),P("_"+nm,"seg-qual"),P("_"+ymd(v.date),"seg-date"),P("_Signed_F","seg-sfx")];
+   if(v.bTeamDoc==="gcp")return[P("GCP Training Certificate","seg-doc"),P("_"+nm,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   if(v.bTeamDoc==="crp")return[P("Clinical Research Professional Training Certificate","seg-doc"),P("_"+nm,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   if(v.bTeamDoc==="cube")return[P("cubeCDMS e-Training certificate"+v.certVer,"seg-doc"),P("_"+nm,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   return[P("Certificate_CSL PV Training","seg-doc"),P("_"+nm,"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["Curriculum Vitae_Yujin Kim_20251106_Signed_F","cubeCDMS e-Training certificate(V5.0)_Yujin Kim_20260121"],
+ note:"CBR 스터디팀 문서는 이니셜이 아니라 영문 이름을 써요"}
+];
+
+/* ---------- studies ---------- */
+var STUDIES={
+  bis:{types:BIS_TYPES,protocol:"BS-CTL-PMS · CartiLife PMS",base:"QC Tracker 3부 · 18개 사이트 기준"},
+  cvf:{types:CVF_TYPES,protocol:"CS-AVA-2022-051 · Tavneos PMS",base:"QC Tracker · Site 01–09 기준"},
+  cbr:{types:CBR_TYPES,protocol:"CSL627_5005 · Afstyla PMS",base:"QC Tracker · Site 001–009 기준"}
+};
+var study="bis";
+try{var ss=localStorage.getItem("tmfnStudy");if(ss&&STUDIES[ss])study=ss;}catch(e){}
+$("study").value=study;
+
+var typeSel=$("doctype"),cur=null;
+function buildTypeSelect(){
+  typeSel.innerHTML="";
+  var groups={};
+  STUDIES[study].types.forEach(function(t){
+    if(!groups[t.group]){groups[t.group]=document.createElement("optgroup");groups[t.group].label=t.group;typeSel.appendChild(groups[t.group]);}
+    var o=document.createElement("option");o.value=t.id;o.textContent=t.label;groups[t.group].appendChild(o);
+  });
+  cur=STUDIES[study].types[0];
+  try{var st=localStorage.getItem("tmfnType_"+study);
+    if(st){var f=STUDIES[study].types.filter(function(t){return t.id===st})[0];if(f)cur=f;}}catch(e){}
+  typeSel.value=cur.id;
+}
+function applyStudy(){
+  $("chipProtocol").textContent=STUDIES[study].protocol;
+  $("chipBase").textContent=STUDIES[study].base;
+  ["bis","cvf","cbr"].forEach(function(s){
+    $("rules-"+s).hidden=study!==s;
+    $("fix-"+s).hidden=study!==s;
+  });
+  buildTypeSelect();renderFields();renderPreview();
+}
+$("study").addEventListener("change",function(){
+  study=$("study").value;
+  try{localStorage.setItem("tmfnStudy",study)}catch(e){}
+  applyStudy();
+});
+
+var mtgSites={};
+try{mtgSites=JSON.parse(localStorage.getItem("tmfnMtg")||"{}")}catch(e){}
+function mtgKey(){return study+"_"+(study==="cvf"?pad2(v.csite):study==="cbr"?pad3(v.bsite):pad3(v.site))}
+function mtgHas(){return !!mtgSites[mtgKey()]}
+function mtgSet(on){if(on)mtgSites[mtgKey()]=1;else delete mtgSites[mtgKey()];try{localStorage.setItem("tmfnMtg",JSON.stringify(mtgSites))}catch(e){}}
+function rangeHas(){return !!mtgSites["range_"+mtgKey()]}
+function rangeSet(on){if(on)mtgSites["range_"+mtgKey()]=1;else delete mtgSites["range_"+mtgKey()];try{localStorage.setItem("tmfnMtg",JSON.stringify(mtgSites))}catch(e){}}
+function renderFields(){
+  var box=$("fields");box.innerHTML="";
+  cur.fields().forEach(function(f){
+    var wrap=document.createElement("div");
+    if(f.type==="checkStore"){
+      wrap.className="checkline";
+      var getFn=f.get||mtgHas,setFn=f.set||mtgSet;
+      var cs=document.createElement("input");cs.type="checkbox";cs.id="f_"+f.key;cs.checked=getFn();
+      cs.addEventListener("change",function(){setFn(cs.checked);renderFields();renderPreview();});
+      var csl=document.createElement("label");csl.htmlFor=cs.id;csl.textContent=f.label;
+      wrap.appendChild(cs);wrap.appendChild(csl);box.appendChild(wrap);return;
+    }
+    if(f.type==="check"){
+      wrap.className="checkline";
+      var cb=document.createElement("input");cb.type="checkbox";cb.id="f_"+f.key;cb.checked=!!v[f.key];
+      cb.addEventListener("change",function(){v[f.key]=cb.checked;renderFields();renderPreview();});
+      var lb=document.createElement("label");lb.htmlFor=cb.id;lb.textContent=f.label;
+      wrap.appendChild(cb);wrap.appendChild(lb);box.appendChild(wrap);return;
+    }
+    wrap.className="field";
+    var lab=document.createElement("label");lab.className="f";lab.htmlFor="f_"+f.key;lab.textContent=f.label;wrap.appendChild(lab);
+    var el;
+    if(f.type==="select"){
+      el=document.createElement("select");
+      (f.options||[]).forEach(function(op){
+        var val=Array.isArray(op)?op[0]:op, txt=Array.isArray(op)?op[1]:(op===""?"없음":op);
+        var o=document.createElement("option");o.value=val;o.textContent=txt;el.appendChild(o);
+      });
+      el.value=v[f.key]!==undefined?v[f.key]:"";
+      if(el.value!==String(v[f.key]))v[f.key]=el.value;
+      el.addEventListener("change",function(){v[f.key]=el.value;renderFields();renderPreview();});
+    }else{
+      el=document.createElement("input");
+      el.type=f.type==="number"?"number":f.type;
+      if(f.min)el.min=f.min;
+      if(f.placeholder)el.placeholder=f.placeholder;
+      el.value=v[f.key]||"";
+      el.addEventListener("input",function(){v[f.key]=el.value;renderPreview();
+        if(f.key==="site"||f.key==="csite"||f.key==="bsite"){
+          try{localStorage.setItem("tmfnSites",JSON.stringify({site:v.site,csite:v.csite,bsite:v.bsite}))}catch(e){}
+          if(document.getElementById("f_mtgHere")||document.getElementById("f_rangeStore")){
+            renderFields();renderPreview();
+            var si=document.getElementById("f_"+f.key);
+            if(si){si.focus();if(si.setSelectionRange){var L=si.value.length;si.setSelectionRange(L,L);}}
+          }
+        }});
+    }
+    el.id="f_"+f.key;wrap.appendChild(el);
+    if(f.hint){var h=document.createElement("div");h.className="hint";h.textContent=f.hint;wrap.appendChild(h);}
+    box.appendChild(wrap);
+  });
+  var iw=document.createElement("div");iw.className="field";
+  var il=document.createElement("label");il.className="f";il.htmlFor="f_idxOv";il.textContent="Index No. (폴더 저장용 접두어 — 비우면 자동)";
+  var ii=document.createElement("input");ii.type="text";ii.id="f_idxOv";ii.placeholder=autoIdx();ii.value=v.idxOv||"";
+  ii.addEventListener("input",function(){v.idxOv=ii.value;renderPreview();});
+  iw.appendChild(il);iw.appendChild(ii);box.appendChild(iw);
+}
+function autoIdx(){
+  var e=v.event;
+  var irbIdx=e==="Interim"?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
+  if(study==="cbr"){
+    var bIdx=e==="Annual"?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
+    switch(cur.id){
+      case"birb":return bIdx; case"bmember":return"5.6"; case"bicf":return"3.4";
+      case"bcontract":return"10.1"; case"bstaff":return"15.2"; case"btr":return"15.2";
+      case"bteam":return v.bTeamDoc==="cv"?"1.3":(v.bTeamDoc==="gcp"||v.bTeamDoc==="crp")?"1.4":v.bTeamDoc==="pv"?"1.5":"1.6";
+      default:return"15.4";
+    }
+  }
+  if(study==="bis"){
+    switch(cur.id){
+      case"irb":return irbIdx; case"irblist":return"5.5"; case"icf":return"3.4";
+      case"sae":return"8.4"; case"contract":return"10.1"; case"ssv":return"15.1";
+      case"setup":return"15.2"; case"siv":return"15.3";
+      case"team":return v.teamDoc==="cv"?"1.3":v.teamDoc==="gcp"?"1.4":"1.5";
+      default:return"15.4";
+    }
+  }
+  switch(cur.id){
+    case"cirb":return irbIdx; case"cirbmember":return"5.5"; case"cstaff":return"15.1";
+    case"csiv":return"15.1"; case"csmv":return"15.2"; case"csvl":return"15.2";
+    case"ccontract":return"10.1"; case"cfeas":return v.feasMode==="sel"?"2.3":"2.4";
+    case"ccorr":return"2.10"; case"cpsr":return"2.10"; case"cmtg":return"2.6";
+    case"cteam":return v.cteamDoc==="cv"?"1.3":v.cteamDoc==="gcp"?"1.4":"1.6";
+    default:return"";
+  }
+}
+function currentList(){
+  var list=(cur.buildList&&cur.buildList())||null;
+  return list&&list.length?list:[cur.build()];
+}
+function renderPreview(){
+  var box=$("previewBlocks");box.innerHTML="";
+  var list=currentList();
+  var idx=(v.idxOv||"").trim()||autoIdx();
+  var blocks=[
+    {label:"폴더 저장용 · Index 제외",pre:[]},
+    {label:"ZIP 보관용 · Index 포함",pre:idx?[P(idx+" ","seg-idx")]:[]}
+  ];
+  blocks.forEach(function(bk){
+    var wrap=document.createElement("div");wrap.className="pv-block";
+    var head=document.createElement("div");head.className="pv-head";
+    var lab=document.createElement("div");lab.className="preview-label";lab.textContent=bk.label;
+    var btn=document.createElement("button");btn.className="primary mini";btn.type="button";
+    btn.textContent=list.length>1?"전체 복사 ("+list.length+"건)":"복사";
+    var names=list.map(function(parts){return joinParts(bk.pre)+joinParts(parts)});
+    var sep=cur.copySep?cur.copySep():"\n";
+    btn.addEventListener("click",function(){copyText(names.join(sep));names.forEach(pushRecent);});
+    head.appendChild(lab);head.appendChild(btn);
+    var body=document.createElement("div");body.className="fname";
+    list.forEach(function(parts,i){
+      var line=document.createElement("div");
+      var all=bk.pre.concat(parts);
+      if(list.length>1){
+        line.style.display="flex";line.style.alignItems="baseline";line.style.gap="8px";
+        if(i>0)line.style.marginTop="6px";
+        var txt=document.createElement("div");txt.style.flex="1";txt.style.wordBreak="break-all";
+        all.forEach(function(p){var s=document.createElement("span");s.className=p[1];s.textContent=p[0];txt.appendChild(s);});
+        var b=document.createElement("button");b.textContent="복사";b.type="button";
+        b.style.cssText="font-family:'IBM Plex Sans KR',sans-serif;font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:5px;padding:2px 8px;cursor:pointer;flex:none;user-select:none;-webkit-user-select:none";
+        (function(name){b.addEventListener("click",function(){copyText(name)})})(joinParts(all));
+        line.appendChild(txt);line.appendChild(b);
+      }else{
+        all.forEach(function(p){var s=document.createElement("span");s.className=p[1];s.textContent=p[0];line.appendChild(s);});
+      }
+      body.appendChild(line);
+    });
+    wrap.appendChild(head);wrap.appendChild(body);box.appendChild(wrap);
+  });
+  var ex=$("example");ex.innerHTML="";
+  var t=document.createElement("div");t.className="ex-title";t.textContent="트래커 실제 예시";ex.appendChild(t);
+  cur.ex.forEach(function(e){var c=document.createElement("code");c.textContent=e;ex.appendChild(c);ex.appendChild(document.createElement("br"));});
+  if(cur.note){var n=document.createElement("div");n.style.marginTop="6px";n.textContent="※ "+cur.note;ex.appendChild(n);}
+}
+typeSel.addEventListener("change",function(){
+  cur=STUDIES[study].types.filter(function(t){return t.id===typeSel.value})[0];
+  try{localStorage.setItem("tmfnType_"+study,cur.id)}catch(e){}
+  renderFields();renderPreview();
+});
+
+var recent=[];
+function pushRecent(name){
+  recent.unshift(name);recent=recent.slice(0,8);
+  var ul=$("recentList");ul.innerHTML="";
+  recent.forEach(function(r){
+    var li=document.createElement("li");
+    var c=document.createElement("code");c.textContent=r;
+    var b=document.createElement("button");b.textContent="복사";
+    b.addEventListener("click",function(){copyText(r)});
+    li.appendChild(c);li.appendChild(b);ul.appendChild(li);
+  });
+  $("recentPanel").hidden=false;
+}
+function copyText(t){
+  function done(){var toast=$("toast");toast.classList.add("show");setTimeout(function(){toast.classList.remove("show")},1500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){fallback(t);done();});}
+  else{fallback(t);done();}
+  function fallback(txt){var ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(ta);}
+}
+var tabs=document.querySelectorAll(".tabs button");
+tabs.forEach(function(b){
+  b.addEventListener("click",function(){
+    tabs.forEach(function(x){x.setAttribute("aria-selected",x===b?"true":"false")});
+    $("tab-gen").hidden=b.dataset.tab!=="gen";
+    $("tab-rules").hidden=b.dataset.tab!=="rules";
+    $("tab-fix").hidden=b.dataset.tab!=="fix";
+  });
+});
+
+
+window.__tmfn={
+  v:v,
+  applyStudy:applyStudy,
+  setStudy:function(s){ if(!STUDIES[s])return; study=s; try{localStorage.setItem("tmfnStudy",s)}catch(e){} $("study").value=s; },
+  getStudy:function(){return study},
+  names:function(withIdx){
+    var list=currentList();
+    var ix=(v.idxOv||"").trim()||autoIdx();
+    var pre=(withIdx&&ix)?ix+" ":"";
+    var sep=cur.copySep?cur.copySep():", "; if(sep==="\n")sep=", ";
+    return list.map(function(p){return pre+joinParts(p)}).join(sep);
+  }
+};
+
+applyStudy();
+})();
+
+
+/* ── IRB Tracker 연동 (행 → 모달 → tmfName 입력) ── */
+window.__tmfnRow=null;
+window.openTmfNamer=function(code,secId,idx){
+  var T=window.__tmfn; if(!T){alert('TMF Namer 초기화 실패');return;}
+  window.__tmfnRow={code:code,secId:secId,idx:idx};
+  try{
+    var p=(typeof protocols!=='undefined'?protocols:[]).filter(function(x){return x.id===curProtocolId})[0];
+    var pn=String((p&&(p.protocolNo||p.name))||'').toUpperCase();
+    var s=pn.indexOf('BS-CTL')>=0?'bis':pn.indexOf('CS-AVA')>=0?'cvf':(pn.indexOf('CSL627')>=0||pn.indexOf('AFSTYLA')>=0)?'cbr':null;
+    if(s)T.setStudy(s);
+  }catch(e){}
+  try{
+    var d=String(code||'').replace(/\D/g,'');
+    if(d){var p3=('000'+d).slice(-3);T.v.site=p3;T.v.bsite=p3;T.v.csite=('0'+String(+d)).slice(-2);}
+  }catch(e){}
+  try{
+    var sec=getSec(code,secId), row=sec&&sec.rows[idx];
+    if(row){
+      var ap=(row.approveDate||'').trim();
+      var su=(row.piSubmitDate||row.submitDate||row.craSubmitDate||'').trim();
+      var rc=(row.receiptDate||'').trim();
+      if(ap)T.v.date=ap;
+      var st=T.getStudy();
+      var d2=(st==='cbr')?(rc||su):(su||rc);
+      if(d2)T.v.date2=d2;
+      if(!ap&&d2)T.v.date=d2;
+    }
+  }catch(e){}
+  T.applyStudy();
+  document.getElementById('tmfnOverlay').style.display='flex';
+};
+window.tmfnInsert=function(withIdx){
+  var T=window.__tmfn,r=window.__tmfnRow; if(!T)return;
+  var name=T.names(withIdx); if(!name)return;
+  if(r&&typeof setField==='function'){
+    setField(r.code,r.secId,r.idx,'tmfName',name);
+    document.getElementById('tmfnOverlay').style.display='none';
+  }else{
+    try{navigator.clipboard.writeText(name)}catch(e){}
+  }
+};
+
 </script>
 
 </body>
