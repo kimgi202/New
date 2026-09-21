@@ -6252,6 +6252,16 @@ function applySiteImport(data){
 // 원칙: 이미 있는 데이터는 절대 지우지 않는다.
 //   · 없는 기관 → 새로 만듦 (기본 섹션 포함)
 //   · 있는 기관 → 빈 칸만 채움 · IRB 이력이 이미 있으면 건너뜀 · 할 일은 같은 문구가 없을 때만 추가
+// 기관 섹션이 '만들어진 그대로(손대지 않음)'인지 — 가져오기 때 교체해도 되는지 판단
+function hoSecUntouched(sec){
+  const m=sec.meta||{};
+  if(['approvalDate','noticeDate','craSubmitDate','piSubmitDate','receiptDate','approvalStartDate','approvalEndDate','recvNo','reportableDate'].some(k=>String(m[k]||'').trim())) return false;
+  if(Array.isArray(m.resubmits)&&m.resubmits.length) return false;
+  if(Array.isArray(sec.attachments)&&sec.attachments.length) return false;
+  return (sec.rows||[]).every(r=>(r.status||'pend')==='pend'
+    && !['ver','fromVer','toVer','masterVer','siteVer','effectiveDate','tmfName','serverFileName','note','deadline','submitDate','craSubmitDate','piSubmitDate','receiptDate','approveDate'].some(k=>String(r[k]||'').trim())
+    && !(Array.isArray(r.history)&&r.history.length));
+}
 function applyHandoverImport(data){
   try{ sanitizeDataHtmlFields(data); }catch(e){}
   const list=(Array.isArray(data.sites)?data.sites:[]).filter(s=>s&&s.code&&s.name);
@@ -6273,6 +6283,7 @@ function applyHandoverImport(data){
   if(!confirm(`인수인계 기관 ${plan.length}곳을 가져올게요.\n\n과제: ${data.protocolNo||''}${target?'':' (새로 만듦)'}`
     +(newOnes.length?`\n새로 추가: ${newOnes.map(L).join(', ')}`:'')
     +(oldOnes.length?`\n이미 있음 → 빈 칸만 채움: ${oldOnes.map(L).join(', ')}`:'')
+    +(list.some(x=>Array.isArray(x.sections)&&x.sections.length)?`\n문서 섹션도 함께 넣어요 (손대지 않은 빈 기본 섹션만 교체)`:'')
     +`\n\n기존에 입력한 내용은 지우지 않아요. 계속할까요?`)) return;
   let created=false;
   if(!target){
@@ -6283,7 +6294,7 @@ function applyHandoverImport(data){
   }
   // 3) 그 과제로 전환 후 기관별로 채우기
   curProtocolId=target.id; bindCurrentProtocol();
-  let histN=0, todoN=0; const histSkip=[];
+  let histN=0, todoN=0, doneN=0, secN=0; const histSkip=[], secReplaced=[], secAppended=[];
   plan.forEach(({src,code})=>{
     let s=sites.find(x=>x.code===code);
     if(!s){
@@ -6307,13 +6318,39 @@ function applyHandoverImport(data){
     }
     const td=getTodos(code);
     (src.todos||[]).forEach(t=>{ t=String(t||'').trim(); if(t&&!td.some(x=>(x.text||'').trim()===t)){ td.push({id:makeId('td'), text:t, done:false}); todoN++; } });
+    // 새 자료로 해결된 확인 항목은 완료 처리 (지우지 않고 체크만)
+    (src.todosDone||[]).forEach(t=>{ t=String(t||'').trim(); const hit=td.find(x=>(x.text||'').trim()===t); if(hit&&!hit.done){ hit.done=true; doneN++; } });
+    // IRB No. — 계약 패널·섹션 머리의 'IRB No.' 칸과 같은 값. 비어 있을 때만
+    if(src.irbNo && !String(c.contractNo||'').trim()) c.contractNo=String(src.irbNo);
+    // 문서 섹션 (심의 건별 문서 항목)
+    //  · 기관의 섹션이 전부 '만들어진 그대로'면 → 가져온 섹션으로 교체
+    //    (같은 종류가 없는 기본 섹션 — 종료보고·동의서 관리 등 — 은 뒤에 그대로 남김)
+    //  · 하나라도 손댄 섹션이 있으면 → 아무것도 지우지 않고, 같은 제목이 없는 섹션만 뒤에 추가
+    if(Array.isArray(src.sections)&&src.sections.length){
+      if(!sections[code]) sections[code]=[];
+      const cur=sections[code];
+      const mk=ss=>({id:makeId('sec'), type:ss.type||'custom', title:String(ss.title||'섹션'),
+        meta:Object.assign({approvalDate:'',noticeDate:''}, ss.meta||{}),
+        rows:(ss.rows||[]).map(r=>Object.assign(emptyFields(), {name:String(r.name||''), dtype:r.dtype||'doc', needVer:!!r.needVer,
+          status:['pend','ok','wip','issue','na'].includes(r.status)?r.status:'pend', ver:String(r.ver||''), note:String(r.note||'')}))});
+      if(cur.every(hoSecUntouched)){
+        const types=new Set(src.sections.map(x=>x.type));
+        sections[code]=src.sections.map(mk).concat(cur.filter(x=>!types.has(x.type)));
+        secN+=src.sections.length; secReplaced.push(code);
+      } else {
+        const have=new Set(cur.map(x=>String(x.title||'').trim()));
+        let n=0; src.sections.forEach(ss=>{ if(!have.has(String(ss.title||'').trim())){ cur.push(mk(ss)); n++; } });
+        secN+=n; if(n) secAppended.push(code);
+      }
+    }
   });
   curSite=plan[0].code; curView='home'; curIndexType=null;
   saveData(); render();
   alert(`✅ 인수인계 가져오기 완료!\n\n과제: ${target.protocolNo||target.name}${created?' (새로 생성됨)':''}`
     +`\n기관: 새로 ${newOnes.length}곳 · 기존 ${oldOnes.length}곳`
     +`\nIRB 심의 이력: ${histN}건`+(histSkip.length?` (이미 이력이 있어 건너뜀: ${histSkip.join(', ')})`:'')
-    +`\n할 일: ${todoN}건`
+    +`\n할 일: ${todoN}건`+(doneN?` (해결돼서 완료 처리: ${doneN}건)`:'')
+    +(secN?`\n문서 섹션: ${secN}개`+(secReplaced.length?` (빈 기본 섹션 교체: ${secReplaced.join(', ')})`:'')+(secAppended.length?` (기존 섹션 뒤에 추가: ${secAppended.join(', ')})`:''):'')
     +`\n\n다음 단계 👉 Index가 채워진 기관에서 ISF·TMF Index → 📑 다른 기관에 복사`);
 }
 
