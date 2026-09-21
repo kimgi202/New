@@ -3246,15 +3246,17 @@ function openIdxCopyModal(type){
   const me=curSiteCode();
   if(!getIndexRows(type).length){ alert('이 기관의 Index가 비어 있어서 복사할 게 없어요.\n먼저 이 기관 Index를 채운 뒤 복사해주세요.'); return; }
   const others=(sites||[]).filter(s=>s.code!==me);
-  if(!others.length){ alert('복사할 다른 기관이 없어요. 먼저 기관을 추가해주세요.'); return; }
+  if(!others.length){ alert('이 과제에 다른 기관이 없어요.\n먼저 기관을 추가한 뒤 복사해주세요. (+ 기관 추가 / 📂 기관 가져오기)'); return; }
   idxCopyState={mode:'push', type, from:me, overwrite:false, copyOrig:true, copyNa:false, copyChk:true,
     picked:new Set(others.filter(s=>!idxRowsFor(s.code,type).length).map(s=>s.code))};   // 비어 있는 기관만 미리 선택
   renderIdxCopyModal();
 }
 function openIdxPullModal(type){
-  if(!curProtocolId) return;
+  if(!curProtocolId){ alert('먼저 과제를 선택해주세요.'); return; }
+  const me=curSiteCode();
+  if(!(sites||[]).some(s=>s.code!==me)){ alert('이 과제에 다른 기관이 없어요.\n먼저 기관을 추가한 뒤 가져와주세요. (+ 기관 추가 / 📂 기관 가져오기)'); return; }
   const src=idxPullSources(type);
-  if(!src.length){ alert('이 Index를 채워 둔 다른 기관이 없어요.'); return; }
+  if(!src.length){ alert(`이 과제의 다른 기관 ${indexLabel(type)}가 모두 비어 있어요.\nIndex가 채워진 기관이 있어야 가져올 수 있어요.`); return; }
   idxCopyState={mode:'pull', type, to:curSiteCode(), from:src[0].code, copyOrig:true, copyNa:false, copyChk:true};
   renderIdxCopyModal();
 }
@@ -3310,7 +3312,9 @@ function renderIdxCopyModal(){
       const rows=idxRowsFor(s.code,S.type), on=S.from===s.code;
       return `<label class="icp-site"><input type="radio" name="icpFrom" data-code="${escAttr(s.code)}" ${on?'checked':''} onchange="idxCopyFrom(this.dataset.code)"><span class="icp-name">${escHtml(idxSiteLabel(s.code))}</span><span class="icp-state">항목 ${idxItemCount(rows)}개</span></label>`;
     }).join('');
-    sumHtml=`<b>${escHtml(idxSiteLabel(S.from))}</b>의 항목 <b>${itemN}개</b>${secN?` · 섹션 <b>${secN}개</b>`:''}를 이 기관에 만들어요.`;
+    const mine=idxItemCount(idxRowsFor(S.to,S.type));
+    sumHtml=`<b>${escHtml(idxSiteLabel(S.from))}</b>의 항목 <b>${itemN}개</b>${secN?` · 섹션 <b>${secN}개</b>`:''}를 이 기관에 만들어요.`
+      +(idxRowsFor(S.to,S.type).length?`<br><b style="color:#c0392b">⚠ 이 기관에 있던 항목 ${mine}개는 지워지고 교체돼요.</b>`:'');
     go=srcRows.length>0; goLabel='📑 가져오기';
   }
   m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeIdxCopyModal()">
@@ -4893,7 +4897,8 @@ function renderIndexBody(){
         ${naCount>0?`<button class="btn" onclick="toggleNaRows()" title="N/A 항목 ${showNaRows?'숨기기':'보기'}">${showNaRows?'⊟ N/A 숨기기':'⊞ N/A 보기'} (${naCount})</button>`:''}
         <button class="btn" onclick="importIndexCSV('${type}')" title="CSV 파일을 불러와 현재 Index에 추가">📤 CSV 불러오기</button>
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
-        ${((sites||[]).length>1&&rows.length)?`<button class="btn" onclick="openIdxCopyModal('${type}')" title="이 기관의 Index 구성(섹션·No.·문서명)을 다른 기관에 한 번에 만들어요. 위치·파일명·Filing 기록은 복사하지 않아요">📑 다른 기관에 복사</button>`:''}
+        <button class="btn" onclick="openIdxCopyModal('${type}')" title="이 기관의 Index 구성(섹션·No.·문서명)을 다른 기관에 한 번에 만들어요. 위치·파일명·Filing 기록은 복사하지 않아요">📑 다른 기관에 복사</button>
+        <button class="btn" onclick="openIdxPullModal('${type}')" title="같은 과제의 다른 기관에서 만든 Index 구성을 이 기관으로 가져와요">📑 다른 기관에서 가져오기</button>
         `}
       </div>
     </div>
@@ -6131,6 +6136,7 @@ function importSiteFromFile(inputEl){
 }
 
 function applySiteImport(data){
+  if(data && data.type==='irb-tracker-handover-import'){ applyHandoverImport(data); return; }
   if(!data || data.type!=='irb-tracker-site-import'){
     alert('이 트래커용 가져오기 파일이 아니에요.'); return;
   }
@@ -6238,6 +6244,77 @@ function applySiteImport(data){
   // 5) 저장 및 화면 전환
   saveData(); render();
   alert(`✅ 가져오기 완료!\n\nProtocol: ${target.protocolNo||target.name}${created?' (새로 생성됨)':''}${summary}`);
+}
+
+// ━━━━━━━━━━━━ 인수인계 패키지 가져오기 (여러 기관 한 번에) ━━━━━━━━━━━━
+// 파일: {type:'irb-tracker-handover-import', protocolNo, protocolName, sponsor, studyType,
+//        sites:[{code, name, piName, contractDate, memo, irbHist:{cols,rows}, todos:[문구]}]}
+// 원칙: 이미 있는 데이터는 절대 지우지 않는다.
+//   · 없는 기관 → 새로 만듦 (기본 섹션 포함)
+//   · 있는 기관 → 빈 칸만 채움 · IRB 이력이 이미 있으면 건너뜀 · 할 일은 같은 문구가 없을 때만 추가
+function applyHandoverImport(data){
+  try{ sanitizeDataHtmlFields(data); }catch(e){}
+  const list=(Array.isArray(data.sites)?data.sites:[]).filter(s=>s&&s.code&&s.name);
+  if(!list.length){ alert('가져올 기관이 없어요.'); return; }
+  syncCurrentProtocolData();
+  // 1) 과제 찾기 — Protocol No. 공백·대소문자 무시, 못 찾으면 이름/번호에 포함된 것까지
+  const nz=x=>String(x||'').toUpperCase().replace(/\s+/g,'');
+  const want=nz(data.protocolNo);
+  let target=protocols.find(p=>want&&nz(p.protocolNo)===want)
+          ||protocols.find(p=>want&&(nz(p.protocolNo).includes(want)||nz(p.name).includes(want)));
+  // 2) 기관코드 맞추기 — 이미 있는 기관이 3자리(009)면 01 → 001 로, 숫자가 같으면 같은 기관으로 본다
+  const tSites=target?((protocolData[target.id]||{}).sites||[]):[];
+  const pad3=tSites.some(s=>/^\d{3}$/.test(s.code));
+  const toCode=c=>{ c=normSiteCode(c); return (pad3&&/^\d{1,2}$/.test(c))?('000'+c).slice(-3):c; };
+  const findSite=(arr,c)=>arr.find(x=>x.code===c)||arr.find(x=>/^\d+$/.test(x.code)&&/^\d+$/.test(c)&&(+x.code)===(+c));
+  const plan=list.map(src=>{ const c=toCode(src.code); const ex=findSite(tSites,c); return {src, code:ex?ex.code:c, exists:!!ex}; });
+  const newOnes=plan.filter(p=>!p.exists), oldOnes=plan.filter(p=>p.exists);
+  const L=p=>p.code+' '+p.src.name;
+  if(!confirm(`인수인계 기관 ${plan.length}곳을 가져올게요.\n\n과제: ${data.protocolNo||''}${target?'':' (새로 만듦)'}`
+    +(newOnes.length?`\n새로 추가: ${newOnes.map(L).join(', ')}`:'')
+    +(oldOnes.length?`\n이미 있음 → 빈 칸만 채움: ${oldOnes.map(L).join(', ')}`:'')
+    +`\n\n기존에 입력한 내용은 지우지 않아요. 계속할까요?`)) return;
+  let created=false;
+  if(!target){
+    const id=makeId('prt');
+    target={id, name:data.protocolName||data.protocolNo, contractNo:data.contractNo||'', projectName:data.projectName||'',
+            protocolNo:data.protocolNo||'', protocolTitle:data.protocolTitle||'', sponsor:data.sponsor||'', studyType:data.studyType||'PMS'};
+    protocols.push(target); protocolData[id]={sites:[],sections:{},indexes:{}}; created=true;
+  }
+  // 3) 그 과제로 전환 후 기관별로 채우기
+  curProtocolId=target.id; bindCurrentProtocol();
+  let histN=0, todoN=0; const histSkip=[];
+  plan.forEach(({src,code})=>{
+    let s=sites.find(x=>x.code===code);
+    if(!s){
+      s={code, name:src.name, contractNo:'', contractDate:'', contractAmount:'', sponsor:data.sponsor||'', piName:src.piName||'', contractNote:''};
+      sites.push(s); initSite(code);
+    }
+    if(!s.name) s.name=src.name;
+    if(!s.piName&&src.piName) s.piName=src.piName;
+    const c=getSiteContract(code);
+    if(!c.pi&&src.piName) c.pi=src.piName;
+    if(!c.sponsor&&data.sponsor) c.sponsor=data.sponsor;
+    if(!c.contractDate&&src.contractDate) c.contractDate=src.contractDate;
+    if(!c.memo&&src.memo) c.memo=src.memo;
+    const cts=getSiteContracts(code);
+    if(!cts.length&&src.contractDate) cts.push({id:makeId('ct'), label:contractAutoLabel(0), date:src.contractDate, amount:'', vat:false, indirect:'', subjects:'', reason:''});
+    const ih=src.irbHist;
+    if(ih&&Array.isArray(ih.cols)&&Array.isArray(ih.rows)&&ih.rows.length){
+      const H=getIrbHist(code);
+      if(H.rows.length) histSkip.push(code);
+      else{ H.cols=ih.cols.map(x=>String(x)); H.rows=ih.rows.map(r=>H.cols.map((_,i)=>normDateStr(String((r||[])[i]==null?'':r[i])))); histN+=H.rows.length; }
+    }
+    const td=getTodos(code);
+    (src.todos||[]).forEach(t=>{ t=String(t||'').trim(); if(t&&!td.some(x=>(x.text||'').trim()===t)){ td.push({id:makeId('td'), text:t, done:false}); todoN++; } });
+  });
+  curSite=plan[0].code; curView='home'; curIndexType=null;
+  saveData(); render();
+  alert(`✅ 인수인계 가져오기 완료!\n\n과제: ${target.protocolNo||target.name}${created?' (새로 생성됨)':''}`
+    +`\n기관: 새로 ${newOnes.length}곳 · 기존 ${oldOnes.length}곳`
+    +`\nIRB 심의 이력: ${histN}건`+(histSkip.length?` (이미 이력이 있어 건너뜀: ${histSkip.join(', ')})`:'')
+    +`\n할 일: ${todoN}건`
+    +`\n\n다음 단계 👉 Index가 채워진 기관에서 ISF·TMF Index → 📑 다른 기관에 복사`);
 }
 
 // ━━━━━━━━━━━━ 탭 드래그 정렬 (길게 눌러서 앞뒤로 이동) ━━━━━━━━━━━━
