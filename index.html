@@ -1011,6 +1011,31 @@ body.sb-collapsed .sb-hover-zone{display:block}
 .csv-choice-t{font-size:16px;font-weight:700;color:#37352f;margin-bottom:3px}
 .csv-choice.over .csv-choice-t{color:#c0392b}
 .csv-choice-s{font-size:14px;color:#787774;line-height:1.4}
+/* ── 📑 Index 기관 간 복사 ── */
+.icp-list{overflow-y:auto;flex:1;min-height:60px;border:1px solid #ececf0;border-radius:10px;padding:4px;margin-bottom:10px}
+.icp-site{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:15px;color:#37352f}
+.icp-site:hover{background:var(--accent-xl)}
+.icp-site input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex:none}
+.icp-site .icp-name{flex:1;min-width:0}
+.icp-site .icp-state{font-size:13px;color:#9aa3b2;flex:none}
+.icp-site.off{cursor:default;color:#b4b4b0}
+.icp-site.off:hover{background:none}
+.icp-site.off input{cursor:default}
+.icp-site.warn .icp-state{color:#c0392b;font-weight:600}
+.icp-listhead{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#787774;margin:2px 2px 6px}
+.icp-listhead button{background:none;border:none;color:var(--accent);font-size:13.5px;font-weight:600;cursor:pointer;padding:2px 4px}
+.icp-opts{display:flex;flex-direction:column;gap:2px;margin-bottom:12px}
+.icp-opts .ih-replace-chk{margin:3px 0;align-items:flex-start}
+.icp-opts .ih-replace-chk input{margin-top:3px;flex:none}
+.icp-opts .icp-opt-t{flex:1;min-width:0;font-size:14.5px;color:#37352f;line-height:1.45}
+.icp-opts .ih-replace-chk input{accent-color:var(--accent)}
+.icp-opts .ih-replace-chk.danger input{accent-color:#c0392b}
+.icp-sum{font-size:14px;color:#5b6b80;margin-bottom:12px}
+.icp-sum b{color:#37352f}
+.icp-acts{display:flex;justify-content:flex-end;gap:8px}
+.icp-acts .ih-save-btn:disabled{background:#c9ccd1;cursor:default}
+.idx-empty-pull{display:block;margin:10px auto 0;background:#fff;border:1px solid var(--accent-l);color:var(--accent);border-radius:8px;padding:8px 16px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.idx-empty-pull:hover{background:var(--accent-xl);border-color:var(--accent)}
 #appSidebar .admin-fb:hover{background:#f2ebfa !important;color:#684b96 !important}
 .fbi-list{max-height:50vh;overflow-y:auto;margin:6px 0 4px}
 .fbi-item{border:1px solid #ececf0;border-radius:9px;padding:10px 12px;margin-bottom:8px;background:#fbfbfd}
@@ -2160,7 +2185,14 @@ function parseIrbHistPaste(text){
   let rows=[];
   for(let i=start;i<lines.length;i++){
     const cells=splitCells(lines[i]);
-    if(cols && looksLikeHeader(cells)) continue; // 중간에 낀 제목 줄 스킵
+    // 중간에 낀 제목 줄 스킵 — 단, '제목 줄과 같은 칸 이름'이 절반 이상일 때만.
+    // 예전에는 looksLikeHeader(심의·상태 같은 단어 有 + 날짜 無)로 판정해서
+    // '초기심의 · 시정'(날짜 NA)이나 '변경심의 · 제출 예정'처럼 날짜가 아직 없는
+    // 진짜 이력 줄까지 제목 줄로 오인해 조용히 버려졌다.
+    if(cols){
+      const ne=cells.map(x=>x.replace(/[▲▼]/g,'').trim()).filter(Boolean);
+      if(ne.length && ne.filter(x=>cols.includes(x)).length*2>=ne.length) continue;
+    }
     rows.push(cells);
   }
   if(!cols){ cols=IH_DEFAULT_COLS.slice(); }
@@ -3146,6 +3178,174 @@ function addIndexSection(type){
   if(!title) return;
   rows.push({n:num, t:title, h:true, custom:true});
   saveData(); renderBody();
+}
+/* ══════════ 📑 Index를 다른 기관에 복사 / 다른 기관에서 가져오기 ══════════
+   인수인계처럼 기관이 한꺼번에 늘어났을 때, 한 기관에서 만든 Index 구성을
+   다른 기관에 그대로 만든다. (기관마다 CSV를 따로 불러오지 않아도 됨)
+   복사하는 것:   섹션 · No. · 문서명 · 참고(ref/sub)
+                  (선택) 원본/사본 구분 · (선택) N/A · (선택) 체크 칸 구성
+   복사 안 하는 것: 상태 · 위치 · 파일명 · 이전/이번 Filing · 비고 · 시행일자 · 첨부
+                  · 체크 표시 · 🔔 ISF Filing 알람 · 방문 대조
+   → 기관마다 다른 값이라, 복사하면 오히려 '틀린 기록'이 된다.
+   저장: 기존 저장소 그대로 — protocolData[과제].indexes['기관코드::타입__템플릿키'] */
+let idxCopyState=null;
+function idxKeyFor(code,type){ return code+'::'+type+'__'+indexTemplateKey(type); }
+function idxRowsFor(code,type){
+  const pd=curProtocolId?protocolData[curProtocolId]:null;
+  const arr=pd&&pd.indexes?pd.indexes[idxKeyFor(code,type)]:null;
+  return Array.isArray(arr)?arr:[];
+}
+function idxItemCount(rows){ return (rows||[]).filter(r=>r&&!r.h).length; }
+function idxSiteLabel(code){ const s=(sites||[]).find(x=>x.code===code); return code+(s&&s.name?' '+s.name:''); }
+// 이 Index를 가져올 수 있는 다른 기관 (줄이 1개 이상 있는 곳)
+function idxPullSources(type){
+  const me=curSiteCode();
+  return (sites||[]).filter(s=>s.code!==me && idxRowsFor(s.code,type).length>0);
+}
+function idxCopyRow(r,o){
+  if(r.h) return {n:r.n||'', t:r.t||'', h:true, sub:Array.isArray(r.sub)?r.sub.slice():null, ref:r.ref||'', custom:!!r.custom};
+  const isNa = r.naType==='NA' || (!!r.na && !r.naType);   // 예전 데이터는 naType 없이 na만 있음
+  let na=false, naType='';
+  if(isNa){ if(o.copyNa){ na=true; naType='NA'; } }
+  else if((r.naType==='원본'||r.naType==='사본') && o.copyOrig) naType=r.naType;
+  return {n:r.n||'', t:r.t||'', h:false, sub:Array.isArray(r.sub)?r.sub.slice():null, ref:r.ref||'',
+          na, naType, status:'pend', location:'', fileName:'', prevFiling:'', thisFiling:'', note:'', effDate:'',
+          custom:!!r.custom};
+}
+// fromCode 기관의 Index 구성을 toCode 기관에 만든다 (toCode 의 기존 줄은 교체)
+function idxCopyInto(fromCode,toCode,type,o){
+  const pd=protocolData[curProtocolId]; if(!pd) return 0;
+  if(!pd.indexes) pd.indexes={};
+  const src=idxRowsFor(fromCode,type);
+  pd.indexes[idxKeyFor(toCode,type)]=src.map(r=>idxCopyRow(r,o));
+  // 기관별 커스텀 Index(ICF, Subject Binder 등)면 받는 기관에도 탭을 만든다
+  if(!['ISF','PSF','TMF'].includes(type)){
+    if(!pd.siteCustomIndexes) pd.siteCustomIndexes={};
+    if(!Array.isArray(pd.siteCustomIndexes[toCode])) pd.siteCustomIndexes[toCode]=[];
+    if(!pd.siteCustomIndexes[toCode].includes(type)) pd.siteCustomIndexes[toCode].push(type);
+  }
+  // Index 표시 이름 — 받는 기관에 따로 정해 둔 이름이 없을 때만
+  const lbl=pd.siteIndexLabels&&pd.siteIndexLabels[fromCode]&&pd.siteIndexLabels[fromCode][type];
+  if(lbl){
+    if(!pd.siteIndexLabels[toCode]) pd.siteIndexLabels[toCode]={};
+    if(!pd.siteIndexLabels[toCode][type]) pd.siteIndexLabels[toCode][type]=lbl;
+  }
+  // 체크 칸 구성만 (체크 표시는 안 가져옴) — 같은 칸이 이미 있으면 건너뜀
+  if(o.copyChk && pd.idxChecks){
+    const sc=pd.idxChecks[idxKeyFor(fromCode,type)];
+    if(Array.isArray(sc)&&sc.length){
+      const k=idxKeyFor(toCode,type);
+      if(!Array.isArray(pd.idxChecks[k])) pd.idxChecks[k]=[];
+      sc.forEach(c=>{ if(!pd.idxChecks[k].some(x=>x.id===c.id||x.label===c.label)) pd.idxChecks[k].push({id:c.id,label:c.label}); });
+    }
+  }
+  return idxItemCount(src);
+}
+function openIdxCopyModal(type){
+  if(!curProtocolId){ alert('먼저 과제를 선택해주세요.'); return; }
+  const me=curSiteCode();
+  if(!getIndexRows(type).length){ alert('이 기관의 Index가 비어 있어서 복사할 게 없어요.\n먼저 이 기관 Index를 채운 뒤 복사해주세요.'); return; }
+  const others=(sites||[]).filter(s=>s.code!==me);
+  if(!others.length){ alert('복사할 다른 기관이 없어요. 먼저 기관을 추가해주세요.'); return; }
+  idxCopyState={mode:'push', type, from:me, overwrite:false, copyOrig:true, copyNa:false, copyChk:true,
+    picked:new Set(others.filter(s=>!idxRowsFor(s.code,type).length).map(s=>s.code))};   // 비어 있는 기관만 미리 선택
+  renderIdxCopyModal();
+}
+function openIdxPullModal(type){
+  if(!curProtocolId) return;
+  const src=idxPullSources(type);
+  if(!src.length){ alert('이 Index를 채워 둔 다른 기관이 없어요.'); return; }
+  idxCopyState={mode:'pull', type, to:curSiteCode(), from:src[0].code, copyOrig:true, copyNa:false, copyChk:true};
+  renderIdxCopyModal();
+}
+function closeIdxCopyModal(){ const m=document.getElementById('idxCopyModal'); if(m) m.innerHTML=''; idxCopyState=null; }
+function idxCopyPick(code,on){ const S=idxCopyState; if(!S||!S.picked) return; if(on) S.picked.add(code); else S.picked.delete(code); renderIdxCopyModal(); }
+function idxCopyPickAll(){
+  const S=idxCopyState; if(!S||!S.picked) return;
+  const avail=(sites||[]).filter(s=>s.code!==S.from && (S.overwrite||!idxRowsFor(s.code,S.type).length)).map(s=>s.code);
+  const allOn=avail.length>0 && avail.every(c=>S.picked.has(c));
+  avail.forEach(c=>{ if(allOn) S.picked.delete(c); else S.picked.add(c); });
+  renderIdxCopyModal();
+}
+function idxCopyOpt(key,val){ const S=idxCopyState; if(!S) return; S[key]=val; renderIdxCopyModal(); }
+function idxCopyFrom(code){ const S=idxCopyState; if(!S) return; S.from=code; renderIdxCopyModal(); }
+function renderIdxCopyModal(){
+  const S=idxCopyState; if(!S) return;
+  let m=document.getElementById('idxCopyModal');
+  if(!m){ m=document.createElement('div'); m.id='idxCopyModal'; document.body.appendChild(m); }
+  const label=indexLabel(S.type);
+  const srcRows=idxRowsFor(S.from,S.type);
+  const itemN=idxItemCount(srcRows), secN=srcRows.length-itemN;
+  const hasNa=srcRows.some(r=>r&&!r.h&&(r.naType==='NA'||(r.na&&!r.naType)));
+  const hasOrig=srcRows.some(r=>r&&!r.h&&(r.naType==='원본'||r.naType==='사본'));
+  const pd=protocolData[curProtocolId]||{};
+  const srcChk=(pd.idxChecks&&pd.idxChecks[idxKeyFor(S.from,S.type)])||[];
+  const chk=(key,on,text,sub,cls)=>`<label class="ih-replace-chk${cls?' '+cls:''}"><input type="checkbox" ${on?'checked':''} onchange="idxCopyOpt('${key}',this.checked)"><span class="icp-opt-t">${text}${sub?` <span>${sub}</span>`:''}</span></label>`;
+  const opts=`<div class="icp-opts">
+      ${hasOrig?chk('copyOrig',S.copyOrig,'원본/사본 구분도 복사'):''}
+      ${hasNa?chk('copyNa',S.copyNa,'N/A 표시도 복사','(기관마다 해당 없는 문서가 다를 수 있어요)'):''}
+      ${srcChk.length?chk('copyChk',S.copyChk,`체크 칸 ${srcChk.length}개도 만들기`,'(체크 표시는 복사 안 함)'):''}
+      ${S.mode==='push'?chk('overwrite',S.overwrite,'이미 Index가 있는 기관도 덮어쓰기','(그 기관의 위치·파일명·Filing 기록이 지워져요)','danger'):''}
+    </div>`;
+  let head, listHead, listHtml, sumHtml, go, goLabel;
+  if(S.mode==='push'){
+    const others=(sites||[]).filter(s=>s.code!==S.from);
+    others.forEach(s=>{ if(!S.overwrite && idxRowsFor(s.code,S.type).length) S.picked.delete(s.code); });
+    head=`<h3>📑 ${escHtml(label)} 다른 기관에 복사</h3>
+      <div class="snap-desc"><b>${escHtml(idxSiteLabel(S.from))}</b>의 Index 구성(섹션·No.·문서명)을 골라둔 기관에 그대로 만들어요.<br>위치·파일명·상태·Filing 기록·비고는 기관마다 달라서 <b>복사하지 않아요.</b></div>`;
+    listHead=`<div class="icp-listhead"><span>받을 기관</span><button onclick="idxCopyPickAll()">전체 선택 / 해제</button></div>`;
+    listHtml=others.map(s=>{
+      const rows=idxRowsFor(s.code,S.type), busy=rows.length>0, off=busy&&!S.overwrite, on=S.picked.has(s.code);
+      const state=busy?`${on?'덮어씀 · ':''}이미 ${idxItemCount(rows)}개 있음`:'비어 있음';
+      return `<label class="icp-site${off?' off':''}${busy&&on?' warn':''}"><input type="checkbox" data-code="${escAttr(s.code)}" ${on?'checked':''} ${off?'disabled':''} onchange="idxCopyPick(this.dataset.code,this.checked)"><span class="icp-name">${escHtml(idxSiteLabel(s.code))}</span><span class="icp-state">${state}</span></label>`;
+    }).join('');
+    const n=S.picked.size;
+    sumHtml=n?`선택한 <b>${n}개 기관</b>에 항목 <b>${itemN}개</b>${secN?` · 섹션 <b>${secN}개</b>`:''}를 만들어요.`:'복사할 기관을 선택해주세요.';
+    go=n>0; goLabel=`📑 ${n}개 기관에 복사`;
+  } else {
+    head=`<h3>📑 ${escHtml(label)} 가져오기</h3>
+      <div class="snap-desc">다른 기관에서 만든 Index 구성(섹션·No.·문서명)을 이 기관(<b>${escHtml(idxSiteLabel(S.to))}</b>)에 그대로 만들어요.<br>위치·파일명·상태·Filing 기록·비고는 <b>가져오지 않아요.</b></div>`;
+    listHead=`<div class="icp-listhead"><span>가져올 기관</span></div>`;
+    listHtml=idxPullSources(S.type).map(s=>{
+      const rows=idxRowsFor(s.code,S.type), on=S.from===s.code;
+      return `<label class="icp-site"><input type="radio" name="icpFrom" data-code="${escAttr(s.code)}" ${on?'checked':''} onchange="idxCopyFrom(this.dataset.code)"><span class="icp-name">${escHtml(idxSiteLabel(s.code))}</span><span class="icp-state">항목 ${idxItemCount(rows)}개</span></label>`;
+    }).join('');
+    sumHtml=`<b>${escHtml(idxSiteLabel(S.from))}</b>의 항목 <b>${itemN}개</b>${secN?` · 섹션 <b>${secN}개</b>`:''}를 이 기관에 만들어요.`;
+    go=srcRows.length>0; goLabel='📑 가져오기';
+  }
+  m.innerHTML=`<div class="snap-overlay" onclick="if(event.target===this)closeIdxCopyModal()">
+    <div class="snap-modal" style="width:500px">
+      ${head}
+      ${listHead}
+      <div class="icp-list">${listHtml}</div>
+      ${opts}
+      <div class="icp-sum">${sumHtml}</div>
+      <div class="icp-acts">
+        <button class="snap-cancel" onclick="closeIdxCopyModal()">취소</button>
+        <button class="ih-save-btn" ${go?'':'disabled'} onclick="applyIdxCopy()">${goLabel}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function applyIdxCopy(){
+  const S=idxCopyState; if(!S||!curProtocolId) return;
+  const o={copyOrig:!!S.copyOrig, copyNa:!!S.copyNa, copyChk:!!S.copyChk};
+  const label=indexLabel(S.type);
+  if(S.mode==='push'){
+    const targets=(sites||[]).map(s=>s.code).filter(c=>c!==S.from && S.picked.has(c));   // 기관 순서대로
+    if(!targets.length) return;
+    const busy=targets.filter(c=>idxRowsFor(c,S.type).length);
+    if(busy.length && !confirm(`아래 ${busy.length}개 기관은 기존 ${label}를 지우고 새로 만들어요.\n${busy.map(idxSiteLabel).join(', ')}\n\n그 기관에 적어둔 위치·파일명·Filing 기록·비고도 함께 사라져요.\n(⏱ 백업 복원으로 되돌릴 수 있어요)\n\n계속할까요?`)) return;
+    let itemN=0;
+    targets.forEach(c=>{ itemN=idxCopyInto(S.from,c,S.type,o); });
+    closeIdxCopyModal(); saveData(); renderTabs(); renderBody();
+    showToastNow(`✓ ${targets.length}개 기관에 ${label} 항목 ${itemN}개를 만들었어요`);
+  } else {
+    if(idxRowsFor(S.to,S.type).length && !confirm('이 기관 Index에 이미 항목이 있어요. 지우고 새로 만들까요?\n(⏱ 백업 복원으로 되돌릴 수 있어요)')) return;
+    const from=S.from, itemN=idxCopyInto(S.from,S.to,S.type,o);
+    closeIdxCopyModal(); saveData(); renderTabs(); renderBody();
+    showToastNow(`✓ ${idxSiteLabel(from)}에서 ${label} 항목 ${itemN}개를 가져왔어요`);
+  }
 }
 function clearIndex(type){
   const rows=getIndexRows(type);
@@ -4693,6 +4893,7 @@ function renderIndexBody(){
         ${naCount>0?`<button class="btn" onclick="toggleNaRows()" title="N/A 항목 ${showNaRows?'숨기기':'보기'}">${showNaRows?'⊟ N/A 숨기기':'⊞ N/A 보기'} (${naCount})</button>`:''}
         <button class="btn" onclick="importIndexCSV('${type}')" title="CSV 파일을 불러와 현재 Index에 추가">📤 CSV 불러오기</button>
         <button class="btn" onclick="exportIndexCSV('${type}')">📥 Index CSV</button>
+        ${((sites||[]).length>1&&rows.length)?`<button class="btn" onclick="openIdxCopyModal('${type}')" title="이 기관의 Index 구성(섹션·No.·문서명)을 다른 기관에 한 번에 만들어요. 위치·파일명·Filing 기록은 복사하지 않아요">📑 다른 기관에 복사</button>`:''}
         `}
       </div>
     </div>
@@ -4723,7 +4924,9 @@ function renderIndexBody(){
       </tr></thead>
       <tbody>${bodyRows}</tbody>
     </table></div>
-    ${rows.length===0?`<div class="idx-empty-hint">아직 Index 항목이 없어요. 아래 버튼으로 우리 회사 Index 항목을 직접 추가해보세요!</div>`:''}
+    ${rows.length===0?(idxPullSources(type).length
+      ?`<div class="idx-empty-hint">아직 Index 항목이 없어요. 다른 기관에서 만든 Index 구성을 그대로 가져올 수 있어요.<button class="idx-empty-pull" onclick="openIdxPullModal('${type}')">📑 다른 기관 Index 가져오기</button></div>`
+      :`<div class="idx-empty-hint">아직 Index 항목이 없어요. 아래 버튼으로 우리 회사 Index 항목을 직접 추가해보세요!</div>`):''}
     <button class="idx-add-btn" onclick="addIndexRow('${type}')">+ 항목 추가</button>
     </div>${showVisitPanel?visitPanelHtml(type,rows):''}</div>
   `;
@@ -6887,6 +7090,10 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
 #tmfnModal .recent li button{border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-size:10.5px;border-radius:5px;padding:1px 7px;cursor:pointer}
 #tmfnModal .tmfn-insert{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
 #tmfnModal .tmfn-insert button.alt{font:inherit;font-weight:600;font-size:12.5px;background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 13px;cursor:pointer}
+#tmfnModal .tmfn-srv{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+#tmfnModal .tmfn-srv-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+#tmfnModal .tmfn-srv-prev{font-family:Consolas,monospace;font-size:12px;color:var(--muted);margin-top:6px;word-break:break-all;min-height:16px}
+#tmfnModal .tmfn-srv-prev b{color:var(--date)}
 #tmfnModal button,#tmfnModal .pv-head,#tmfnModal .legend,#tmfnModal .preview-label,#tmfnModal label.f,#tmfnModal .checkline label{-webkit-user-select:none;user-select:none}
 </style>
 
@@ -6914,6 +7121,21 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
         <div class="legend">
           <span><b class="seg-idx">■</b> Index</span><span><b class="seg-site">■</b> 사이트</span><span><b>■</b> 문서명</span>
           <span><b class="seg-qual">■</b> 상세</span><span><b class="seg-date">■</b> 날짜</span><span><b class="seg-sfx">■</b> 접미사</span>
+        </div>
+        <div class="tmfn-srv" id="tmfnSrvBox">
+          <div class="preview-label">서버 내 파일명에만 덧붙이기 <span style="font-weight:500;text-transform:none">(선택 · TMF 파일명에는 안 들어가요)</span></div>
+          <div style="margin-top:6px"><label class="f" for="tmfnSrvMode">이 기관에서 붙일 항목 <span style="font-weight:500">(기관별로 기억돼요)</span></label>
+            <select id="tmfnSrvMode" onchange="tmfnSrvModeChange()">
+              <option value="both">접수번호 + 접수일</option>
+              <option value="no">접수번호만</option>
+              <option value="date">접수일만 (접수번호 없는 기관)</option>
+              <option value="none">붙이지 않음</option>
+            </select></div>
+          <div class="tmfn-srv-row">
+            <div id="tmfnRecvNoWrap"><label class="f" for="tmfnRecvNo">IRB 접수번호</label><input type="text" id="tmfnRecvNo" placeholder="예: 2025-1118" oninput="tmfnSrvPreview()"></div>
+            <div id="tmfnRecvDateWrap"><label class="f" for="tmfnRecvDate">IRB 접수일</label><input type="text" id="tmfnRecvDate" placeholder="YYYY-MM-DD" oninput="tmfnSrvPreview()"></div>
+          </div>
+          <div class="tmfn-srv-prev" id="tmfnSrvPrev"></div>
         </div>
         <div class="tmfn-insert">
           <button class="primary" onclick="tmfnInsert(false)">이 행에 입력 (TMF파일명 + 서버 내 파일명 자동)</button>
@@ -7794,8 +8016,53 @@ window.openTmfNamer=function(code,secId,idx){
     if(!ap&&d2)T.v.date=d2;
   }catch(e){}
   T.applyStudy();
+  try{ tmfnSrvPrefill(code,secId); }catch(e){}
   document.getElementById('tmfnOverlay').style.display='flex';
 };
+/* ── '서버 내 파일명'에만 붙는 IRB 접수번호·접수일 ── */
+function tmfnSrvPrefill(code,secId){
+  var noEl=document.getElementById('tmfnRecvNo'), dtEl=document.getElementById('tmfnRecvDate'); if(!noEl||!dtEl) return;
+  var sec=(typeof getSec==='function')?getSec(code,secId):null, m=(sec&&sec.meta)||{};
+  var dt=String(m.receiptDate||'').trim(), no=String(m.recvNo||'').trim();
+  if(!no&&dt&&typeof getIrbHist==='function'){
+    try{
+      var H=getIrbHist(code)||{cols:[],rows:[]};
+      var ciNo=H.cols.findIndex(function(c){return /접수\s*번호/.test(c);}), ciDt=H.cols.findIndex(function(c){return /접수\s*일/.test(c);});
+      var key=function(x){return String(x||'').replace(/\D/g,'');};
+      if(ciNo>=0&&ciDt>=0){ var hit=H.rows.filter(function(r){return key(r[ciDt])&&key(r[ciDt])===key(dt);}); if(hit.length===1) no=String(hit[0][ciNo]||'').trim(); } // 접수일이 같은 줄이 딱 1개일 때만 자동 채움
+    }catch(e){}
+  }
+  noEl.value=no; dtEl.value=dt;
+  __tmfnSrvSite=code; var st=tmfnSrvSiteObj(), mEl=document.getElementById('tmfnSrvMode');
+  if(mEl) mEl.value=(st&&st.srvTagMode)||'both';
+  tmfnSrvApplyMode();
+}
+var __tmfnSrvSite=null;
+function tmfnSrvSiteObj(){ try{ return (typeof sites!=='undefined'&&sites&&__tmfnSrvSite!=null)?sites.find(function(x){return String(x.code)===String(__tmfnSrvSite);}):null; }catch(e){ return null; } }
+function tmfnSrvMode(){ var el=document.getElementById('tmfnSrvMode'); var m=el?el.value:'both'; return (m==='no'||m==='date'||m==='none')?m:'both'; }
+function tmfnSrvApplyMode(){
+  var m=tmfnSrvMode(), a=document.getElementById('tmfnRecvNoWrap'), b=document.getElementById('tmfnRecvDateWrap');
+  if(a&&a.style) a.style.display=(m==='both'||m==='no')?'':'none';
+  if(b&&b.style) b.style.display=(m==='both'||m==='date')?'':'none';
+  tmfnSrvPreview();
+}
+function tmfnSrvModeChange(){
+  var st=tmfnSrvSiteObj(); if(st){ st.srvTagMode=tmfnSrvMode(); if(typeof saveData==='function') saveData(); } // 기관에 저장 → 다른 기기에서도 유지
+  tmfnSrvApplyMode();
+}
+function tmfnSrvTag(){
+  var g=function(id){var el=document.getElementById(id);return el?String(el.value||'').trim().replace(/[\\/:*?"<>|]/g,'-'):'';};
+  var no=g('tmfnRecvNo'), dt=g('tmfnRecvDate'), t='';
+  var m=(typeof tmfnSrvMode==='function')?tmfnSrvMode():'both';
+  if(no&&(m==='both'||m==='no')) t+='[접수번호 '+no+']';
+  if(dt&&(m==='both'||m==='date')) t+='[접수일 '+dt+']';
+  return t;
+}
+function tmfnSrvPreview(){
+  var el=document.getElementById('tmfnSrvPrev'); if(!el) return;
+  var tag=tmfnSrvTag(), mode=tmfnSrvMode(), E=function(x){return String(x).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});};
+  el.innerHTML=tag?('서버 내 파일명 → … <b>'+E(tag)+'</b>'):(mode==='none'?'이 기관은 붙이지 않음 → 서버 내 파일명 = Index 포함 TMF 파일명 그대로':'비워두면 서버 내 파일명 = Index 포함 TMF 파일명 그대로');
+}
 /* ═════ TMF → ISF 매핑 (과제별) ═════
    반환값:  'x.y' = 연결할 ISF No.  /  null = TMF 전용(ISF 대응 없음)  /  undefined = 매핑표 없음 → 같은 번호로 찾기
    앱스틸라(cbr): 2026-03 COT033 Tracker + COW005 가이드 + Ella 확정(2026-09-17) 기준 */
@@ -7910,7 +8177,12 @@ window.tmfnInsert=function(withIdx){
     var linked=null, isfNo;
     try{
       var sv=T.names(true);
-      if(sv) setField(r.code,r.secId,r.idx,'serverFileName',sv);
+      var srvTag=(typeof tmfnSrvTag==='function')?tmfnSrvTag():'';
+      if(sv) setField(r.code,r.secId,r.idx,'serverFileName', srvTag?(sv+' '+srvTag):sv);   // 접수번호·접수일은 '서버 내 파일명'에만
+      try{ // 접수번호는 이 섹션에 기억해 뒀다가 다음에 Namer를 열 때 다시 채워준다
+        var no0=(document.getElementById('tmfnRecvNo')||{}).value; var sec0=getSec(r.code,r.secId);
+        if(sec0){ if(!sec0.meta) sec0.meta={}; var md0=(typeof tmfnSrvMode==='function')?tmfnSrvMode():'both'; if(String(no0||'').trim()&&(md0==='both'||md0==='no')) sec0.meta.recvNo=String(no0).trim(); }
+      }catch(e){}
       var tmfNo=T.idx?T.idx():'';
       isfNo=tmfnResolveIsfNo(T);              // 과제별 매핑표 (없으면 undefined)
       if(isfNo===undefined) isfNo=tmfNo;      // 매핑표 없는 과제 → 같은 번호로 찾기
