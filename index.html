@@ -4300,6 +4300,7 @@ function dueItems(){
     (pd.sites||[]).forEach(site=>{
       const secs=((pd.sections||{})[site.code])||[];
       const a=siteApprovalOf(site, secs);
+      if(apClosed(secs, a)) return;   // 종료 승인된 기관은 제외
       const base={pid:p.id, pname:protoLabel(p), code:site.code, sname:site.name||'', sec:'📅 IRB 승인기간'};
       const ie=a.end?dueInfo(a.end):null;
       if(ie && ie.days<=DUE_HORIZON)
@@ -5602,7 +5603,7 @@ function rowHtml(code,secId,idx,row,total){
       </div>
     </td>
     <td>${searchTerm.trim()?`<span class="doc-name-display">${highlight(row.name)}</span>`:richField('sec',{code,sec:secId,idx},'name',row,'문서명','rich-docname')}${histTxt}</td>
-    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR·IDV 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</div></div></td>
+    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</div></div></td>
     <td>${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
@@ -6312,7 +6313,7 @@ function applyHandoverImport(data){
   if(!confirm(`인수인계 기관 ${plan.length}곳을 가져올게요.\n\n과제: ${data.protocolNo||''}${target?'':' (새로 만듦)'}`
     +(newOnes.length?`\n새로 추가: ${newOnes.map(L).join(', ')}`:'')
     +(oldOnes.length?`\n이미 있음 → 빈 칸만 채움: ${oldOnes.map(L).join(', ')}`:'')
-    +(list.some(x=>Array.isArray(x.sections)&&x.sections.length)?`\n문서 섹션도 함께 넣어요 (손대지 않은 빈 기본 섹션만 교체)`:'')
+    +(list.some(x=>Array.isArray(x.sections)&&x.sections.length)?(data.sectionsMode==='emptyOnly'?`\n문서 섹션은 비어 있는 기관에만 넣어요 (이미 입력한 기관은 건너뜀)`:`\n문서 섹션도 함께 넣어요 (손대지 않은 빈 기본 섹션만 교체)`):'')
     +`\n\n기존에 입력한 내용은 지우지 않아요. 계속할까요?`)) return;
   let created=false;
   if(!target){
@@ -6323,7 +6324,7 @@ function applyHandoverImport(data){
   }
   // 3) 그 과제로 전환 후 기관별로 채우기
   curProtocolId=target.id; bindCurrentProtocol();
-  let histN=0, todoN=0, doneN=0, secN=0; const histSkip=[], secReplaced=[], secAppended=[];
+  let histN=0, todoN=0, doneN=0, secN=0; const histSkip=[], secReplaced=[], secAppended=[], secSkipped=[];
   plan.forEach(({src,code})=>{
     let s=sites.find(x=>x.code===code);
     if(!s){
@@ -6366,6 +6367,8 @@ function applyHandoverImport(data){
         const types=new Set(src.sections.map(x=>x.type));
         sections[code]=src.sections.map(mk).concat(cur.filter(x=>!types.has(x.type)));
         secN+=src.sections.length; secReplaced.push(code);
+      } else if(data.sectionsMode==='emptyOnly'){
+        secSkipped.push(code);   // 이미 직접 입력해 둔 기관 → 문서 섹션은 건드리지 않음 (중복 방지)
       } else {
         const have=new Set(cur.map(x=>String(x.title||'').trim()));
         let n=0; src.sections.forEach(ss=>{ if(!have.has(String(ss.title||'').trim())){ cur.push(mk(ss)); n++; } });
@@ -6379,6 +6382,7 @@ function applyHandoverImport(data){
       if(!cand) (src.sections||[]).forEach(ss=>{ const m=ss.meta||{}; if(m.approvalEndDate && (!cand||m.approvalEndDate>cand.end)) cand={start:m.approvalStartDate||'', end:m.approvalEndDate}; });
       if(cand && (!a.end || cand.end>a.end)){ a.start=cand.start||''; a.end=cand.end; a.reportable=''; }
       if(src.approval && src.approval.noInterim) a.noInterim=true;
+      if((src.sections||[]).some(ss=>(ss.type==='close'||ss.type==='result') && ss.meta && ss.meta.approvalDate)) a.closed=true;
     }
   });
   curSite=plan[0].code; curView='home'; curIndexType=null;
@@ -6388,6 +6392,7 @@ function applyHandoverImport(data){
     +`\nIRB 심의 이력: ${histN}건`+(histSkip.length?` (이미 이력이 있어 건너뜀: ${histSkip.join(', ')})`:'')
     +`\n할 일: ${todoN}건`+(doneN?` (해결돼서 완료 처리: ${doneN}건)`:'')
     +(secN?`\n문서 섹션: ${secN}개`+(secReplaced.length?` (빈 기본 섹션 교체: ${secReplaced.join(', ')})`:'')+(secAppended.length?` (기존 섹션 뒤에 추가: ${secAppended.join(', ')})`:''):'')
+    +(secSkipped.length?`\n문서 섹션 건너뜀 (이미 입력해 둔 기관): ${secSkipped.join(', ')}`:'')
     +`\n\n다음 단계 👉 Index가 채워진 기관에서 ISF·TMF Index → 📑 다른 기관에 복사`);
 }
 
@@ -6472,6 +6477,8 @@ function siteApprovalOf(site, secs){
   return site.irbApproval;
 }
 function getSiteApproval(code){ return siteApprovalOf((sites||[]).find(x=>x.code===code), sections[code]); }
+// 종료보고(또는 결과보고)가 승인된 기관 → 지속심의·승인 만료 관리가 더 필요 없음
+function apClosed(secs, a){ return !!(a&&a.closed) || (secs||[]).some(x=>(x.type==='close'||x.type==='result') && x.meta && String(x.meta.approvalDate||'').trim()); }
 function apReportable(a){ return a.noInterim ? '' : (a.reportable || (a.end?apShift(a.end,-2):'')); }
 // 이번 주기 지속심의를 이미 냈는지 — 종료일 6개월 전~종료일 사이에 제출·접수한 지속심의 섹션이 있으면
 function apSubmittedThisCycle(a, secs){
@@ -6486,7 +6493,7 @@ function apBadge(a){
 }
 function setSiteApproval(code, field, val){
   const a=getSiteApproval(code);
-  if(field==='noInterim') a.noInterim=!!val;
+  if(field==='noInterim'||field==='closed') a[field]=!!val;
   else a[field]=normDateStr(String(val||'').trim());
   saveData();
   if(curView==='site') renderBody(); else updateApFloat();   // 섹션 머리의 📅 칩도 같이 갱신 (패널 입력칸은 그대로 둠)
@@ -6496,6 +6503,7 @@ function apChipHtml(code){
   return `<div class="meta-field"><span>현재 승인기간</span><button type="button" class="ap-chip ${b.cls}" onclick="apOpen=true;updateApFloat()" title="기관 승인기간은 오른쪽 📅 탭에서 한 곳만 관리해요">📅 ${a.end?(esc((a.start?a.start+' ':'')+'~ '+a.end)+' · '+b.txt):'입력하기'}</button></div>`;
 }
 function apStatusHtml(code,a){
+  if(apClosed(sections[code]||[], a)) return '<div class="ap-line ap-ok">✓ 종료된 기관이에요 — 승인기간·지속심의 알림은 끄고 있어요</div>';
   const b=apBadge(a), out=[];
   out.push(`<div class="ap-line ${b.cls}"><b>${a.end?esc(a.end):'종료일 미입력'}</b>${a.end?' · '+b.long:''}</div>`);
   if(a.noInterim) out.push('<div class="ap-line">지속심의 불필요 기관 — 만료일만 관리해요</div>');
@@ -6515,6 +6523,7 @@ function apPanelHtml(code,a){
       <div class="ap-row"><span>승인기간</span>${inp('start',a.start,'시작일')}<span class="ap-tilde">~</span>${inp('end',a.end,'종료일')}</div>
       <div class="ap-row"><span>지속심의<br>권장일</span>${inp('reportable',a.reportable,'비우면 만료 2개월 전')}</div>
       <label class="ap-chk"><input type="checkbox" ${a.noInterim?'checked':''} onchange="setSiteApproval('${code}','noInterim',this.checked)"> 지속심의 불필요 기관 (만료일만 관리)</label>
+      <label class="ap-chk"><input type="checkbox" ${a.closed?'checked':''} onchange="setSiteApproval('${code}','closed',this.checked)"> 종료된 기관 (알림 끄기 · 종료보고 승인되면 자동)</label>
       <div id="apStatus"></div>
       <div class="ap-note">지속심의가 승인되면 <b>여기 날짜만</b> 바꿔주세요. 마감 창에도 바로 반영돼요.</div>
     </div>`;
@@ -6525,7 +6534,8 @@ function updateApFloat(){
   if(!p){ p=document.createElement('div'); p.id='apPanel'; p.style.display='none'; document.body.appendChild(p); }
   const show=!!curSite && (curView==='site'||curView==='index') && (sites||[]).some(x=>x.code===curSite);
   if(!show){ h.style.display='none'; p.style.display='none'; apPanelFor=null; return; }
-  const a=getSiteApproval(curSite), b=apBadge(a);
+  const a=getSiteApproval(curSite), closed=apClosed(sections[curSite]||[], a);
+  const b=closed?{txt:'종료',cls:'ap-none',long:'종료보고 승인된 기관'}:apBadge(a);
   h.style.display=''; h.className=b.cls;
   h.title='IRB 승인기간 ('+curSite+') — '+b.long;
   h.innerHTML=`<span class="ah-ico">📅</span><span class="ah-label">승인</span><span class="ah-cnt">${b.txt}</span>`;
@@ -7344,7 +7354,6 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
       <option value="bis">BIS · CartiLife PMS</option>
       <option value="cvf">CVF · Tavneos PMS</option>
       <option value="cbr">CBR · Afstyla PMS</option>
-      <option value="idv">IDV · Idelvion PMS</option>
     </select>
     <span class="chip" id="chipProtocol"></span>
     <span class="chip" id="chipBase"></span>
@@ -7388,8 +7397,8 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
     </div>
   </div>
   <div hidden id="tab-gen"></div><div hidden id="tab-rules"></div><div hidden id="tab-fix"></div>
-  <div hidden id="rules-bis"></div><div hidden id="rules-cvf"></div><div hidden id="rules-cbr"></div><div hidden id="rules-idv"></div>
-  <div hidden id="fix-bis"></div><div hidden id="fix-cvf"></div><div hidden id="fix-cbr"></div><div hidden id="fix-idv"></div>
+  <div hidden id="rules-bis"></div><div hidden id="rules-cvf"></div><div hidden id="rules-cbr"></div>
+  <div hidden id="fix-bis"></div><div hidden id="fix-cvf"></div><div hidden id="fix-cbr"></div>
  </div>
 </div>
 <script>
@@ -7419,9 +7428,8 @@ var v={site:"030",csite:"01",date:today(),date2:today(),date3:today(),event:"Ame
   logDoc:"ICF Tracking Log",people:"",desc:"",ntfSeq:"",teamDoc:"cv",cteamDoc:"cv",
   psrDoc:"report",psrN:"1",corrTopic:"",feasMode:"sel",hosp:"",mtgAmend:false,idxOv:"",
   icfPop:"Adult",validOn:false,vfrom:today(),vto:today(),rangeOn:false,trCourse:"",person:"",engName:"",
-  bStaffDoc:"CV",bTeamDoc:"cv",bVisitDoc:"report",bsite:"001",
-  dsite:"005",dSeq:"",dVisitDoc:"SSVR",dStaffDoc:"CV",dTeamDoc:"cv"};
-try{var saved=JSON.parse(localStorage.getItem("tmfnSites")||"{}");["site","csite","bsite","dsite"].forEach(function(k){if(saved[k])v[k]=saved[k]});}catch(e){}
+  bStaffDoc:"CV",bTeamDoc:"cv",bVisitDoc:"report",bsite:"001"};
+try{var saved=JSON.parse(localStorage.getItem("tmfnSites")||"{}");["site","csite","bsite"].forEach(function(k){if(saved[k])v[k]=saved[k]});}catch(e){}
 
 function F(key,type,label,opt){return Object.assign({key:key,type:type,label:label},opt||{})}
 var siteF=F("site","text","사이트 번호 (3자리)",{placeholder:"030"});
@@ -7990,109 +7998,11 @@ var CBR_TYPES=[
  note:"CBR 스터디팀 문서는 이니셜이 아니라 영문 이름을 써요"}
 ];
 
-/* ---------- IDV (IDELVION) types ---------- */
-var IDV_IRB_EVENTS=[["Initial","Initial (최초)"],["Amendment","Amendment (변경)"],["Annual progress report","Annual progress report (연차, 5.2)"],["Trial Completion Report","Trial Completion Report (종료, 5.3)"],["Trial Result Report","Trial Result Report (결과, 5.4)"],["None compliance","None compliance"],["SAE","SAE (5.5)"],["SUSAR","SUSAR (5.5)"],["Other","Other"]];
-var dsiteF=F("dsite","text","사이트 번호 (3자리 → S005 형식)",{placeholder:"005"});
-function dS(){return "S"+pad3(v.dsite)}
-
-var IDV_TYPES=[
-{id:"dirb",group:"IRB (Zone 5)",label:"IRB 제출/승인 (5.1–5.5)",
- fields:function(){
-   if(!IDV_IRB_EVENTS.some(function(o){return o[0]===v.event}))v.event="Initial";
-   var f=[dsiteF,F("event","select","심의 유형",{options:IDV_IRB_EVENTS})];
-   if(v.event!=="Initial")f.push(F("dSeq","text","차수 (비우면 차수 없음)",{placeholder:"예: 1 — 실제 표기 미확정"}));
-   f.push(F("setMode","check","세트 생성 — Approval + Submission(+첨부) 한 번에"));
-   if(v.setMode){
-     f.push(F("date","date","Approval 날짜",{hint:"날짜 기준(심사일/통지일)은 아직 미확정이에요"}));
-     f.push(F("date2","date","Submission 날짜",{hint:"날짜 기준(신청일/접수일)은 아직 미확정이에요"}));
-     f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["range","Attachment #1~#N (묶음 표기)"],["each","Attachment #1 ~ #N 개별 목록"],["one","Attachment #n (1건)"]]}));
-     if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
-     return f;
-   }
-   f.push(F("kind","select","문서 종류",{options:[["Submission","Submission"],["Approval","Approval"]]}));
-   f.push(dateF(v.kind==="Submission"?"Submission 날짜":"Approval 날짜","날짜 기준(신청일/접수일/심사일)은 아직 미확정이에요"));
-   if(v.kind==="Submission")f.push(F("sameDay","select","같은 날 복수 제출 (#)",{options:["","#1","#2","#3"]}));
-   f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["one","Attachment #n (1건)"],["range","Attachment #1~#N (묶음 표기)"],["each","Attachment #1 ~ #N 개별 목록"]]}));
-   if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
-   return f;},
- _mk:function(kind,dateIso){
-   var ev=v.event+((v.event!=="Initial"&&(v.dSeq||"").trim())?" "+(v.dSeq||"").trim():"");
-   return [P(ev+" ","seg-qual"),P(kind,"seg-doc"),P("_"+dS(),"seg-site"),P("_"+ymd(dateIso),"seg-date")];},
- copySep:function(){return v.setMode?", ":"\n"},
- buildList:function(){
-   var n=Math.max(1,+v.attachN||1),i;
-   if(v.setMode){
-     var out=[this._mk("Approval",v.date)];
-     out.push(this._mk("Submission",v.date2));
-     var sub=this._mk("Submission",v.date2);
-     if(v.attach==="range")out.push(sub.concat([P("_Attachment #1~#"+n,"seg-sfx")]));
-     else if(v.attach==="one")out.push(sub.concat([P("_Attachment #"+n,"seg-sfx")]));
-     else if(v.attach==="each")for(i=1;i<=n;i++)out.push(sub.concat([P("_Attachment #"+i,"seg-sfx")]));
-     return out;
-   }
-   if(v.attach!=="each")return null;
-   var base=this._mk(v.kind,v.date);
-   var out2=[];
-   for(i=1;i<=n;i++)out2.push(base.concat([P("_Attachment #"+i,"seg-sfx")]));
-   return out2;},
- build:function(){
-   if(v.setMode)return this._mk("Approval",v.date);
-   var p=this._mk(v.kind,v.date);
-   if(v.sameDay&&v.kind==="Submission")p.push(P(" "+v.sameDay,"seg-qual"));
-   if(v.attach==="one")p.push(P("_Attachment #"+(v.attachN||1),"seg-sfx"));
-   if(v.attach==="range")p.push(P("_Attachment #1~#"+(v.attachN||2),"seg-sfx"));
-   return p;},
- ex:["Initial Submission_S005_20260126 #1","Initial Approval_S005_20260211","Initial Submission_S005_20260126_Attachment #1~#13"],
- note:"IDELVION은 문서명이 먼저, 사이트가 S005 형식으로 중간에 와요. 같은 날 복수 제출은 날짜 뒤 공백+#n, 첨부는 #없는 날짜본에 _Attachment #n. Initial 외 유형은 실제 파일이 아직 없어 목차 표기를 준용했어요."},
-
-{id:"dvisit",group:"Site Management (Zone 15)",label:"방문·교신 (15.1·15.4)",
- fields:function(){return[dsiteF,
-   F("dVisitDoc","select","문서",{options:[["SSVR","SSVR (실사보고서, _Signed_F)"],["SSVR Correspondence","SSVR Correspondence"],["SSV Confirmation Letter","SSV Confirmation Letter"],["SSV Follow-up Letter","SSV Follow-up Letter"],["SSV PPT","SSV PPT"],["Site Visit Log","Site Visit Log"],["Correspondence","Correspondence"],["Delivery Receipt","Delivery Receipt"]]}),
-   dateF("문서 일자")];},
- build:function(){
-   var p=[P(dS(),"seg-site"),P("_","seg-doc"),P(v.dVisitDoc,"seg-doc"),P("_"+ymd(v.date),"seg-date")];
-   if(v.dVisitDoc==="SSVR")p.push(P("_Signed_F","seg-sfx"));
-   return p;},
- ex:["S005_SSVR_20251218_Signed_F","S005_SSV Confirmation Letter_20251218","S005_Correspondence_20251204","S005_Delivery Receipt_20251218"],
- note:"15.4에 Correspondence_S005_ 처럼 어순이 반대인 건이 1건 있지만, 다수 표기인 사이트-앞 형식으로 생성해요"},
-
-{id:"dstaff",group:"Site Management (Zone 15)",label:"사이트 인력 (15.2)",
- fields:function(){return[dsiteF,
-   F("dStaffDoc","select","문서",{options:[["CV","CV"],["GCP Certificate","GCP Certificate"],["IC","Informed Consent for Disclosure of Personal Information"]]}),
-   F("role","select","역할",{options:["PI","SI","Sub-I","CRC","SC"]}),
-   F("name","text","이름",{placeholder:"최은진"}),
-   dateF("문서 일자")];},
- build:function(){
-   var doc=v.dStaffDoc==="IC"?"Informed Consent for Disclosure of Personal Information":v.dStaffDoc;
-   return[P(doc,"seg-doc"),P("_"+dS(),"seg-site"),P("_"+v.role+" "+(v.name||"이름"),"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
- ex:["CV_S005_PI 최은진_20251218","GCP Certificate_S005_CRC 안지영_20250724","Informed Consent for Disclosure of Personal Information_S005_PI 최은진_20251218"],
- note:"문서명이 앞, 사이트가 뒤 — 방문 문서(S005_...)와 어순이 반대인 점 주의"},
-
-{id:"dteam",group:"스터디팀 (Zone 1)",label:"팀 문서 (1.3–1.5)",
- fields:function(){
-   var f=[F("dTeamDoc","select","문서",{options:[["cv","Curriculum Vitae (1.3)"],["gcp","GCP training (1.4)"],["pv","Certificate_CSL PV Training (1.5)"],["cube","cubeCDMS e-Training certificate (1.5)"]]})];
-   if(v.dTeamDoc==="cv"||v.dTeamDoc==="pv")f.push(F("engName","text","영문 이름",{placeholder:"Minji Kim"}));
-   else f.push(F("initials","text","이니셜",{placeholder:"LSH"}));
-   if(v.dTeamDoc==="gcp")f.push(F("hours","text","교육시간 (hrs)",{placeholder:"4"}));
-   if(v.dTeamDoc==="cube")f.push(F("certVer","text","버전 표기",{placeholder:"(V3.0)"}));
-   f.push(dateF("문서 일자"));
-   return f;},
- build:function(){
-   var d=ymd(v.date);
-   if(v.dTeamDoc==="cv")return[P("RSF002_Curriculum Vitae","seg-doc"),P("_"+(v.engName||"이름"),"seg-qual"),P("_"+d,"seg-date"),P("_Signed_F","seg-sfx")];
-   if(v.dTeamDoc==="gcp")return[P("GCP training","seg-doc"),P("_"+(v.initials||"LSH"),"seg-qual"),P("_"+d,"seg-date"),P("_"+(v.hours||"4")+"hrs","seg-sfx")];
-   if(v.dTeamDoc==="cube")return[P("cubeCDMS e-Training certificate","seg-doc"),P(v.certVer||"(V3.0)","seg-qual"),P("_"+(v.initials||"LSH"),"seg-qual"),P("_"+d,"seg-date")];
-   return[P("Certificate_CSL PV Training","seg-doc"),P("_"+(v.engName||"이름"),"seg-qual"),P("_"+d,"seg-date")];},
- ex:["RSF002_Curriculum Vitae_Minji Kim_20250122_Signed_F","GCP training_LSH_20240510_14hrs","Certificate_CSL PV Training_Minji Kim_20241119","cubeCDMS e-Training certificate(V3.0)_LSH_20251210"],
- note:"팀 CV에는 RSF002 양식번호가 붙어요. GCP training은 이니셜+교육시간(_14hrs), 같은 날 같은 시간 2건은 _1hr_1/_1hr_2 로 구분한 예가 있어요"}
-];
-
 /* ---------- studies ---------- */
 var STUDIES={
   bis:{types:BIS_TYPES,protocol:"BS-CTL-PMS · CartiLife PMS",base:"QC Tracker 3부 · 18개 사이트 기준"},
   cvf:{types:CVF_TYPES,protocol:"CS-AVA-2022-051 · Tavneos PMS",base:"QC Tracker · Site 01–09 기준"},
-  cbr:{types:CBR_TYPES,protocol:"CSL627_5005 · Afstyla PMS",base:"QC Tracker · Site 001–009 기준"},
-  idv:{types:IDV_TYPES,protocol:"CSL654-5009 · Idelvion PMS",base:"QC Tracker Signed_F · Site S005 기준"}
+  cbr:{types:CBR_TYPES,protocol:"CSL627_5005 · Afstyla PMS",base:"QC Tracker · Site 001–009 기준"}
 };
 var study="bis";
 try{var ss=localStorage.getItem("tmfnStudy");if(ss&&STUDIES[ss])study=ss;}catch(e){}
@@ -8114,7 +8024,7 @@ function buildTypeSelect(){
 function applyStudy(){
   $("chipProtocol").textContent=STUDIES[study].protocol;
   $("chipBase").textContent=STUDIES[study].base;
-  ["bis","cvf","cbr","idv"].forEach(function(s){
+  ["bis","cvf","cbr"].forEach(function(s){
     $("rules-"+s).hidden=study!==s;
     $("fix-"+s).hidden=study!==s;
   });
@@ -8128,7 +8038,7 @@ $("study").addEventListener("change",function(){
 
 var mtgSites={};
 try{mtgSites=JSON.parse(localStorage.getItem("tmfnMtg")||"{}")}catch(e){}
-function mtgKey(){return study+"_"+(study==="cvf"?pad2(v.csite):study==="cbr"?pad3(v.bsite):study==="idv"?pad3(v.dsite):pad3(v.site))}
+function mtgKey(){return study+"_"+(study==="cvf"?pad2(v.csite):study==="cbr"?pad3(v.bsite):pad3(v.site))}
 function mtgHas(){return !!mtgSites[mtgKey()]}
 function mtgSet(on){if(on)mtgSites[mtgKey()]=1;else delete mtgSites[mtgKey()];try{localStorage.setItem("tmfnMtg",JSON.stringify(mtgSites))}catch(e){}}
 function rangeHas(){return !!mtgSites["range_"+mtgKey()]}
@@ -8171,8 +8081,8 @@ function renderFields(){
       if(f.placeholder)el.placeholder=f.placeholder;
       el.value=v[f.key]||"";
       el.addEventListener("input",function(){v[f.key]=el.value;renderPreview();
-        if(f.key==="site"||f.key==="csite"||f.key==="bsite"||f.key==="dsite"){
-          try{localStorage.setItem("tmfnSites",JSON.stringify({site:v.site,csite:v.csite,bsite:v.bsite,dsite:v.dsite}))}catch(e){}
+        if(f.key==="site"||f.key==="csite"||f.key==="bsite"){
+          try{localStorage.setItem("tmfnSites",JSON.stringify({site:v.site,csite:v.csite,bsite:v.bsite}))}catch(e){}
           if(document.getElementById("f_mtgHere")||document.getElementById("f_rangeStore")){
             renderFields();renderPreview();
             var si=document.getElementById("f_"+f.key);
@@ -8193,16 +8103,6 @@ function renderFields(){
 function autoIdx(){
   var e=v.event;
   var irbIdx=(e==="Interim"||e==="Annual")?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
-  if(study==="idv"){
-    var dIdx=(e==="Annual progress report")?"5.2":(e==="Trial Completion Report")?"5.3":(e==="Trial Result Report")?"5.4":(e==="SAE"||e==="SUSAR")?"5.5":"5.1";
-    switch(cur.id){
-      case"dirb":return dIdx;
-      case"dvisit":return (v.dVisitDoc&&v.dVisitDoc.indexOf("SSV")===0)?"15.1":"15.4";
-      case"dstaff":return"15.2";
-      case"dteam":return v.dTeamDoc==="cv"?"1.3":v.dTeamDoc==="gcp"?"1.4":"1.5";
-      default:return"";
-    }
-  }
   if(study==="cbr"){
     var bIdx=e==="Annual"?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
     switch(cur.id){
@@ -8341,12 +8241,12 @@ window.openTmfNamer=function(code,secId,idx){
   try{
     var p=(typeof protocols!=='undefined'?protocols:[]).filter(function(x){return x.id===curProtocolId})[0];
     var pn=String((p&&(p.protocolNo||p.name))||'').toUpperCase();
-    var s=pn.indexOf('BS-CTL')>=0?'bis':pn.indexOf('CS-AVA')>=0?'cvf':(pn.indexOf('CSL627')>=0||pn.indexOf('AFSTYLA')>=0)?'cbr':(pn.indexOf('CSL654')>=0||pn.indexOf('IDELVION')>=0)?'idv':null;
+    var s=pn.indexOf('BS-CTL')>=0?'bis':pn.indexOf('CS-AVA')>=0?'cvf':(pn.indexOf('CSL627')>=0||pn.indexOf('AFSTYLA')>=0)?'cbr':null;
     if(s)T.setStudy(s);
   }catch(e){}
   try{
     var d=String(code||'').replace(/\D/g,'');
-    if(d){var p3=('000'+d).slice(-3);T.v.site=p3;T.v.bsite=p3;T.v.dsite=p3;T.v.csite=('0'+String(+d)).slice(-2);}
+    if(d){var p3=('000'+d).slice(-3);T.v.site=p3;T.v.bsite=p3;T.v.csite=('0'+String(+d)).slice(-2);}
   }catch(e){}
   try{
     // 날짜는 행(row)이 아니라 섹션 메타(sec.meta)에 들어 있다.
