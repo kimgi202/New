@@ -273,6 +273,11 @@ tr:hover td{background:var(--bg)}
 .protocol-title-row{flex-basis:100%;display:flex;align-items:center;gap:10px;margin-top:2px}
 .protocol-title-row .protocol-name-input{max-width:none;font-weight:600}
 .protocol-select:focus{border-color:var(--accent)}
+.protocol-name-input.project-grow{flex:1 1 360px;min-width:260px;max-width:none;resize:none;overflow:hidden;line-height:1.4;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;display:block;height:auto}
+.contract-field.memo .rich-note.rich-box{min-height:72px;resize:vertical;overflow:auto;max-height:none}
+.project-grow-wrap{display:flex;align-items:flex-start;gap:10px;flex:1 1 420px;min-width:300px}
+.project-grow-wrap .protocol-label{padding-top:7px;white-space:nowrap}
+.autosave-hint{font-size:12.5px;color:#9b9a97}
 .protocol-name-input.small{min-width:170px;max-width:260px;flex:0 1 220px}
 
 .protocol-tabs-wrap{background:#fff;border-bottom:1px solid #e9e9e7;padding:0 2rem;display:flex;overflow-x:auto;gap:0}
@@ -1203,8 +1208,8 @@ td.vc-nover{background:#fef8ec}
   </select>
   <span class="protocol-label">Protocol No.</span>
   <input class="protocol-name-input" id="protocolNameInput" placeholder="프로토콜 번호" onchange="renameProtocol(this.value)">
-  <span class="protocol-label">Project</span>
-  <input class="protocol-name-input small" id="projectNameInput" placeholder="프로젝트명" onchange="setProjectField('projectName',this.value)">
+  <span class="project-grow-wrap"><span class="protocol-label">Project</span>
+  <textarea class="protocol-name-input project-grow" id="projectNameInput" rows="1" placeholder="프로젝트명 (길게 써도 칸이 늘어나요)" oninput="autoGrow(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onchange="setProjectField('projectName',this.value)"></textarea></span>
   <span class="protocol-label">Sponsor</span>
   <input class="protocol-name-input small" id="sponsorInput" placeholder="스폰서" onchange="setProjectField('sponsor',this.value)">
   <span class="protocol-label">Study Type</span>
@@ -2384,6 +2389,7 @@ function renderContractList(code){
       <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
         <button class="btn ci-add" onclick="addContract('${code}')">+ 계약 추가</button>
         <button class="btn" style="background:var(--accent);color:#fff;border-color:var(--accent)" onclick="saveData();showToastNow('✓ 계약 정보가 저장되었습니다')">💾 저장</button>
+        <span class="autosave-hint">입력하면 자동 저장돼요</span>
       </div>
     </div>`:''}
   </div>`;
@@ -3870,7 +3876,7 @@ function renderProtocolTabs(){
   const input=document.getElementById('protocolNameInput');
   if(input) input.value=cur?.protocolNo||cur?.name||'';
   const projectInput=document.getElementById('projectNameInput');
-  if(projectInput) projectInput.value=cur?.projectName||'';
+  if(projectInput){ projectInput.value=cur?.projectName||''; autoGrow(projectInput); }
   const sponsorInput=document.getElementById('sponsorInput');
   if(sponsorInput) sponsorInput.value=cur?.sponsor||'';
   const studyTypeInput=document.getElementById('studyTypeInput');
@@ -5123,11 +5129,64 @@ function richCommit(el){
   const field=el.dataset.field||'note';
   const obj=richResolve(el); if(!obj) return;
   if(field==='name' && !text.trim()){ el.innerHTML=fieldHtml(obj,'name'); return; } // 문서명은 비울 수 없음
-  if((obj[field+'Html']||'')===html && (obj[field]||'')===text) return;
-  obj[field+'Html']=html; obj[field]=text; saveData();
+  clearTimeout(el._autoTimer);
+  const same=(obj[field+'Html']||'')===html && (obj[field]||'')===text;
+  if(same && !el._autoSaved) return;
+  el._autoSaved=false;
+  if(!same){ obj[field+'Html']=html; obj[field]=text; saveData(); }
   if(field==='name' || (field==='note'&&!showNoteCol)) renderBody();
   else el.innerHTML=html;
 }
+// ━━━ 자동 저장 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 예전: 칸을 벗어나야(blur) 저장 → 창을 바로 닫으면 입력이 사라질 수 있었음.
+// 지금: 타이핑을 0.7초 멈추면 저장. 화면 재렌더는 하지 않아 커서가 튀지 않음.
+function autoGrow(el){ if(!el) return; el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+const AUTOSAVE_MS=700;
+function quietSave(){ const t=saveToastEnabled; saveToastEnabled=false; try{ saveData(); } finally { saveToastEnabled=t; } }
+// 서식 메모칸(비고/메모 등): 편집 중에도 저장
+function richAutoSave(el){
+  if(!el || el.contentEditable!=='true') return;
+  const html=sanitizeNoteHtml(el.innerHTML);
+  const tmp=document.createElement('div'); tmp.innerHTML=html.replace(/<br\s*\/?>/gi,'\n');
+  const text=(tmp.textContent||'').replace(/\u00a0/g,' ');
+  const field=el.dataset.field||'note';
+  if(field==='name' && !text.trim()) return;
+  const obj=richResolve(el); if(!obj) return;
+  if((obj[field+'Html']||'')===html && (obj[field]||'')===text) return;
+  obj[field+'Html']=html; obj[field]=text; el._autoSaved=true; quietSave();
+}
+// 일반 입력칸: 저장만 하고 화면을 다시 그리지 않는 핸들러만 자동 저장 대상
+//   (날짜칸·URL칸·재렌더 핸들러는 기존처럼 칸을 벗어날 때 저장)
+const AUTOSAVE_OK=/^\s*(setProjectField|renameProtocol|setContractField|setSiteContract)\(/;
+function autosaveEligible(el){
+  if(!el || !(el.tagName==='INPUT'||el.tagName==='TEXTAREA')) return false;
+  if(el.type==='checkbox'||el.type==='file'||el.type==='radio') return false;
+  const oc=el.getAttribute('onchange')||'';
+  if(!AUTOSAVE_OK.test(oc) || /render|Url'|Hidden'/.test(oc)) return false;
+  if((el.getAttribute('onblur')||'').includes('dtBlur')) return false;
+  return true;
+}
+document.addEventListener('input',e=>{
+  const el=e.target;
+  if(el && el.classList && el.classList.contains('rich-note') && el.contentEditable==='true'){
+    clearTimeout(el._autoTimer); el._autoTimer=setTimeout(()=>richAutoSave(el),AUTOSAVE_MS); return;
+  }
+  if(!autosaveEligible(el)) return;
+  clearTimeout(el._autoTimer);
+  el._autoTimer=setTimeout(()=>{
+    const t=saveToastEnabled; saveToastEnabled=false;
+    try{ el.onchange && el.onchange.call(el); } finally { saveToastEnabled=t; }
+  },AUTOSAVE_MS);
+},true);
+// 창 닫기·탭 전환 직전: 대기 중인 자동 저장을 즉시 실행
+function flushAutoSave(){
+  const a=document.activeElement;
+  if(!a) return;
+  if(a.classList && a.classList.contains('rich-note') && a.contentEditable==='true'){ clearTimeout(a._autoTimer); richAutoSave(a); }
+  else if(a._autoTimer && autosaveEligible(a)){ clearTimeout(a._autoTimer); a._autoTimer=null; a.onchange && a.onchange.call(a); }
+}
+window.addEventListener('pagehide', flushAutoSave);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushAutoSave(); });
 document.addEventListener('dblclick',e=>{ const el=e.target.closest&&e.target.closest('.rich-note'); if(el&&el.contentEditable!=='true') richStartEdit(el); });
 document.addEventListener('click',e=>{ const el=e.target.closest&&e.target.closest('.rich-note'); if(el&&el.contentEditable!=='true'&&!el.textContent.trim()) richStartEdit(el); });
 document.addEventListener('focusout',e=>{ const el=e.target; if(el&&el.classList&&el.classList.contains('rich-note')&&el.contentEditable==='true') setTimeout(()=>{ if(document.activeElement!==el) richCommit(el); },0); });
@@ -5618,7 +5677,7 @@ function rowHtml(code,secId,idx,row,total){
       </div>
     </td>
     <td>${searchTerm.trim()?`<span class="doc-name-display">${highlight(row.name)}</span>`:richField('sec',{code,sec:secId,idx},'name',row,'문서명','rich-docname')}${histTxt}</td>
-    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</div></div></td>
+    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR·IDV 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</div></div></td>
     <td>${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
@@ -6636,6 +6695,7 @@ render(); initTabReorder(); initSectionReorder(); initIndexReorder();
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const supabaseUrl = "https://wmqmzmftcrcbhlwrlxpu.supabase.co";
 const supabaseKey = "sb_publishable_SYi6pBE6YJKx8jubBTR0nQ_lB5GcXYA";
@@ -7419,6 +7479,7 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
       <option value="bis">BIS · CartiLife PMS</option>
       <option value="cvf">CVF · Tavneos PMS</option>
       <option value="cbr">CBR · Afstyla PMS</option>
+      <option value="idv">IDV · Idelvion PMS</option>
     </select>
     <span class="chip" id="chipProtocol"></span>
     <span class="chip" id="chipBase"></span>
@@ -7454,7 +7515,13 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
         <div class="tmfn-insert">
           <button class="primary" onclick="tmfnInsert(false)">이 행에 입력 (TMF파일명 + 서버 내 파일명 자동)</button>
           <button class="alt" onclick="tmfnInsert(true)">TMF파일명도 Index 포함으로 입력</button>
+          <button class="alt" type="button" onclick="qcApplyNow()" title="행 입력 없이 QC Tracker 엑셀에만 추가해요">📊 QC Tracker에만 반영</button>
           <span class="toast" id="toast">복사됐어요</span>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none"><input type="checkbox" id="tmfnQcOn" onchange="try{localStorage.setItem('tmfnQcOn',this.checked?'1':'0')}catch(e){}"> 입력 시 QC Tracker(xlsx)에도 자동 반영</label>
+          <button type="button" onclick="qcPickFile()" style="font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:6px;padding:3px 9px;cursor:pointer;user-select:none">📊 파일 연결</button>
+          <span id="tmfnQcName"></span>
         </div>
         <div class="example" id="example"></div>
       </div>
@@ -7462,8 +7529,8 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
     </div>
   </div>
   <div hidden id="tab-gen"></div><div hidden id="tab-rules"></div><div hidden id="tab-fix"></div>
-  <div hidden id="rules-bis"></div><div hidden id="rules-cvf"></div><div hidden id="rules-cbr"></div>
-  <div hidden id="fix-bis"></div><div hidden id="fix-cvf"></div><div hidden id="fix-cbr"></div>
+  <div hidden id="rules-bis"></div><div hidden id="rules-cvf"></div><div hidden id="rules-cbr"></div><div hidden id="rules-idv"></div>
+  <div hidden id="fix-bis"></div><div hidden id="fix-cvf"></div><div hidden id="fix-cbr"></div><div hidden id="fix-idv"></div>
  </div>
 </div>
 <script>
@@ -7493,8 +7560,10 @@ var v={site:"030",csite:"01",date:today(),date2:today(),date3:today(),event:"Ame
   logDoc:"ICF Tracking Log",people:"",desc:"",ntfSeq:"",teamDoc:"cv",cteamDoc:"cv",
   psrDoc:"report",psrN:"1",corrTopic:"",feasMode:"sel",hosp:"",mtgAmend:false,idxOv:"",
   icfPop:"Adult",validOn:false,vfrom:today(),vto:today(),rangeOn:false,trCourse:"",person:"",engName:"",
-  bStaffDoc:"CV",bTeamDoc:"cv",bVisitDoc:"report",bsite:"001"};
-try{var saved=JSON.parse(localStorage.getItem("tmfnSites")||"{}");["site","csite","bsite"].forEach(function(k){if(saved[k])v[k]=saved[k]});}catch(e){}
+  bStaffDoc:"CV",bTeamDoc:"cv",bVisitDoc:"report",bsite:"001",
+  dsite:"005",dSeq:"",dVisitDoc:"SSVR",dStaffDoc:"CV",dTeamDoc:"cv",
+  dMemMode:"date",dVisitNo:"",dVisitStage:"15.1",dProjDoc:"pmp",dEssDoc:"protocol",dVer:"1.0",dRev:"1",dMtgName:"Sponsor KOM",dYearN:"6",dSopKind:"Initial",dPsrMail:false,dIcfPop:"성인",dIcfAll:false,dFinalKo:false};
+try{var saved=JSON.parse(localStorage.getItem("tmfnSites")||"{}");["site","csite","bsite","dsite"].forEach(function(k){if(saved[k])v[k]=saved[k]});}catch(e){}
 
 function F(key,type,label,opt){return Object.assign({key:key,type:type,label:label},opt||{})}
 var siteF=F("site","text","사이트 번호 (3자리)",{placeholder:"030"});
@@ -8063,11 +8132,227 @@ var CBR_TYPES=[
  note:"CBR 스터디팀 문서는 이니셜이 아니라 영문 이름을 써요"}
 ];
 
+/* ---------- IDV (IDELVION) types ---------- */
+var IDV_IRB_EVENTS=[["Initial","Initial (최초)"],["Amendment","Amendment (변경)"],["Annual progress report","Annual progress report (연차, 5.2)"],["Trial Completion Report","Trial Completion Report (종료, 5.3)"],["Trial Result Report","Trial Result Report (결과, 5.4)"],["None compliance","None compliance"],["SAE","SAE (5.5)"],["SUSAR","SUSAR (5.5)"],["Other","Other"]];
+var dsiteF=F("dsite","text","사이트 번호 (3자리 → S005 형식)",{placeholder:"005"});
+function dS(){return "S"+pad3(v.dsite)}
+
+var IDV_TYPES=[
+{id:"dirb",group:"IRB (Zone 5)",label:"IRB 제출/승인 (5.1–5.5)",
+ fields:function(){
+   if(!IDV_IRB_EVENTS.some(function(o){return o[0]===v.event}))v.event="Initial";
+   var f=[dsiteF,F("event","select","심의 유형",{options:IDV_IRB_EVENTS})];
+   if(v.event!=="Initial")f.push(F("dSeq","text","차수 (비우면 차수 없음)",{placeholder:"예: 1 — 실제 표기 미확정"}));
+   f.push(F("setMode","check","세트 생성 — Approval + Submission(+첨부) 한 번에"));
+   if(v.setMode){
+     f.push(F("date","date","Approval 날짜",{hint:"날짜 기준(심사일/통지일)은 아직 미확정이에요"}));
+     f.push(F("date2","date","Submission 날짜",{hint:"날짜 기준(신청일/접수일)은 아직 미확정이에요"}));
+     f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["range","Attachment #1~#N (묶음 표기)"],["each","Attachment #1 ~ #N 개별 목록"],["one","Attachment #n (1건)"]]}));
+     if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
+     return f;
+   }
+   f.push(F("kind","select","문서 종류",{options:[["Submission","Submission"],["Approval","Approval"]]}));
+   f.push(dateF(v.kind==="Submission"?"Submission 날짜":"Approval 날짜","날짜 기준(신청일/접수일/심사일)은 아직 미확정이에요"));
+   if(v.kind==="Submission")f.push(F("sameDay","select","같은 날 복수 제출 (#)",{options:["","#1","#2","#3"]}));
+   f.push(F("attach","select","첨부(Attachment)",{options:[["none","없음"],["one","Attachment #n (1건)"],["range","Attachment #1~#N (묶음 표기)"],["each","Attachment #1 ~ #N 개별 목록"]]}));
+   if(v.attach!=="none")f.push(F("attachN","number",v.attach==="one"?"첨부 번호":"첨부 개수 (N)",{min:1}));
+   return f;},
+ _mk:function(kind,dateIso){
+   var ev=v.event+((v.event!=="Initial"&&(v.dSeq||"").trim())?" "+(v.dSeq||"").trim():"");
+   return [P(ev+" ","seg-qual"),P(kind,"seg-doc"),P("_"+dS(),"seg-site"),P("_"+ymd(dateIso),"seg-date")];},
+ copySep:function(){return v.setMode?", ":"\n"},
+ buildList:function(){
+   var n=Math.max(1,+v.attachN||1),i;
+   if(v.setMode){
+     var out=[this._mk("Approval",v.date)];
+     out.push(this._mk("Submission",v.date2));
+     var sub=this._mk("Submission",v.date2);
+     if(v.attach==="range")out.push(sub.concat([P("_Attachment #1~#"+n,"seg-sfx")]));
+     else if(v.attach==="one")out.push(sub.concat([P("_Attachment #"+n,"seg-sfx")]));
+     else if(v.attach==="each")for(i=1;i<=n;i++)out.push(sub.concat([P("_Attachment #"+i,"seg-sfx")]));
+     return out;
+   }
+   if(v.attach!=="each")return null;
+   var base=this._mk(v.kind,v.date);
+   var out2=[];
+   for(i=1;i<=n;i++)out2.push(base.concat([P("_Attachment #"+i,"seg-sfx")]));
+   return out2;},
+ build:function(){
+   if(v.setMode)return this._mk("Approval",v.date);
+   var p=this._mk(v.kind,v.date);
+   if(v.sameDay&&v.kind==="Submission")p.push(P(" "+v.sameDay,"seg-qual"));
+   if(v.attach==="one")p.push(P("_Attachment #"+(v.attachN||1),"seg-sfx"));
+   if(v.attach==="range")p.push(P("_Attachment #1~#"+(v.attachN||2),"seg-sfx"));
+   return p;},
+ ex:["Initial Submission_S005_20260126 #1","Initial Approval_S005_20260211","Initial Submission_S005_20260126_Attachment #1~#13"],
+ note:"IDELVION은 문서명이 먼저, 사이트가 S005 형식으로 중간에 와요. 같은 날 복수 제출은 날짜 뒤 공백+#n, 첨부는 #없는 날짜본에 _Attachment #n. Initial 외 유형은 실제 파일이 아직 없어 목차 표기를 준용했어요."},
+
+{id:"dmember",group:"IRB (Zone 5)",label:"IRB Membership List (5.6)",
+ fields:function(){
+   var f=[dsiteF,F("dMemMode","select","날짜 표기",{options:[["date","발행일 1개"],["term","임기기간 (시작~종료)"]]})];
+   if(v.dMemMode==="term"){f.push(F("vfrom","date","임기 시작"));f.push(F("vto","date","임기 종료"));}
+   else f.push(dateF("발행/개정 일자"));
+   return f;},
+ build:function(){
+   var p=[P("IRB Membership List","seg-doc"),P("_"+dS(),"seg-site")];
+   if(v.dMemMode==="term")p.push(P("_"+ymd(v.vfrom)+"~"+ymd(v.vto),"seg-date"));
+   else p.push(P("_"+ymd(v.date),"seg-date"));
+   return p;},
+ ex:["IRB Membership List_S005_20260126","IRB Membership List_S005_20260301~20280228 (임기기간형)"],
+ note:"트래커에 실제 파일명 기재가 없어 IDV IRB 어순(문서명 앞·S005 중간)을 준용한 제안 표기예요 — 기관 실물 파일이 생기면 알려주시면 맞춰 조정할게요. 임기기간으로 발행하는 기관(세브란스식)은 기간 표기를 선택하세요"},
+
+{id:"dproj",group:"프로젝트 문서 (1.2·2.x)",label:"프로젝트 문서 (Member Tracker·플랜·회의·교신)",
+ fields:function(){
+   var f=[F("dProjDoc","select","문서",{options:[
+     ["pmtracker","Project Member Tracker (1.2)"],
+     ["pmp","Project Management Plan (2.1)"],
+     ["sop","SOP Management Tracker (2.1)"],
+     ["mp","Monitoring Plan (2.2)"],
+     ["pdspec","PMS PD Spec (2.2)"],
+     ["feas","Feasibility Questionnaire (2.3)"],
+     ["mtg","Meeting Minutes (2.5)"],
+     ["komppt","회의 PPT (2.5)"],
+     ["pdlist","PD List (2.8)"],
+     ["corr","Correspondence_주제 (2.10)"],
+     ["ecorr","e-mail correspondence(주제) (2.10)"],
+     ["psr","Project Status Report (2.10)"]]})];
+   var d=v.dProjDoc;
+   if(d==="pmp"||d==="mp"||d==="pdspec"||d==="feas")f.push(F("dVer","text","버전",{placeholder:"1.0"}));
+   if(d==="sop")f.push(F("dSopKind","text","구분",{placeholder:"Initial"}));
+   if(d==="mtg"){f.push(F("dRev","text","리비전 (R n)",{placeholder:"1"}));f.push(F("dMtgName","text","회의명",{placeholder:"Sponsor KOM"}));}
+   if(d==="komppt")f.push(F("dMtgName","text","회의명",{placeholder:"KOM"}));
+   if(d==="pdlist")f.push(F("dYearN","text","년차",{placeholder:"6"}));
+   if(d==="corr"||d==="ecorr")f.push(F("corrTopic","text","주제",{placeholder:d==="ecorr"?"ICSR Reconciliation":"CTA"}));
+   if(d==="psr"){f.push(F("psrN","number","차수 (1st·2nd·…)",{min:1}));f.push(F("dPsrMail","check","e-mail correspondence 본도 같이 생성"));}
+   f.push(dateF("문서 일자",(d==="sop"||d==="mtg"||d==="pdlist")?"이 문서는 압축형(YYYYMMDD) 날짜":"이 문서군은 공백형(YYYY MMDD) 날짜를 써요"));
+   if(d==="ecorr")f.push(F("idxOv","text","Index No. (안전성 교신이면 8.7로)",{placeholder:"2.10"}));
+   return f;},
+ _psr:function(mail){
+   var head=mail?"e-mail correspondence":"Idelvion PMS";
+   return[P(head,"seg-doc"),P("_Project Status Report","seg-doc"),P("_V1.0","seg-qual"),P("_"+ord(v.psrN||1),"seg-qual"),P("_"+ymdSp(v.date),"seg-date")];},
+ buildList:function(){
+   if(v.dProjDoc==="psr"&&v.dPsrMail)return[this._psr(false),this._psr(true)];
+   return null;},
+ build:function(){
+   var d=v.dProjDoc,ver=v.dVer||"1.0",sp=ymdSp(v.date),cp=ymd(v.date);
+   if(d==="pmtracker")return[P("Idelvion PMS_Project Member Tracker","seg-doc"),P("_"+sp,"seg-date")];
+   if(d==="pmp")return[P("Idelvion_Project Management Plan","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+sp,"seg-date"),P("_signed_F","seg-sfx")];
+   if(d==="sop")return[P("SOT002_SOP Management Tracker","seg-doc"),P("_"+(v.dSopKind||"Initial"),"seg-qual"),P("_"+cp,"seg-date")];
+   if(d==="mp")return[P("Idelvion_Monitoring Plan","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+sp,"seg-date"),P("_signed_F","seg-sfx")];
+   if(d==="pdspec")return[P("Idelvion_PMS PD Spec","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+sp,"seg-date")];
+   if(d==="feas")return[P("Feasibility Questionnaire_PMS_IDELVION","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+sp,"seg-date"),P("_F","seg-sfx")];
+   if(d==="mtg")return[P("DOT002_Meeting Minutes","seg-doc"),P("_R"+(v.dRev||"1"),"seg-qual"),P("_IDELVION","seg-doc"),P("_"+(v.dMtgName||"Sponsor KOM"),"seg-qual"),P("_"+cp,"seg-date"),P("_Signed_F","seg-sfx")];
+   if(d==="komppt")return[P((v.dMtgName||"KOM")+" PPT","seg-doc"),P("_IDELVION","seg-doc"),P("_"+sp,"seg-date")];
+   if(d==="pdlist")return[P("PD List_Idelvion PMS","seg-doc"),P("_"+(v.dYearN||"6")+"년차","seg-qual"),P("_"+cp,"seg-date"),P("_Signed","seg-sfx")];
+   if(d==="corr")return[P("Correspondence","seg-doc"),P("_"+sp,"seg-date"),P("_"+(v.corrTopic||"주제"),"seg-qual")];
+   if(d==="ecorr")return[P("e-mail correspondence","seg-doc"),P("("+(v.corrTopic||"주제")+")","seg-qual"),P("_"+sp,"seg-date")];
+   return this._psr(false);},
+ ex:["Idelvion PMS_Project Member Tracker_2024 0205","Idelvion_Monitoring Plan_V1.0_2024 1010_signed_F","DOT002_Meeting Minutes_R1_IDELVION_Sponsor KOM_20240808_Signed_F","PD List_Idelvion PMS_6년차_20260527_Signed","Correspondence_2024 0718_CTA","e-mail correspondence(ICSR Reconciliation)_2025 0128","Idelvion PMS_Project Status Report_V1.0_1st_2024 1224"],
+ note:"이 문서군은 날짜가 공백형(YYYY MMDD)이 다수예요 — 단 SOP Tracker·Meeting Minutes·PD List는 압축형. 플랜류 서명본은 소문자 _signed_F, Meeting Minutes는 _Signed_F, PD List는 _Signed(F 없음) — 트래커 표기 그대로예요"},
+
+{id:"dess",group:"필수문서 (Zone 3)",label:"필수문서 (Protocol·ICF·CRF)",
+ fields:function(){
+   var f=[F("dEssDoc","select","문서",{options:[
+     ["protocol","Protocol (3.3)"],
+     ["icf","Master ICF (3.4)"],
+     ["crf","CRF (3.5)"],
+     ["ecrf","Blank eCRF (3.5)"],
+     ["ecrfguide","eCRF Completion Guideline (3.5)"]]}),
+     F("dVer","text","버전",{placeholder:"1.0"})];
+   var d=v.dEssDoc;
+   if(d==="icf"){
+     f.push(F("dIcfPop","select","대상",{options:["성인","소아","청소년"]}));
+     f.push(F("dIcfAll","check","세 대상(성인·소아·청소년) 한 번에 생성"));
+   }
+   if(d==="crf")f.push(F("dFinalKo","check","_최종본 접미 붙이기"));
+   f.push(dateF("문서 일자",(d==="ecrf"||d==="ecrfguide")?"이 문서는 압축형(YYYYMMDD) 날짜":"이 문서는 DDMonYYYY 날짜 (예: 26Apr2024)"));
+   return f;},
+ _icf:function(pop){return[P("IDELVION_Master ICF","seg-doc"),P("_"+pop,"seg-qual"),P("_Ver"+(v.dVer||"1.0"),"seg-qual"),P("_"+dMon(v.date),"seg-date")];},
+ buildList:function(){
+   if(v.dEssDoc==="icf"&&v.dIcfAll){var me=this;return["성인","소아","청소년"].map(function(p){return me._icf(p)});}
+   return null;},
+ build:function(){
+   var d=v.dEssDoc,ver=v.dVer||"1.0";
+   if(d==="icf")return this._icf(v.dIcfPop||"성인");
+   if(d==="crf"){var p=[P("IDELVION_PMS_CRF_Kor","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+dMon(v.date),"seg-date")];if(v.dFinalKo)p.push(P("_최종본","seg-sfx"));return p;}
+   if(d==="ecrf")return[P("IDELVION_Total_Blank eCRF","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   if(d==="ecrfguide")return[P("eCRF Completion Guideline_IDELVION PMS","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+ymd(v.date),"seg-date")];
+   return[P("IDELVION_PMS_Protocol_Kor","seg-doc"),P("_V"+ver,"seg-qual"),P("_"+dMon(v.date),"seg-date")];},
+ ex:["IDELVION_PMS_Protocol_Kor_V1.0_26Apr2024","IDELVION_Master ICF_성인_Ver1.0_12Sep2024","IDELVION_PMS_CRF_Kor_V1.0_26APR2024_최종본","IDELVION_Total_Blank eCRF_V1.0_20241014","eCRF Completion Guideline_IDELVION PMS_V1.0_20241204"],
+ note:"Protocol·CRF·ICF는 DDMonYYYY 날짜(26Apr2024), eCRF 관련은 압축형. ICF만 V가 아니라 Ver 표기예요. 트래커의 CRF 26APR2024(대문자)는 표기 흔들림 — 26Apr2024 형으로 생성해요"},
+
+{id:"dvisit",group:"Site Management (Zone 15)",label:"방문·교신 (15.1–15.4)",
+ fields:function(){
+   var f=[dsiteF,
+   F("dVisitDoc","select","문서",{options:[
+     ["SSVR","SSVR — 선정방문 보고서 (15.1)"],["SSVR Correspondence","SSVR Correspondence (15.1)"],["SSV Confirmation Letter","SSV Confirmation Letter (15.1)"],["SSV Follow-up Letter","SSV Follow-up Letter (15.1)"],["SSV PPT","SSV PPT (15.1)"],
+     ["SIVR","SIVR — 개시방문 보고서 (15.3)"],["SIV Confirmation Letter","SIV Confirmation Letter (15.3)"],["SIV Follow-up Letter","SIV Follow-up Letter (15.3)"],["SIV PPT","SIV PPT (15.3)"],
+     ["SMVR","SMVR — 모니터링 보고서 (15.4)"],["SMV Confirmation Letter","SMV Confirmation Letter (15.4)"],["SMV Follow-up Letter","SMV Follow-up Letter (15.4)"],["SMVR Correspondence","SMVR Correspondence (15.4)"],["SCVR","SCVR — 종료방문 보고서 (15.4)"],["Training Record","Training Record"],
+     ["Site Visit Log","Site Visit Log"],["Correspondence","Correspondence"],["Delivery Receipt","Delivery Receipt"]]})];
+   var d=v.dVisitDoc;
+   if(/^SMV/.test(d))f.push(F("dVisitNo","text","방문 차수 (#n — 비우면 차수 없음)",{placeholder:"예: 1 — IDV 실표기 미확정"}));
+   if(d==="Training Record"){
+     f.push(F("trCourse","text","교육명",{placeholder:"예: Protocol V2.0"}));
+     f.push(F("role","select","역할 (이름 없으면 생략)",{options:["PI","SI","Sub-I","CRC","SC"]}));
+     f.push(F("name","text","이름 (비우면 역할·이름 생략)",{placeholder:"최은진"}));
+   }
+   if(d==="Site Visit Log"||d==="Correspondence"||d==="Delivery Receipt"||d==="Training Record")
+     f.push(F("dVisitStage","select","구분",{options:[["15.1","15.1 Site Selection"],["15.2","15.2 Site Set-up"],["15.3","15.3 Site Initiation"],["15.4","15.4 Study Conduct"]]}));
+   f.push(dateF("문서 일자"));
+   return f;},
+ build:function(){
+   var d=v.dVisitDoc,doc=d;
+   if(/^SMV/.test(d)&&(v.dVisitNo||"").trim())doc=d.replace(/^(SMVR?)/,"$1 #"+(v.dVisitNo||"").trim());
+   if(d==="Training Record"){
+     var tp=[P(dS(),"seg-site"),P("_Training Record","seg-doc")];
+     if((v.trCourse||"").trim())tp.push(P("_"+v.trCourse.trim(),"seg-qual"));
+     if((v.name||"").trim())tp.push(P("_"+v.role+" "+v.name.trim(),"seg-qual"));
+     tp.push(P("_"+ymd(v.date),"seg-date"));
+     return tp;
+   }
+   var p=[P(dS(),"seg-site"),P("_","seg-doc"),P(doc,"seg-doc"),P("_"+ymd(v.date),"seg-date")];
+   if(d==="SSVR"||d==="SIVR"||d==="SMVR"||d==="SCVR")p.push(P("_Signed_F","seg-sfx"));
+   return p;},
+ ex:["S005_SSVR_20251218_Signed_F","S005_SIVR_20260401_Signed_F","S005_SMVR #1_20260601_Signed_F","S005_Correspondence_20251204"],
+ note:"15.1 선정(SSV) → 15.2 셋업(인력 문서는 '사이트 인력' 유형) → 15.3 개시(SIV) → 15.4 수행(SMV·SCV·교신). SIV·SMV는 IDV 실물이 아직 없어 SSV 표기를 준용했고, SMV 차수(#n)도 미확정 제안이에요 — 실물 생기면 알려주세요. 보고서(SSVR·SIVR·SMVR·SCVR)만 _Signed_F"},
+
+{id:"dstaff",group:"Site Management (Zone 15)",label:"사이트 인력 (15.2)",
+ fields:function(){return[dsiteF,
+   F("dStaffDoc","select","문서",{options:[["CV","CV"],["GCP Certificate","GCP Certificate"],["IC","Informed Consent for Disclosure of Personal Information"]]}),
+   F("role","select","역할",{options:["PI","SI","Sub-I","CRC","SC"]}),
+   F("name","text","이름",{placeholder:"최은진"}),
+   dateF("문서 일자")];},
+ build:function(){
+   var doc=v.dStaffDoc==="IC"?"Informed Consent for Disclosure of Personal Information":v.dStaffDoc;
+   return[P(doc,"seg-doc"),P("_"+dS(),"seg-site"),P("_"+v.role+" "+(v.name||"이름"),"seg-qual"),P("_"+ymd(v.date),"seg-date")];},
+ ex:["CV_S005_PI 최은진_20251218","GCP Certificate_S005_CRC 안지영_20250724","Informed Consent for Disclosure of Personal Information_S005_PI 최은진_20251218"],
+ note:"문서명이 앞, 사이트가 뒤 — 방문 문서(S005_...)와 어순이 반대인 점 주의"},
+
+{id:"dteam",group:"스터디팀 (Zone 1)",label:"팀 문서 (1.3–1.5)",
+ fields:function(){
+   var f=[F("dTeamDoc","select","문서",{options:[["cv","Curriculum Vitae (1.3)"],["gcp","GCP training (1.4)"],["pv","Certificate_CSL PV Training (1.5)"],["cube","cubeCDMS e-Training certificate (1.5)"]]})];
+   if(v.dTeamDoc==="cv"||v.dTeamDoc==="pv")f.push(F("engName","text","영문 이름",{placeholder:"Minji Kim"}));
+   else f.push(F("initials","text","이니셜",{placeholder:"LSH"}));
+   if(v.dTeamDoc==="gcp")f.push(F("hours","text","교육시간 (hrs)",{placeholder:"4"}));
+   if(v.dTeamDoc==="cube")f.push(F("certVer","text","버전 표기",{placeholder:"(V3.0)"}));
+   f.push(dateF("문서 일자"));
+   return f;},
+ build:function(){
+   var d=ymd(v.date);
+   if(v.dTeamDoc==="cv")return[P("RSF002_Curriculum Vitae","seg-doc"),P("_"+(v.engName||"이름"),"seg-qual"),P("_"+d,"seg-date"),P("_Signed_F","seg-sfx")];
+   if(v.dTeamDoc==="gcp")return[P("GCP training","seg-doc"),P("_"+(v.initials||"LSH"),"seg-qual"),P("_"+d,"seg-date"),P("_"+(v.hours||"4")+"hrs","seg-sfx")];
+   if(v.dTeamDoc==="cube")return[P("cubeCDMS e-Training certificate","seg-doc"),P(v.certVer||"(V3.0)","seg-qual"),P("_"+(v.initials||"LSH"),"seg-qual"),P("_"+d,"seg-date")];
+   return[P("Certificate_CSL PV Training","seg-doc"),P("_"+(v.engName||"이름"),"seg-qual"),P("_"+d,"seg-date")];},
+ ex:["RSF002_Curriculum Vitae_Minji Kim_20250122_Signed_F","GCP training_LSH_20240510_14hrs","Certificate_CSL PV Training_Minji Kim_20241119","cubeCDMS e-Training certificate(V3.0)_LSH_20251210"],
+ note:"팀 CV에는 RSF002 양식번호가 붙어요. GCP training은 이니셜+교육시간(_14hrs), 같은 날 같은 시간 2건은 _1hr_1/_1hr_2 로 구분한 예가 있어요"}
+];
+
 /* ---------- studies ---------- */
 var STUDIES={
   bis:{types:BIS_TYPES,protocol:"BS-CTL-PMS · CartiLife PMS",base:"QC Tracker 3부 · 18개 사이트 기준"},
   cvf:{types:CVF_TYPES,protocol:"CS-AVA-2022-051 · Tavneos PMS",base:"QC Tracker · Site 01–09 기준"},
-  cbr:{types:CBR_TYPES,protocol:"CSL627_5005 · Afstyla PMS",base:"QC Tracker · Site 001–009 기준"}
+  cbr:{types:CBR_TYPES,protocol:"CSL627_5005 · Afstyla PMS",base:"QC Tracker · Site 001–009 기준"},
+  idv:{types:IDV_TYPES,protocol:"CSL654-5009 · Idelvion PMS",base:"QC Tracker Signed_F · Site S005 기준"}
 };
 var study="bis";
 try{var ss=localStorage.getItem("tmfnStudy");if(ss&&STUDIES[ss])study=ss;}catch(e){}
@@ -8089,7 +8374,7 @@ function buildTypeSelect(){
 function applyStudy(){
   $("chipProtocol").textContent=STUDIES[study].protocol;
   $("chipBase").textContent=STUDIES[study].base;
-  ["bis","cvf","cbr"].forEach(function(s){
+  ["bis","cvf","cbr","idv"].forEach(function(s){
     $("rules-"+s).hidden=study!==s;
     $("fix-"+s).hidden=study!==s;
   });
@@ -8103,7 +8388,7 @@ $("study").addEventListener("change",function(){
 
 var mtgSites={};
 try{mtgSites=JSON.parse(localStorage.getItem("tmfnMtg")||"{}")}catch(e){}
-function mtgKey(){return study+"_"+(study==="cvf"?pad2(v.csite):study==="cbr"?pad3(v.bsite):pad3(v.site))}
+function mtgKey(){return study+"_"+(study==="cvf"?pad2(v.csite):study==="cbr"?pad3(v.bsite):study==="idv"?pad3(v.dsite):pad3(v.site))}
 function mtgHas(){return !!mtgSites[mtgKey()]}
 function mtgSet(on){if(on)mtgSites[mtgKey()]=1;else delete mtgSites[mtgKey()];try{localStorage.setItem("tmfnMtg",JSON.stringify(mtgSites))}catch(e){}}
 function rangeHas(){return !!mtgSites["range_"+mtgKey()]}
@@ -8146,8 +8431,8 @@ function renderFields(){
       if(f.placeholder)el.placeholder=f.placeholder;
       el.value=v[f.key]||"";
       el.addEventListener("input",function(){v[f.key]=el.value;renderPreview();
-        if(f.key==="site"||f.key==="csite"||f.key==="bsite"){
-          try{localStorage.setItem("tmfnSites",JSON.stringify({site:v.site,csite:v.csite,bsite:v.bsite}))}catch(e){}
+        if(f.key==="site"||f.key==="csite"||f.key==="bsite"||f.key==="dsite"){
+          try{localStorage.setItem("tmfnSites",JSON.stringify({site:v.site,csite:v.csite,bsite:v.bsite,dsite:v.dsite}))}catch(e){}
           if(document.getElementById("f_mtgHere")||document.getElementById("f_rangeStore")){
             renderFields();renderPreview();
             var si=document.getElementById("f_"+f.key);
@@ -8168,6 +8453,19 @@ function renderFields(){
 function autoIdx(){
   var e=v.event;
   var irbIdx=(e==="Interim"||e==="Annual")?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
+    if(study==="idv"){
+    var dIdx=(e==="Annual progress report")?"5.2":(e==="Trial Completion Report")?"5.3":(e==="Trial Result Report")?"5.4":(e==="SAE"||e==="SUSAR")?"5.5":"5.1";
+    switch(cur.id){
+      case"dirb":return dIdx;
+      case"dmember":return"5.6";
+      case"dvisit":{var dv=v.dVisitDoc||"";return dv.indexOf("SSV")===0?"15.1":dv.indexOf("SIV")===0?"15.3":(dv.indexOf("SMV")===0||dv.indexOf("SCV")===0)?"15.4":(v.dVisitStage||"15.1");}
+      case"dstaff":return"15.2";
+      case"dteam":return v.dTeamDoc==="cv"?"1.3":v.dTeamDoc==="gcp"?"1.4":"1.5";
+      case"dproj":{var pd=v.dProjDoc;return pd==="pmtracker"?"1.2":(pd==="pmp"||pd==="sop")?"2.1":(pd==="mp"||pd==="pdspec")?"2.2":pd==="feas"?"2.3":(pd==="mtg"||pd==="komppt")?"2.5":pd==="pdlist"?"2.8":"2.10";}
+      case"dess":return v.dEssDoc==="protocol"?"3.3":v.dEssDoc==="icf"?"3.4":"3.5";
+      default:return"";
+    }
+  }
   if(study==="cbr"){
     var bIdx=e==="Annual"?"5.2":e==="Completion"?"5.3":e==="Result"?"5.4":"5.1";
     switch(cur.id){
@@ -8306,12 +8604,12 @@ window.openTmfNamer=function(code,secId,idx){
   try{
     var p=(typeof protocols!=='undefined'?protocols:[]).filter(function(x){return x.id===curProtocolId})[0];
     var pn=String((p&&(p.protocolNo||p.name))||'').toUpperCase();
-    var s=pn.indexOf('BS-CTL')>=0?'bis':pn.indexOf('CS-AVA')>=0?'cvf':(pn.indexOf('CSL627')>=0||pn.indexOf('AFSTYLA')>=0)?'cbr':null;
+    var s=pn.indexOf('BS-CTL')>=0?'bis':pn.indexOf('CS-AVA')>=0?'cvf':(pn.indexOf('CSL627')>=0||pn.indexOf('AFSTYLA')>=0)?'cbr':(pn.indexOf('CSL654')>=0||pn.indexOf('IDELVION')>=0)?'idv':null;
     if(s)T.setStudy(s);
   }catch(e){}
   try{
     var d=String(code||'').replace(/\D/g,'');
-    if(d){var p3=('000'+d).slice(-3);T.v.site=p3;T.v.bsite=p3;T.v.csite=('0'+String(+d)).slice(-2);}
+    if(d){var p3=('000'+d).slice(-3);T.v.site=p3;T.v.bsite=p3;T.v.dsite=p3;T.v.csite=('0'+String(+d)).slice(-2);}
   }catch(e){}
   try{
     // 날짜는 행(row)이 아니라 섹션 메타(sec.meta)에 들어 있다.
@@ -8331,6 +8629,7 @@ window.openTmfNamer=function(code,secId,idx){
   }catch(e){}
   T.applyStudy();
   try{ tmfnSrvPrefill(code,secId); }catch(e){}
+  try{qcUiRefresh()}catch(e){}
   document.getElementById('tmfnOverlay').style.display='flex';
 };
 /* ── '서버 내 파일명'에만 붙는 IRB 접수번호·접수일 ── */
@@ -8474,6 +8773,208 @@ function isfPendingToThis(type,idx){
   try{ showToastNow(add.length?('이번 Filing 칸에 '+add.length+'건 담았어요'):'이미 이번 Filing 칸에 있어요'); }catch(e){}
   openIsfPending(type,idx);
 }
+/* ── QC Tracker(xlsx) 자동 반영 — 셀 XML만 교체해 서식 100% 보존 ── */
+function qcXmlEsc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function qcXmlDec(s){return String(s).replace(/&#(\d+);/g,function(_,d){return String.fromCharCode(+d)}).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");}
+function qcParseSst(xml){
+  var out=[],re=/<si>([\s\S]*?)<\/si>/g,m;
+  while((m=re.exec(xml))){
+    var ts=m[1].match(/<t[^>]*>[\s\S]*?<\/t>/g)||[];
+    out.push(qcXmlDec(ts.map(function(x){return x.replace(/^<t[^>]*>/,"").replace(/<\/t>$/,"")}).join("")));
+  }
+  return out;
+}
+function qcCellText(cxml,sst){
+  if(!cxml)return"";
+  var t=/\bt="([^"]+)"/.exec(cxml);
+  if(t&&t[1]==="s"){var vm=/<v[^>]*>([\s\S]*?)<\/v>/.exec(cxml);return vm?(sst[+vm[1]]||""):"";}
+  if(t&&(t[1]==="inlineStr"||t[1]==="str")){
+    var ts=cxml.match(/<t[^>]*>[\s\S]*?<\/t>/g)||[];
+    if(ts.length)return qcXmlDec(ts.map(function(x){return x.replace(/^<t[^>]*>/,"").replace(/<\/t>$/,"")}).join(""));
+  }
+  var vm2=/<v[^>]*>([\s\S]*?)<\/v>/.exec(cxml);return vm2?qcXmlDec(vm2[1]):"";
+}
+function qcCellXml(rowXml,col,rowNum){
+  /* 자기닫힘 셀(<c .../>)을 먼저 시도 — 아니면 다음 셀까지 삼키는 오매칭이 난다 */
+  var m=new RegExp('<c [^>]*r="'+col+rowNum+'"[^>]*/>').exec(rowXml);
+  if(m)return m[0];
+  m=new RegExp('<c [^>]*r="'+col+rowNum+'"[^>]*>[\\s\\S]*?</c>').exec(rowXml);
+  return m?m[0]:null;
+}
+function qcMakeCell(col,rowNum,styleAttr,text){
+  return '<c r="'+col+rowNum+'"'+(styleAttr?' s="'+styleAttr+'"':'')+' t="inlineStr"><is><t xml:space="preserve">'+qcXmlEsc(text)+'</t></is></c>';
+}
+function qcCellStyle(cxml){var m=cxml&&/\bs="(\d+)"/.exec(cxml);return m?m[1]:"";}
+/* spec: {a:"5.1", bKey?:"Initial", nth?:0} — A열 번호(+B열 키워드)로 행을 찾는다 */
+function qcEditSheetXml(sheetXml,sst,spec,names){
+  var rows=sheetXml.match(/<row [^>]*>[\s\S]*?<\/row>/g)||[];
+  var want=Math.round(parseFloat(spec.a)*100);
+  function collect(key,skipA){
+    var out=[];
+    rows.forEach(function(rx){
+      var rn=/\br="(\d+)"/.exec(rx);if(!rn)return;
+      var a=qcCellText(qcCellXml(rx,"A",rn[1]),sst);
+      if(spec.zone&&String(a).indexOf(spec.zone)!==0)return;
+      if(!skipA&&(!a||Math.round(parseFloat(a)*100)!==want))return;
+      if(key){
+        var b=qcCellText(qcCellXml(rx,"B",rn[1]),sst);
+        if(b.toLowerCase().indexOf(key.toLowerCase())<0)return;
+      }
+      out.push({xml:rx,num:rn[1]});
+    });
+    return out;
+  }
+  var hits=[];
+  if(spec.bKeys){for(var ki=0;ki<spec.bKeys.length&&!hits.length;ki++)hits=collect(spec.bKeys[ki],true);}
+  else hits=collect(spec.bKey,!!spec.bOnly);
+  var hit=hits[spec.nth||0];
+  if(!hit)throw new Error("QC Tracker에서 "+(spec.a||(spec.bKeys?spec.bKeys.join("/"):""))+(spec.bKey?" ("+spec.bKey+")":"")+" 행을 못 찾았어요");
+  var dOld=qcCellXml(hit.xml,"D",hit.num);
+  var curTxt=qcCellText(dOld,sst);
+  var lines=curTxt?curTxt.split(/\n/).map(function(x){return x.trim()}):[];
+  var flat=curTxt.replace(/\s+/g," ");
+  var applied=[],already=[];
+  names.forEach(function(nm){
+    nm=String(nm).trim();if(!nm)return;
+    if(flat.indexOf(nm)>=0){already.push(nm);return;}
+    if(lines.length&&!/,$/.test(lines[lines.length-1]))lines[lines.length-1]+=", ";
+    lines.push(nm);flat+=" "+nm;applied.push(nm);
+  });
+  if(!applied.length)return{xml:sheetXml,row:hit.num,applied:[],already:already};
+  var newTxt=lines.join("\n");
+  var newRow=hit.xml;
+  var dNew=qcMakeCell("D",hit.num,dOld?qcCellStyle(dOld):"",newTxt);
+  if(dOld)newRow=newRow.replace(dOld,dNew);
+  else newRow=newRow.replace(/<\/row>$/,dNew+"</row>");
+  /* FILED? 칸이 비었거나 NA/No면 Yes로 */
+  var cOld=qcCellXml(newRow,"C",hit.num);
+  var cTxt=qcCellText(cOld,sst).trim().toLowerCase();
+  if(cOld&&(cTxt===""||cTxt==="na"||cTxt==="no")){
+    newRow=newRow.replace(cOld,qcMakeCell("C",hit.num,qcCellStyle(cOld),"Yes"));
+  }
+  return{xml:sheetXml.replace(hit.xml,newRow),row:hit.num,applied:applied,already:already};
+}
+
+/* ── QC Tracker 파일 연결 (File System Access API + IndexedDB 핸들 저장) ── */
+function qcIdb(){return new Promise(function(res,rej){var r=indexedDB.open("tmfnQC",1);r.onupgradeneeded=function(){r.result.createObjectStore("kv")};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function qcIdbGet(k){return qcIdb().then(function(db){return new Promise(function(res,rej){var t=db.transaction("kv").objectStore("kv").get(k);t.onsuccess=function(){res(t.result)};t.onerror=function(){rej(t.error)}})})}
+function qcIdbSet(k,val){return qcIdb().then(function(db){return new Promise(function(res,rej){var t=db.transaction("kv","readwrite").objectStore("kv").put(val,k);t.onsuccess=function(){res()};t.onerror=function(){rej(t.error)}})})}
+window.qcUiRefresh=async function(){
+  try{
+    var cb=document.getElementById("tmfnQcOn");
+    if(cb)cb.checked=localStorage.getItem("tmfnQcOn")==="1";
+    var h=window.__qcHandle;
+    if(!h){try{h=await qcIdbGet("handle")}catch(e){}}
+    if(h)window.__qcHandle=h;
+    var sp=document.getElementById("tmfnQcName");
+    if(sp)sp.textContent=h?("연결됨: "+h.name):"(QC 파일 미연결)";
+  }catch(e){}
+};
+window.qcPickFile=async function(){
+  if(!window.showOpenFilePicker){showToastNow("이 브라우저에선 파일 연결이 안 돼요 — Chrome/Edge에서 열어주세요");return;}
+  try{
+    var hs=await showOpenFilePicker({types:[{description:"Excel",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
+    if(!hs||!hs[0])return;
+    window.__qcHandle=hs[0];
+    try{await qcIdbSet("handle",hs[0])}catch(e){}
+    qcUiRefresh();
+    showToastNow("QC Tracker 연결: "+hs[0].name);
+  }catch(e){}
+};
+/* 현재 선택(과제·문서유형·심의유형) → QC Tracker 행 좌표 */
+function qcRowSpec(T){
+  if(T.getStudy()!=="idv")return{err:"QC 자동반영은 아직 IDELVION(IDV) 트래커만 지원해요"};
+  var id=T.typeId?T.typeId():"",v=T.v;
+  var ov=(v.idxOv||"").trim();
+  if(id==="dirb"){
+    var e=v.event;
+    if(e==="SAE"||e==="SUSAR")return{err:"이 QC Tracker에는 SAE/SUSAR IRB 행이 없어요 — 수동으로 넣어주세요"};
+    if(e==="Annual progress report")return{a:"5.2"};
+    if(e==="Trial Completion Report")return{a:"5.3"};
+    if(e==="Trial Result Report")return{a:"5.4"};
+    if(e==="Amendment")return{a:"5.1",bKey:"Amendment"};
+    if(e==="None compliance")return{a:"5.1",bKey:"None compliance"};
+    if(e==="Other")return{a:"5.1",bKey:"other"};
+    return{a:"5.1",bKey:"Initial"};
+  }
+  if(id==="dmember")return{bOnly:true,bKey:"Membership"};
+  if(id==="dproj"){
+    if(ov)return{a:ov};
+    var pd=v.dProjDoc;
+    if(pd==="pmtracker")return{a:"1.2"};
+    if(pd==="pmp"||pd==="sop")return{a:"2.1",bKey:"Project Management"};
+    if(pd==="mp"||pd==="pdspec")return{a:"2.2"};
+    if(pd==="feas")return{a:"2.3"};
+    if(pd==="mtg"||pd==="komppt")return{a:"2.5"};
+    if(pd==="pdlist")return{a:"2.8"};
+    if(pd==="psr")return{a:"2.10",bKey:"Emails",nth:1};
+    return{a:"2.10",bKey:"Emails:"};
+  }
+  if(id==="dess"){
+    if(ov)return{a:ov};
+    var ed=v.dEssDoc;
+    if(ed==="protocol")return{a:"3.3"};
+    if(ed==="icf")return{a:"3.4",bKey:"Master"};
+    if(ed==="ecrfguide")return{a:"3.5",bKey:"guideline"};
+    return{a:"3.5",bKey:"Blank"};
+  }
+  if(id==="dvisit"){
+    var dv=v.dVisitDoc||"";
+    if(dv.indexOf("SSV")===0)return{zone:"15.",bKeys:["Site Selection"]};
+    if(dv.indexOf("SIV")===0)return{zone:"15.",bKeys:["Site Initiation"]};
+    if(dv.indexOf("SMV")===0||dv.indexOf("SCV")===0)return{zone:"15.",bKeys:["Study Conduct"]};
+    var st15=v.dVisitStage||"15.1";
+    if(st15==="15.2")return{zone:"15.",bKeys:["Site Set-up","Site Initiation"]};
+    if(st15==="15.3")return{zone:"15.",bKeys:["Site Initiation"]};
+    if(st15==="15.4")return{zone:"15.",bKeys:["Study Conduct"]};
+    return{zone:"15.",bKeys:["Site Selection"]};
+  }
+  if(id==="dstaff")return{zone:"15.",bKeys:["Site Set-up","Site Initiation"]};
+  if(id==="dteam")return v.dTeamDoc==="cv"?{a:"1.3"}:v.dTeamDoc==="gcp"?{a:"1.4"}:v.dTeamDoc==="pv"?{a:"1.5",nth:0}:{a:"1.5",nth:1};
+  return{err:"이 문서 유형은 QC 매핑이 아직 없어요"};
+}
+window.qcAutoApply=async function(names,force){
+  try{
+    if(!force&&localStorage.getItem("tmfnQcOn")!=="1")return;
+    var T=window.__tmfn;if(!T||!names||!names.length)return;
+    var spec=qcRowSpec(T);
+    if(spec.err){showToastNow(spec.err);return;}
+    var h=window.__qcHandle;
+    if(!h){try{h=await qcIdbGet("handle")}catch(e){}}
+    if(!h){showToastNow("QC Tracker 파일이 연결 안 됐어요 — 🏷️ 모달의 '📊 파일 연결'을 눌러주세요");return;}
+    window.__qcHandle=h;
+    if((await h.queryPermission({mode:"readwrite"}))!=="granted"){
+      if((await h.requestPermission({mode:"readwrite"}))!=="granted"){showToastNow("QC 파일 쓰기 권한이 거부됐어요");return;}
+    }
+    if(!window.JSZip){showToastNow("압축 라이브러리(JSZip) 로드 실패 — 인터넷 연결을 확인해주세요");return;}
+    var file=await h.getFile();
+    var zip=await JSZip.loadAsync(await file.arrayBuffer());
+    var sheetPath=Object.keys(zip.files).filter(function(p){return /^xl[/]worksheets[/]sheet\d+[.]xml$/.test(p)}).sort()[0];
+    if(!sheetPath){showToastNow("QC 파일에서 시트를 못 찾았어요");return;}
+    var sstFile=zip.file("xl/sharedStrings.xml");
+    var sst=sstFile?qcParseSst(await sstFile.async("string")):[];
+    var xml=await zip.file(sheetPath).async("string");
+    var r=qcEditSheetXml(xml,sst,spec,names);
+    if(!r.applied.length){showToastNow("QC Tracker "+r.row+"행에 이미 있는 이름이라 건너뛰었어요");return;}
+    zip.file(sheetPath,r.xml);
+    var blob=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
+    var w=await h.createWritable();
+    await w.write(blob);await w.close();
+    showToastNow("QC Tracker "+r.row+"행에 "+r.applied.length+"건 반영했어요 ("+h.name+")");
+  }catch(e){
+    var msg=(e&&e.message)||"";
+    if(msg.indexOf("못 찾았어요")>=0)showToastNow(msg);
+    else showToastNow("QC 반영 실패 — 파일이 엑셀에서 열려 있으면 닫고 다시 입력해주세요"+(msg?" ("+msg.slice(0,60)+")":""));
+  }
+};
+/* 행 입력 없이 QC Tracker에만 반영 (모달 단독 버튼) */
+window.qcApplyNow=async function(){
+  var T=window.__tmfn;if(!T)return;
+  var names=String(T.names(false)).split(/,\s*/).map(function(x){return x.trim()}).filter(Boolean);
+  if(!names.length){showToastNow("생성된 이름이 없어요");return;}
+  await qcAutoApply(names,true);
+};
+
 window.tmfnInsert=function(withIdx){
   var T=window.__tmfn,r=window.__tmfnRow; if(!T)return;
   var name=T.names(withIdx); if(!name)return;
@@ -8503,6 +9004,7 @@ window.tmfnInsert=function(withIdx){
       if(isfNo) linked=tmfnLinkIsf(r, sv, tmfNo, isfNo);   // ISF Index 파일명 칸 기록 + 🔔 알람
     }catch(e){}
     setField(r.code,r.secId,r.idx,'tmfName',name);   // 내부에서 saveData + 화면 갱신
+    try{qcAutoApply(String(T.names(false)).split(/,\s*/).map(function(x){return x.trim()}).filter(Boolean));}catch(e){}
     document.getElementById('tmfnOverlay').style.display='none';
     try{
       if(linked&&linked.na) showToastNow('ISF '+linked.no+' '+linked.title+' 은 N/A라 알람 없이 파일명만 기록했어요 (TMF '+(T.idx?T.idx():'')+')');
