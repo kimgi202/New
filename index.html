@@ -3121,7 +3121,7 @@ function addFilingLogEntry(type, idx){
   const rows=getIndexRows(type); const r=rows[idx]; if(!r) return;
   if(!r.filingLog) r.filingLog=[];
   const nextRound=curVisitLabel(r) || ('SMV #'+nextSmvNo(r));
-  const today=new Date().toISOString().slice(0,10);
+  const today=siteVisitDate(nextRound) || todayStr();
   r.filingLog.push({round:nextRound, date:today, content:'', status:'done'});
   _flogEdit[flogKey(type,idx,r.filingLog.length-1)]=JSON.stringify(r.filingLog[r.filingLog.length-1]);
   r.logOpen=true; saveData(); renderBody();
@@ -3131,9 +3131,32 @@ function delFilingLogEntry(type, idx, li){
   if(!confirm('이 회차 기록을 삭제할까요?')) return;
   r.filingLog.splice(li,1); saveData(); renderBody();
 }
+// 이 기관의 모든 Index(ISF·TMF·커스텀)에서 같은 회차(예: SMV #1)의 기록에 날짜를 똑같이 넣는다
+function applyVisitDateToSite(round, date, exceptRow){
+  const k=normRound(round); if(!k||!date) return 0;
+  let n=0;
+  (getIndexTypesForProtocol()||[]).forEach(t=>{
+    (getIndexRows(t)||[]).forEach(row=>{
+      if(row.h||!row.filingLog) return;
+      row.filingLog.forEach(e=>{ if(normRound(e.round)===k && e.date!==date && !(row===exceptRow)){ e.date=date; n++; } });
+    });
+  });
+  return n;
+}
+// 이 기관에 이미 기록된 같은 회차의 날짜 (새 기록을 만들 때 그대로 물려받음)
+function siteVisitDate(round){
+  const k=normRound(round); if(!k) return '';
+  for(const t of (getIndexTypesForProtocol()||[])) for(const row of (getIndexRows(t)||[])) for(const e of (row.filingLog||[])) if(normRound(e.round)===k && e.date) return e.date;
+  return '';
+}
 function setFilingLogField(type, idx, li, field, val){
   const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
-  r.filingLog[li][field]=val; saveData();
+  r.filingLog[li][field]=val;
+  if(field==='date' && val){
+    const n=applyVisitDateToSite(r.filingLog[li].round, val, r);
+    if(n) showToastNow(`✓ ${r.filingLog[li].round} 날짜를 이 기관의 다른 항목 ${n}개에도 넣었어요`);
+  }
+  saveData();
   if(field==='status'||field==='date') renderBody();
 }
 function copyFilingContent(type, idx, li){
@@ -3292,7 +3315,7 @@ function commitThisFiling(type,idx){
     const e=r.filingLog[ci], have=(e.content||'').split('\n').map(x=>x.trim());
     const add=content.split('\n').filter(x=>x.trim() && !have.includes(x.trim()));
     if(add.length) e.content=((e.content||'').replace(/\s+$/,'')+(e.content?'\n':'')+add.join('\n'));
-  } else r.filingLog.push({round:label, date:new Date().toISOString().slice(0,10), content, status:'done'});
+  } else r.filingLog.push({round:label, date:siteVisitDate(label) || todayStr(), content, status:'done'});
   r.thisFiling=''; delete r.thisFilingHtml;
   saveData(); renderBody();
   showToastNow('✓ '+label+' 회차 이력에 기록했어요');
@@ -3331,7 +3354,7 @@ function filingLogRowHtml(type, idx, r){
     return `
     <div class="flog-entry flog-${eff} flog-editing">
       <div class="flog-top">
-        <input class="flog-round" list="visitRoundList" value="${esc(e.round||'')}" placeholder="회차 (예: SMV #2)" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
+        <input class="flog-round" value="${esc(e.round||'')}" placeholder="회차 (예: SMV #2)" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
         <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="flog-date" value="${esc(e.date||'')}" onchange="setFilingLogField('${type}',${idx},${li},'date',this.value)">
         ${eff==='planned'?`<span class="flog-auto" title="날짜가 오늘 이후라서 자동으로 '예정'이에요. 날짜가 지나면 완료/일부로 표시돼요">예정 (날짜 기준 자동)</span>`:`<select class="flog-status" onchange="setFilingLogField('${type}',${idx},${li},'status',this.value)">
           <option value="done"${!partial?' selected':''}>완료</option>
@@ -3349,7 +3372,7 @@ function filingLogRowHtml(type, idx, r){
     <div class="flog-head">🗂 회차별 Filing 이력 <span class="flog-cnt">${log.length}건</span></div>
     ${log.length?entries:'<div class="flog-empty">아직 기록이 없어요. 아래 버튼으로 1회차부터 남겨보세요.</div>'}
     <button class="flog-add" onclick="addFilingLogEntry('${type}',${idx})">+ 회차 기록 추가</button>
-    <datalist id="visitRoundList"><option value="SIV"><option value="SMV #${nextSmvNo(r)}"><option value="PSV"><option value="COV"></datalist>
+
   </div></td></tr>`;
 }
 function delIndexRow(type, idx){
