@@ -3146,6 +3146,7 @@ function applyVisitDateToSite(round, date, exceptRow){
 // 이 기관에 이미 기록된 같은 회차의 날짜 (새 기록을 만들 때 그대로 물려받음)
 function siteVisitDate(round){
   const k=normRound(round); if(!k) return '';
+  const sv=siteVisits().find(v=>normRound(v.label)===k); if(sv&&sv.date) return sv.date;
   for(const t of (getIndexTypesForProtocol()||[])) for(const row of (getIndexRows(t)||[])) for(const e of (row.filingLog||[])) if(normRound(e.round)===k && e.date) return e.date;
   return '';
 }
@@ -3251,6 +3252,56 @@ function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.get
 // 회차 기록의 실제 상태: 날짜가 오늘 이후면 '예정', 아니면 저장된 상태(완료/일부)
 function flogEff(e){ const d=String(e.date||'').trim(); return (d && d>todayStr()) ? 'planned' : (e.status==='partial'?'partial':'done'); }
 function flogBadge(e){ const st=flogEff(e); return `<span class="pf-badge ${st==='planned'?'pf-planned':st==='partial'?'pf-partial':'pf-done'}">${st==='planned'?'예정':st==='partial'?'일부':'완료'}</span>`; }
+// ━━━ 기관별 방문 일정 (PSV · SIV · SMV #n · COV) ━━━━━━━━━━━━━━━━━━━━━━━━
+// Index 상단에서 한 번만 날짜를 넣으면, 그 기관의 모든 Index 회차 이력에 같은 날짜가 들어간다.
+function siteVisits(){
+  const pd=curProtocolId?protocolData[curProtocolId]:null; if(!pd) return [];
+  if(!pd.siteVisits) pd.siteVisits={};
+  const sc=curSiteCode(); if(!pd.siteVisits[sc]) pd.siteVisits[sc]=[];
+  return pd.siteVisits[sc];
+}
+function suggestVisitLabel(){
+  const labels=siteVisits().map(v=>normRound(v.label));
+  if(!labels.includes('PSV')&&!labels.includes('SIV')) return 'PSV';
+  if(!labels.includes('SIV')) return 'SIV';
+  let max=0; siteVisits().forEach(v=>{ const m=String(v.label||'').match(/SMV\s*#?\s*(\d+)/i); if(m) max=Math.max(max,+m[1]); });
+  return 'SMV #'+(max+1);
+}
+function visitScheduleHtml(){
+  const vs=siteVisits();
+  const items=vs.map((v,i)=>`<span class="vb-item">
+      <input class="vb-label" value="${escAttr(v.label||'')}" placeholder="회차" onchange="setSiteVisit(${i},'label',this.value)" title="방문 이름 (예: PSV, SIV, SMV #1, COV)">
+      <input class="vb-date" type="text" placeholder="YYYY-MM-DD" value="${escAttr(v.date||'')}" onfocus="dtFocus(this)" onblur="dtBlur(this)" onchange="setSiteVisit(${i},'date',this.value)" title="방문 날짜 — 넣으면 이 기관의 모든 Index 회차 이력에 적용돼요">
+      ${v.date && v.date>todayStr()?'<span class="pf-badge pf-planned">예정</span>':''}
+      <button class="vb-del" onclick="delSiteVisit(${i})" title="이 방문 지우기">✕</button>
+    </span>`).join('');
+  return `<div class="visit-bar">
+    <span class="vb-title" title="방문 이름과 날짜를 여기서 한 번만 넣으면, 회차 이력의 같은 이름 기록에 날짜가 자동으로 들어가요">📅 방문 일정</span>
+    ${items || '<span class="vb-empty">아직 방문이 없어요. + 방문 추가 → 이름과 날짜를 넣으면 회차 이력에 자동으로 연동돼요.</span>'}
+    <button class="vb-add" onclick="addSiteVisit()">+ 방문 추가</button>
+  </div>`;
+}
+function addSiteVisit(){ siteVisits().push({label:suggestVisitLabel(), date:''}); saveData(); renderBody(); }
+function delSiteVisit(i){
+  const vs=siteVisits(); if(!vs[i]) return;
+  if(!confirm(`'${vs[i].label}' 방문을 일정에서 지울까요?\n(회차 이력에 이미 기록된 내용은 지워지지 않아요)`)) return;
+  vs.splice(i,1); saveData(); renderBody();
+}
+function setSiteVisit(i,field,val){
+  const vs=siteVisits(); const v=vs[i]; if(!v) return;
+  val=String(val||'').trim();
+  if(field==='label'){
+    const old=v.label; v.label=val;
+    if(old && val && normRound(old)!==normRound(val)){   // 이름을 바꾸면 이력의 회차 이름도 따라 바꿈
+      let n=0; (getIndexTypesForProtocol()||[]).forEach(t=>(getIndexRows(t)||[]).forEach(row=>(row.filingLog||[]).forEach(e=>{ if(normRound(e.round)===normRound(old)){ e.round=val; n++; } })));
+      if(n) showToastNow(`✓ 회차 이름 '${old}' → '${val}' (${n}개 기록에 반영)`);
+    }
+  } else if(field==='date'){
+    v.date=val;
+    if(val){ const n=applyVisitDateToSite(v.label, val, null); showToastNow(n?`✓ ${v.label} 날짜를 회차 이력 ${n}개에 넣었어요`:`✓ ${v.label} 날짜 저장 (아직 이 회차 기록이 없어요 — 새로 만들 때 자동으로 들어가요)`); }
+  }
+  saveData(); renderBody();
+}
 function normRound(x){ return String(x||'').toUpperCase().replace(/[\s#]/g,''); }
 // 이번 방문(방문 구분+번호)에 해당하는 회차 기록의 위치 (없으면 -1)
 function curVisitLogIndex(r){
@@ -3274,7 +3325,12 @@ function prevFilingSummary(r){
 function thisVisitPicker(type,idx,r){
   const t=r.tvType||'';
   const no=r.tvNo||nextSmvNo(r);
-  const opts=['<option value="">방문 구분</option>'].concat(VISIT_TYPES.map(v=>`<option value="${v}"${t===v?' selected':''}>${v}</option>`)).join('');
+  const cur=normRound(curVisitLabel(r));
+  const sched=siteVisits().filter(v=>v.label);
+  const opts=['<option value="">방문 구분</option>']
+    .concat(sched.length?['<optgroup label="이 기관 방문 일정">'].concat(sched.map(v=>`<option value="${escAttr(v.label)}"${normRound(v.label)===cur?' selected':''}>${esc(v.label)}${v.date?' · '+esc(v.date):''}</option>`)).concat(['</optgroup><optgroup label="직접 지정">']):[])
+    .concat(VISIT_TYPES.map(v=>`<option value="${v}"${(!sched.some(x=>normRound(x.label)===cur) && t===v && !(t==='SMV'&&r.tvNo&&sched.length))?' selected':''}>${v}</option>`))
+    .concat(sched.length?['</optgroup>']:[]).join('');
   const hasContent=(r.thisFiling||'').trim();
   return `<div class="tv-row">
     <select class="tv-type" onchange="setThisVisit('${type}',${idx},'tvType',this.value)" title="이번 방문 구분">${opts}</select>
@@ -3299,7 +3355,11 @@ function openFilingLogEdit(type,idx,li){
 }
 function setThisVisit(type,idx,field,val){
   const r=getIndexRows(type)[idx]; if(!r) return;
-  if(field==='tvType'){ r.tvType=val; if(val==='SMV' && !r.tvNo) r.tvNo=nextSmvNo(r); }
+  if(field==='tvType'){
+    const m=String(val||'').match(/^(SIV|SMV|PSV|COV)\s*#?\s*(\d+)?/i);
+    if(m){ r.tvType=m[1].toUpperCase(); if(m[2]) r.tvNo=+m[2]; else if(r.tvType==='SMV' && !r.tvNo) r.tvNo=nextSmvNo(r); }
+    else r.tvType=val;
+  }
   else if(field==='tvNo'){ const n=parseInt(val,10); r.tvNo=n>0?n:nextSmvNo(r); }
   saveData(); renderBody();
 }
@@ -5227,6 +5287,7 @@ function renderIndexBody(){
           &nbsp;·&nbsp; 완료 ${done}/${target.length} · 이슈 ${issue} · N/A ${naCount}${isfPendingCount(rows)?` · <span class="isf-alarm-sum">🔔 ISF Filing 필요 ${isfPendingCount(rows)}</span>`:''}
         </div>
       </div>
+      ${visitScheduleHtml()}
       <div class="idx-toolbar">
         ${idxSelMode ? `
         <button class="idx-doselect-btn" onclick="bulkDelIndexSelected('${type}')" title="체크한 항목·섹션 삭제">🗑️ 선택 삭제 (${(getIndexRows(type).filter(r=>r.selected)).length})</button>
@@ -9804,6 +9865,18 @@ table th{color:var(--label)}
 .flog-entry.flog-planned{background:#F5F9FF;border-color:#BFDBFE}
 .tf-logged.tf-planned{background:#F5F9FF;border-color:#BFDBFE}
 .flog-auto{font-size:12px;font-weight:600;color:#1D4ED8;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:4px 8px}
+
+/* ── 방문 일정 바 ── */
+.visit-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px;padding:10px 12px;background:#fff;border:1px solid var(--border,#E2E8F0);border-radius:10px}
+.vb-title{font-size:13px;font-weight:700;color:var(--navy,#1E3A5F);margin-right:4px;white-space:nowrap}
+.vb-item{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 8px;border:1px solid var(--border,#E2E8F0);border-radius:8px;background:#F8FAFC}
+.vb-label{width:92px;height:30px;border:1px solid var(--border-2,#CBD5E1);border-radius:6px;padding:0 8px;font-size:13px;font-weight:600;color:var(--navy,#1E3A5F);background:#fff;font-family:inherit}
+.vb-date{width:118px;height:30px;border:1px solid var(--border-2,#CBD5E1);border-radius:6px;padding:0 8px;font-size:13px;background:#fff;font-family:inherit;font-variant-numeric:tabular-nums}
+.vb-del{width:24px;height:24px;border:none;background:none;color:var(--text-3,#94A3B8);cursor:pointer;border-radius:6px;font-size:13px}
+.vb-del:hover{background:#FEF2F2;color:#B91C1C}
+.vb-add{height:30px;border:1px dashed var(--border-2,#CBD5E1);background:#fff;color:var(--blue,#2563EB);border-radius:8px;padding:0 10px;font-size:13px;font-weight:600;cursor:pointer}
+.vb-add:hover{background:var(--blue-bg,#EFF6FF);border-color:var(--blue,#2563EB)}
+.vb-empty{font-size:13px;color:var(--text-3,#94A3B8)}
 </style>
 
 <style id="editorial-ui-refinement">
