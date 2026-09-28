@@ -3120,9 +3120,10 @@ function toggleFilingLog(type, idx){
 function addFilingLogEntry(type, idx){
   const rows=getIndexRows(type); const r=rows[idx]; if(!r) return;
   if(!r.filingLog) r.filingLog=[];
-  const nextRound=(r.filingLog.length+1)+'회차';
+  const nextRound=curVisitLabel(r) || ('SMV #'+nextSmvNo(r));
   const today=new Date().toISOString().slice(0,10);
   r.filingLog.push({round:nextRound, date:today, content:'', status:'done'});
+  _flogEdit[flogKey(type,idx,r.filingLog.length-1)]=JSON.stringify(r.filingLog[r.filingLog.length-1]);
   r.logOpen=true; saveData(); renderBody();
 }
 function delFilingLogEntry(type, idx, li){
@@ -3206,26 +3207,144 @@ function installPWA(){
   }
   alert(guide);
 }
+
+// ━━━ Filing 방문 구분 · 회차 이력 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const VISIT_TYPES=['SIV','SMV','PSV','COV'];
+// 회차 이력에 기록된 SMV 중 가장 큰 번호 + 1
+function nextSmvNo(r){
+  let max=0;
+  (r.filingLog||[]).forEach(e=>{
+    // 회차 이름(예: SMV #2)과 내용 첫머리(예: SMV#1)에서 SMV 번호를 찾는다
+    const txt=String(e.round||'')+' '+String(e.content||'').split('\n')[0];
+    const m=txt.match(/SMV\s*#?\s*(\d+)/i); if(m) max=Math.max(max,+m[1]);
+  });
+  return max+1;
+}
+function visitLabel(t,no){ return t==='SMV' ? ('SMV #'+(no||1)) : (t||''); }
+function curVisitLabel(r){ return r.tvType ? visitLabel(r.tvType, r.tvType==='SMV'?(r.tvNo||nextSmvNo(r)):null) : ''; }
+// 회차 이름 비교용: 'SMV #2' = 'SMV#2' = 'smv 2'
+function normRound(x){ return String(x||'').toUpperCase().replace(/[\s#]/g,''); }
+// 이번 방문(방문 구분+번호)에 해당하는 회차 기록의 위치 (없으면 -1)
+function curVisitLogIndex(r){
+  const lab=curVisitLabel(r); if(!lab) return -1;
+  const k=normRound(lab), log=r.filingLog||[];
+  for(let i=log.length-1;i>=0;i--) if(normRound(log[i].round)===k) return i;
+  return -1;
+}
+function prevFilingSummary(r){
+  const ci=curVisitLogIndex(r);
+  const log=(r.filingLog||[]).filter((_,i)=>i!==ci);
+  let h='';
+  if(log.length){
+    const e=log[log.length-1], partial=e.status==='partial';
+    h=`<div class="pf-sum"><span class="pf-round">${esc(e.round||'')}</span><span class="pf-date">${esc(e.date||'')}</span><span class="pf-badge ${partial?'pf-partial':'pf-done'}">${partial?'일부':'완료'}</span>${log.length>1?`<span class="pf-more">외 ${log.length-1}건</span>`:''}</div>`;
+  } else h='<div class="pf-sum pf-none">기록 없음</div>';
+  // 예전에 이 칸에 직접 적어 둔 글이 있으면 지우지 않고 읽기 전용으로 보여 줌
+  if((r.prevFiling||'').trim()) h+=`<div class="pf-legacy" title="예전에 이전 Filing 칸에 직접 입력한 내용 (읽기 전용)">${esc(r.prevFiling).replace(/\n/g,'<br>')}</div>`;
+  return `<div class="pf-box">${h}</div>`;
+}
+function thisVisitPicker(type,idx,r){
+  const t=r.tvType||'';
+  const no=r.tvNo||nextSmvNo(r);
+  const opts=['<option value="">방문 구분</option>'].concat(VISIT_TYPES.map(v=>`<option value="${v}"${t===v?' selected':''}>${v}</option>`)).join('');
+  const hasContent=(r.thisFiling||'').trim();
+  return `<div class="tv-row">
+    <select class="tv-type" onchange="setThisVisit('${type}',${idx},'tvType',this.value)" title="이번 방문 구분">${opts}</select>
+    ${t==='SMV'?`<span class="tv-no-wrap">#<input class="tv-no" type="number" min="1" value="${no}" onchange="setThisVisit('${type}',${idx},'tvNo',this.value)" title="SMV 회차 (회차 이력에 이어서 자동 제안)"></span>`:''}
+    ${hasContent?`<button class="tv-commit" onclick="commitThisFiling('${type}',${idx})" title="이번 Filing 내용을 회차 이력에 기록해요">↳ 이력에 기록</button>`:''}
+    ${(t==='SMV' && curVisitLogIndex(r)>=0 && !hasContent)?`<button class="tv-next" onclick="setThisVisit('${type}',${idx},'tvNo',${no+1})" title="다음 방문(SMV #${no+1})으로 넘어가기">다음 방문 →</button>`:''}
+  </div>`;
+}
+function thisFilingView(type,idx,r){
+  const ci=curVisitLogIndex(r);
+  if(ci<0 || (r.thisFiling||'').trim()) return richField('idx',{type,idx},'thisFiling',r,'이번 방문에 Filing 할 것','idx-note');
+  const e=r.filingLog[ci], partial=e.status==='partial';
+  return `<div class="tf-logged" title="회차 이력에 기록된 내용이에요 (수정은 회차 이력에서)">
+    <div class="tf-logged-top"><span class="pf-badge ${partial?'pf-partial':'pf-done'}">${partial?'일부':'완료'}</span><span class="tf-logged-date">${esc(e.date||'')}</span>
+      <button class="tf-logged-edit" onclick="openFilingLogEdit('${type}',${idx},${ci})">✏️ 수정</button></div>
+    <div class="tf-logged-body">${e.content?esc(e.content).replace(/\n/g,'<br>'):'<span class="flog-nocontent">(파일명 없음)</span>'}</div>
+  </div>`;
+}
+function openFilingLogEdit(type,idx,li){
+  const r=getIndexRows(type)[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
+  r.logOpen=true; _flogEdit[flogKey(type,idx,li)]=JSON.stringify(r.filingLog[li]); saveData(); renderBody();
+}
+function setThisVisit(type,idx,field,val){
+  const r=getIndexRows(type)[idx]; if(!r) return;
+  if(field==='tvType'){ r.tvType=val; if(val==='SMV' && !r.tvNo) r.tvNo=nextSmvNo(r); }
+  else if(field==='tvNo'){ const n=parseInt(val,10); r.tvNo=n>0?n:nextSmvNo(r); }
+  saveData(); renderBody();
+}
+function commitThisFiling(type,idx){
+  const r=getIndexRows(type)[idx]; if(!r) return;
+  const content=(r.thisFiling||'').trim(); if(!content){ showToastNow('이번 Filing 내용이 비어 있어요'); return; }
+  const label=curVisitLabel(r) || ((r.filingLog||[]).length+1)+'회차';
+  if(!confirm(`이번 Filing 내용을 '${label}' 회차 이력으로 옮길까요?\n(기록한 내용은 이번 Filing 칸에 계속 보이고, 회차 이력에서 수정·삭제할 수 있어요)`)) return;
+  if(!r.filingLog) r.filingLog=[];
+  if(r.tvType==='SMV' && !r.tvNo) r.tvNo=nextSmvNo(r);
+  const ci=curVisitLogIndex(r);
+  if(ci>=0){   // 같은 회차 기록이 있으면 없는 줄만 이어 붙임
+    const e=r.filingLog[ci], have=(e.content||'').split('\n').map(x=>x.trim());
+    const add=content.split('\n').filter(x=>x.trim() && !have.includes(x.trim()));
+    if(add.length) e.content=((e.content||'').replace(/\s+$/,'')+(e.content?'\n':'')+add.join('\n'));
+  } else r.filingLog.push({round:label, date:new Date().toISOString().slice(0,10), content, status:'done'});
+  r.thisFiling=''; delete r.thisFilingHtml;
+  saveData(); renderBody();
+  showToastNow('✓ '+label+' 회차 이력에 기록했어요');
+}
+// 회차 이력: 보기 ↔ 수정 모드 (수정 중 취소하면 되돌림)
+const _flogEdit={};
+function flogKey(type,idx,li){ return type+':'+idx+':'+li; }
+function editFilingLog(type,idx,li){
+  const r=getIndexRows(type)[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
+  _flogEdit[flogKey(type,idx,li)]=JSON.stringify(r.filingLog[li]); renderBody();
+}
+function saveFilingLogEdit(type,idx,li){ delete _flogEdit[flogKey(type,idx,li)]; saveData(); renderBody(); showToastNow('✓ 회차 기록을 저장했어요'); }
+function cancelFilingLogEdit(type,idx,li){
+  const k=flogKey(type,idx,li), r=getIndexRows(type)[idx];
+  if(r&&r.filingLog&&r.filingLog[li]&&_flogEdit[k]) r.filingLog[li]=JSON.parse(_flogEdit[k]);
+  delete _flogEdit[k]; saveData(); renderBody();
+}
 function filingLogRowHtml(type, idx, r){
   const log=r.filingLog||[];
-  const entries=log.map((e,li)=>`
-    <div class="flog-entry flog-${e.status==='partial'?'partial':'done'}">
+  const entries=log.map((e,li)=>{
+    const partial=e.status==='partial', editing=_flogEdit[flogKey(type,idx,li)]!==undefined;
+    if(!editing) return `
+    <div class="flog-entry flog-${partial?'partial':'done'} flog-view">
       <div class="flog-top">
-        <input class="flog-round" value="${esc(e.round||'')}" placeholder="회차" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
+        <span class="flog-round-v">${esc(e.round||'')}</span>
+        <span class="flog-date-v">${esc(e.date||'')}</span>
+        <span class="pf-badge ${partial?'pf-partial':'pf-done'}">${partial?'일부':'완료'}</span>
+        <span class="flog-acts">
+          <button class="flog-btn" onclick="copyFilingContent('${type}',${idx},${li})" title="이 회차 파일명 복사">📋 복사</button>
+          <button class="flog-btn" onclick="editFilingLog('${type}',${idx},${li})" title="이 회차 기록 수정">✏️ 수정</button>
+          <button class="flog-btn flog-btn-del" onclick="delFilingLogEntry('${type}',${idx},${li})" title="이 회차 기록 삭제">🗑 삭제</button>
+        </span>
+      </div>
+      <div class="flog-content-v">${e.content?esc(e.content).replace(/\n/g,'<br>'):'<span class="flog-nocontent">(파일명 없음)</span>'}</div>
+    </div>`;
+    return `
+    <div class="flog-entry flog-${partial?'partial':'done'} flog-editing">
+      <div class="flog-top">
+        <input class="flog-round" list="visitRoundList" value="${esc(e.round||'')}" placeholder="회차 (예: SMV #2)" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
         <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="flog-date" value="${esc(e.date||'')}" onchange="setFilingLogField('${type}',${idx},${li},'date',this.value)">
         <select class="flog-status" onchange="setFilingLogField('${type}',${idx},${li},'status',this.value)">
-          <option value="done"${e.status!=='partial'?' selected':''}>완료</option>
-          <option value="partial"${e.status==='partial'?' selected':''}>일부</option>
+          <option value="done"${!partial?' selected':''}>완료</option>
+          <option value="partial"${partial?' selected':''}>일부</option>
         </select>
-        <button class="flog-copy" onclick="copyFilingContent('${type}',${idx},${li})" title="이 회차 파일명 복사">📋 복사</button>
-        <button class="flog-del" onclick="delFilingLogEntry('${type}',${idx},${li})" title="이 회차 삭제">✕</button>
+        <span class="flog-acts">
+          <button class="flog-btn flog-btn-save" onclick="saveFilingLogEdit('${type}',${idx},${li})">✓ 저장</button>
+          <button class="flog-btn" onclick="cancelFilingLogEdit('${type}',${idx},${li})">취소</button>
+        </span>
       </div>
-      <textarea class="flog-content" rows="2" placeholder="이 회차에 Filing한 문서 파일명을 줄바꿈(Enter)으로 적으세요&#10;예) CartiLife_PMP_V1.0_20250225_signed_F&#10;    CartiLife_PMP_V2.0_20250625_Signed_F" oninput="autoGrow(this)" onchange="setFilingLogField('${type}',${idx},${li},'content',this.value)">${esc(e.content||'')}</textarea>
-    </div>`).join('');
+      <textarea class="flog-content" rows="3" placeholder="이 회차에 Filing한 문서 파일명을 줄바꿈(Enter)으로 적으세요" oninput="autoGrow(this)" onchange="setFilingLogField('${type}',${idx},${li},'content',this.value)">${esc(e.content||'')}</textarea>
+    </div>`;
+  }).join('');
   return `<tr class="idx-log-row"><td colspan="${10+idxCheckCols(type).length}"><div class="flog-wrap">
     <div class="flog-head">🗂 회차별 Filing 이력 <span class="flog-cnt">${log.length}건</span></div>
     ${log.length?entries:'<div class="flog-empty">아직 기록이 없어요. 아래 버튼으로 1회차부터 남겨보세요.</div>'}
     <button class="flog-add" onclick="addFilingLogEntry('${type}',${idx})">+ 회차 기록 추가</button>
+    <datalist id="visitRoundList"><option value="SIV"><option value="SMV #${nextSmvNo(r)}"><option value="PSV"><option value="COV"></datalist>
   </div></td></tr>`;
 }
 function delIndexRow(type, idx){
@@ -4984,7 +5103,9 @@ function setupDocTopScroll(){
 // ── Index 뷰 렌더링 ───────────────────────────────────────────
 // ── Index 컬럼 폭 (커서 드래그로 조절, localStorage 저장) ──
 const IDX_COL_DEFAULT=[38,72,360,64,96,270,250,250,240]; // 가로 폭 확대
-let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v3')); if(Array.isArray(v)&&v.length===9) return v.map(Number);}catch(e){} return IDX_COL_DEFAULT.slice(); })();
+// 칸별 최소 너비: ✓, No., 문서명, 원본/사본, 상태, 위치/파일명, 이전 Filing, 이번 Filing, 비고
+const IDX_COL_MIN=[34,60,240,76,92,220,200,240,200];
+let idxColW=(function(){ try{const v=JSON.parse(localStorage.getItem('idxColW_v3')); if(Array.isArray(v)&&v.length===9) return v.map((x,i)=>Math.max(Number(x)||0, IDX_COL_MIN[i]));}catch(e){} return IDX_COL_DEFAULT.slice(); })();
 function saveIdxColW(){ try{ localStorage.setItem('idxColW_v3', JSON.stringify(idxColW)); }catch(e){} }
 function setupIdxResizers(){
   const table=document.querySelector('.index-table'); if(!table) return;
@@ -5050,18 +5171,20 @@ function renderIndexBody(){
     const titleCell = editable
       ? `<td class="idx-name"><div class="idx-name-row"><textarea class="idx-title-input" rows="1" placeholder="문서명 입력" oninput="autoGrow(this)" onchange="setIndexRowMeta('${type}',${idx},'t',this.value)">${esc(r.t||'')}</textarea><button class="idx-name-edit" onclick="editIdxName(this)" title="이름 편집">✏️</button></div>${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`
       : `<td class="idx-name">${esc(r.t)}${r.ref?`<span class="idx-ref">${esc(r.ref)}</span>`:''}${subHtml}</td>`;
+    // 행 버튼(첨부·회차 이력·항목삭제·방문에 담기): 비고 칸을 숨기면 문서명 칸 아래로 옮겨서 계속 쓸 수 있게
+    const rowActs=`${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}`;
     const ckAll = CHK.length>0 && CHK.every(c=>r.chk&&r.chk[c.id]);
     const ckCells = CHK.map(c=>`<td class="idx-ck-cell"><input type="checkbox" ${(r.chk&&r.chk[c.id])?'checked':''} title="${escAttr(c.label)}" onchange="setIdxCheck('${type}',${idx},'${c.id}',this.checked)"></td>`).join('')+`<td class="idx-ck-cell"></td>`;
     bodyRows+=`<tr class="idx-row${r.na?' idx-na':''}${(idxJustNa===type+':'+idx)?' idx-na-keep':''}${r.status==='ok'?' idx-done':''}${ckAll?' idx-ck-all':''}${(r.isfPending&&r.isfPending.length)?' idx-alarm':''}" data-ridx="${idx}">
       <td class="idx-chk"><input type="checkbox" ${r.status==='ok'?'checked':''} title="보관완료" onchange="setIndexField('${type}',${idx},'status',this.checked?'ok':'pend')"></td>
       ${numCell}
-      ${titleCell}
+      ${showIdxNote?titleCell:titleCell.replace(/<\/td>$/,`<div class="idx-row-acts">${rowActs}</div></td>`)}
       <td class="idx-na-cell"><select class="na-sel" onchange="setIndexNaType('${type}',${idx},this.value)" title="원본/사본/해당없음 구분"><option value=""${(!r.naType&&!r.na)?' selected':''}>–</option><option value="원본"${r.naType==='원본'?' selected':''}>원본</option><option value="사본"${r.naType==='사본'?' selected':''}>사본</option><option value="NA"${(r.naType==='NA'||(r.na&&!r.naType))?' selected':''}>N/A</option></select></td>
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><div class="idx-loc-wrap">${richField('idx',{type,idx},'location',r,'위치','idx-loc idx-loc-top rich-mono')}${richField('idx',{type,idx},'fileName',r,'파일명','idx-loc idx-loc-bot rich-mono')}${isfAlarmBadge(type,idx,r)}</div></td>
-      <td><div class="prevfiling-wrap">${richField('idx',{type,idx},'prevFiling',r,'지난 방문까지 Filing 완료','idx-note')}<button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
-      <td><div class="thisfiling-wrap">${richField('idx',{type,idx},'thisFiling',r,'이번 방문에 Filing 할 것','idx-note')}<input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
-      <td>${richField('idx',{type,idx},'note',r,'비고 (더블클릭 → 편집)')}${renderIdxAttachments(type,idx,r)}<button class="flog-toggle${r.logOpen?' open':''}" onclick="toggleFilingLog('${type}',${idx})" title="회차별 Filing 이력 보기">🗂 회차 이력${(r.filingLog&&r.filingLog.length)?` (${r.filingLog.length})`:''}</button>${editable?`<button class="idx-del-row" onclick="delIndexRow('${type}',${idx})" title="항목 삭제">✕ 항목삭제</button>`:''}${showVisitPanel?`<button class="idx-pull-btn" onclick="addRowToVisit('${type}',${idx})" title="이번 방문 대조 목록에 담기">📋 이번 방문에 담기</button>`:''}</td>
+      <td><div class="prevfiling-wrap">${prevFilingSummary(r)}<button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
+      <td>${thisVisitPicker(type,idx,r)}<div class="thisfiling-wrap">${thisFilingView(type,idx,r)}<input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
+      <td>${richField('idx',{type,idx},'note',r,'비고 (더블클릭 → 편집)')}${showIdxNote?rowActs:''}</td>
       ${ckCells}
     </tr>`;
     if(r.logOpen) bodyRows+=filingLogRowHtml(type, idx, r);
@@ -5095,7 +5218,7 @@ function renderIndexBody(){
             <button class="tb-btn" onclick="fitIdxCols()" title="칸 비율은 그대로 두고 표 전체 너비를 화면에 맞춰요 (가로 스크롤 없애기)">↔ 화면 맞춤</button>
             <button class="tb-btn${idxFreeze?' on':''}" onclick="toggleIdxFreeze()" title="가로로 스크롤해도 왼쪽 ✓ · No. · 문서명 칸이 따라다녀요">${idxFreeze?'🔒 열 고정':'🔓 열 고정'}</button>
             <button class="tb-btn${showLocCol?' on':''}" onclick="toggleLocCol()" title="위치 / 파일명 칸 ${showLocCol?'숨기기':'펼치기'}">${showLocCol?'⊟ 위치/파일명':'⊞ 위치/파일명'}</button>
-            <button class="tb-btn${showIdxNote?' on':''}" onclick="toggleIdxNote()" title="비고 칸 ${showIdxNote?'접기 (첨부·회차 이력 버튼은 남아요)':'펼치기'}">${showIdxNote?'⊟ 비고':'⊞ 비고'}</button>
+            <button class="tb-btn${showIdxNote?' on':''}" onclick="toggleIdxNote()" title="비고 칸 ${showIdxNote?'숨기기 (첨부·회차 이력·항목삭제 버튼은 문서명 아래로 옮겨져요)':'펼치기'}">${showIdxNote?'⊟ 비고':'⊞ 비고'}</button>
             <button class="tb-btn${showFilingCols?' on':''}" onclick="toggleFilingCols()" title="이전·이번 Filing 칸 ${showFilingCols?'숨기기':'펼치기'}">${showFilingCols?'⊟ Filing 칸':'⊞ Filing 칸'}</button>
             ${naCount>0?`<button class="tb-btn${showNaRows?' on':''}" onclick="toggleNaRows()" title="N/A 항목 ${showNaRows?'숨기기':'보기'}">${showNaRows?'⊟ N/A':'⊞ N/A'} (${naCount})</button>`:''}
           </div>
@@ -5126,7 +5249,7 @@ function renderIndexBody(){
     </div>
     <div class="idx-split"><div class="idx-split-main">
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
-    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showLocCol?'':' hide-loc'}${showIdxNote?'':' hide-note'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))-(showLocCol?0:(idxColW[5]||0))-(showIdxNote?0:Math.max(0,(idxColW[8]||0)-IDX_NOTE_MIN))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
+    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showLocCol?'':' hide-loc'}${showIdxNote?'':' hide-note'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))-(showLocCol?0:(idxColW[5]||0))-(showIdxNote?0:(idxColW[8]||0))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}${CHK.map(()=>`<col style="width:${IDX_CK_W}px">`).join('')}<col style="width:${IDX_CK_ADD_W}px"></colgroup>
       <thead><tr>
         <th>✓</th>
@@ -5562,7 +5685,7 @@ let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols
 let showLocCol=(function(){ try{ return localStorage.getItem('showLocCol')!=='0'; }catch(e){ return true; } })();
 // 비고 칸 펼침 여부 (기본: 펼침). 접어도 첨부·회차 이력·항목삭제 버튼은 남도록 칸을 좁게만 만든다
 let showIdxNote=(function(){ try{ return localStorage.getItem('showIdxNote')!=='0'; }catch(e){ return true; } })();
-const IDX_NOTE_MIN=132;
+
 let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'; }catch(e){ return false; } })();
 /* ━━━ 화면 맞춤 / 열 고정 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    두 표 모두 table-layout:fixed 에 칸 너비 합계를 px 로 박아 쓴다.
@@ -5593,7 +5716,8 @@ function fitIdxCols(){
   const avail=Math.max(360, wrap.clientWidth-2);
   // 숨겨진 Filing 칸(6,7)은 폭을 차지하지 않으므로 대상에서 뺀다
   const idxs=[0,1,2,3,4,5,6,7,8].filter(i=>(showFilingCols || (i!==6 && i!==7)) && (showLocCol || i!==5) && (showIdxNote || i!==8));
-  fitWidths(idxColW, idxs, avail-extra-(showIdxNote?0:IDX_NOTE_MIN), 44);
+  fitWidths(idxColW, idxs, avail-extra, 44);
+  idxs.forEach(i=>{ if(idxColW[i]<IDX_COL_MIN[i]) idxColW[i]=IDX_COL_MIN[i]; });
   saveIdxColW(); renderBody();
   showToastNow('✓ 칸 너비를 화면에 맞췄어요');
 }
@@ -9556,9 +9680,12 @@ table th{color:var(--label)}
 .font-row.active{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--navy);font-weight:600}
 .font-sample{font-size:12px;color:var(--text-3);font-weight:400}
 
-/* 비고 칸 접기: 메모 글은 숨기고 첨부·회차 이력·항목삭제 버튼만 남긴다 */
-.index-table.hide-note colgroup col:nth-child(9){width:132px !important}
-.index-table.hide-note td:nth-child(9) .rich-note{display:none !important}
+/* 비고 칸 숨기기 (9번째 칸 통째로). 행 버튼은 문서명 칸 아래(.idx-row-acts)로 옮겨 렌더링 */
+.index-table.hide-note th:nth-child(9),.index-table.hide-note td:nth-child(9){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0;width:0}
+.index-table.hide-note th:nth-child(9)>*,.index-table.hide-note td:nth-child(9)>*{display:none !important}
+.index-table.hide-note colgroup col:nth-child(9){width:0 !important}
+.idx-row-acts{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:6px}
+.idx-row-acts > *{margin:0 !important}
 /* 도구 모음 메뉴가 표 위 스크롤 막대에 가려지던 문제 */
 .idx-toolbar{position:relative;z-index:90}
 .tb-menu-list{z-index:100 !important}
@@ -9574,6 +9701,58 @@ table th{color:var(--label)}
   position:relative;z-index:40;width:min(520px,70vw) !important;height:auto !important;min-height:0 !important;max-height:60vh;overflow:auto !important;max-width:none !important;background:#fff !important;
   border:1px solid var(--blue,#2563EB) !important;border-radius:8px !important;box-shadow:0 10px 28px rgba(15,23,42,.16);padding:8px 10px !important}
 .index-table td:last-child .rich-note.idx-peek{right:0}
+
+/* ── Filing: 이전 요약 · 이번 방문 구분 · 회차 이력 보기/수정 ── */
+.pf-box{flex:1;min-width:0}
+.pf-sum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:13px;color:var(--label,#334155);padding:3px 0}
+.pf-round{font-weight:700;color:var(--navy,#1E3A5F)}
+.pf-date{color:var(--text-2,#64748B);font-variant-numeric:tabular-nums}
+.pf-more{font-size:12px;color:var(--text-3,#94A3B8)}
+.pf-none{color:var(--text-3,#94A3B8)}
+.pf-badge{font-size:11px;font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid}
+.pf-done{background:#F0FDF4;color:#15803D;border-color:#BBF7D0}
+.pf-partial{background:#FFFBEB;color:#B45309;border-color:#FDE68A}
+.pf-legacy{margin-top:4px;font-size:12px;color:var(--text-2,#64748B);background:#F8FAFC;border:1px dashed var(--border,#E2E8F0);border-radius:6px;padding:4px 6px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
+.tv-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
+.tv-type{height:30px;border:1px solid var(--border-2,#CBD5E1);border-radius:6px;padding:0 6px;font-size:13px;font-weight:600;color:var(--navy,#1E3A5F);background:#fff;font-family:inherit}
+.tv-no-wrap{display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:600;color:var(--navy,#1E3A5F)}
+.tv-no{width:48px;height:30px;border:1px solid var(--border-2,#CBD5E1);border-radius:6px;padding:0 4px;font-size:13px;text-align:center;font-family:inherit}
+.tv-commit{height:30px;border:1px solid var(--blue-bd,#BFDBFE);background:var(--blue-bg,#EFF6FF);color:var(--navy,#1E3A5F);border-radius:6px;padding:0 8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.tv-commit:hover{background:#DBEAFE}
+.flog-view .flog-top,.flog-editing .flog-top{flex-wrap:wrap}
+.flog-round-v{font-weight:700;color:var(--navy,#1E3A5F);font-size:14px}
+.flog-date-v{color:var(--text-2,#64748B);font-size:13px;font-variant-numeric:tabular-nums}
+.flog-acts{margin-left:auto;display:inline-flex;gap:4px}
+.flog-btn{height:28px;border:1px solid var(--border-2,#CBD5E1);background:#fff;color:var(--label,#334155);border-radius:6px;padding:0 9px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.flog-btn:hover{background:#F1F5F9}
+.flog-btn-del{color:#B91C1C;border-color:#FECACA}
+.flog-btn-del:hover{background:#FEF2F2}
+.flog-btn-save{background:var(--navy,#1E3A5F);color:#fff;border-color:var(--navy,#1E3A5F)}
+.flog-btn-save:hover{background:var(--navy-d,#172A46)}
+.flog-content-v{font-size:13px;line-height:1.6;color:var(--text,#172033);padding:2px 2px 0;word-break:keep-all;overflow-wrap:anywhere}
+.flog-nocontent{color:var(--text-3,#94A3B8)}
+.flog-editing{border-color:var(--blue,#2563EB) !important;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+
+/* 이번 Filing: 시행일자를 아래로 내려 글 칸을 넓게 */
+.thisfiling-wrap{flex-direction:column !important;align-items:stretch !important}
+.thisfiling-wrap .idx-effdate{width:100% !important;max-width:160px}
+/* 회차 이력: 버튼이 표 끝(오른쪽 멀리)으로 밀려 안 보이던 문제 → 이력 상자 폭 제한 */
+.flog-wrap{max-width:980px;position:sticky;left:0}
+
+/* 이번 Filing: 회차 이력에 기록된 내용 표시 */
+.tf-logged{border:1px solid var(--ok-bd,#BBF7D0);background:#F7FDF9;border-radius:8px;padding:6px 8px}
+.tf-logged-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.tf-logged-date{font-size:12px;color:var(--text-2,#64748B);font-variant-numeric:tabular-nums}
+.tf-logged-edit{margin-left:auto;height:24px;border:1px solid var(--border-2,#CBD5E1);background:#fff;border-radius:6px;padding:0 7px;font-size:12px;font-weight:600;color:var(--label,#334155);cursor:pointer}
+.tf-logged-edit:hover{background:#F1F5F9}
+.tf-logged-body{font-size:13px;line-height:1.55;color:var(--text,#172033);word-break:keep-all;overflow-wrap:anywhere}
+.tv-next{height:30px;border:1px dashed var(--border-2,#CBD5E1);background:#fff;color:var(--label,#334155);border-radius:6px;padding:0 8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.tv-next:hover{border-color:var(--blue,#2563EB);color:var(--navy,#1E3A5F)}
+/* 전체 콘텐츠 폭을 넓게 (큰 모니터에서 양옆 빈 공간 줄이기) */
+:root{--gutter:max(24px, calc((100vw - 1800px) / 2))}
+@media (max-width:820px){:root{--gutter:16px}}
+/* 표가 화면보다 좁으면 남는 폭을 칸들에 나눠서 꽉 채움 */
+.index-table{min-width:100%}
 </style>
 
 <style id="editorial-ui-refinement">
