@@ -9927,5 +9927,47 @@ document.addEventListener('click',e=>{
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
 })();
 </script>
+<style id="ux-refresh">
+.header{padding:14px var(--gutter) !important}.header-top{margin-bottom:8px !important}.hn-protocol-section{margin-top:18px !important}.hn-nav{gap:12px !important}.hn-nav .tabs-wrap::after{display:none!important}.hn-nav .tabs-wrap>.tab[data-key],.hn-nav .tabs-wrap>.tab-add{display:none!important}
+.ux-context{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 20px;background:#fff;border:1px solid #dce4ef;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px #1e3a5f05}.ux-context label{display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1;color:#64748b;font-size:12px;font-weight:600}.ux-context select{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#1e3a5f;font-size:14px}.ux-context .ux-location{margin-left:auto;color:#475569;font-size:13px}.ux-caption{font-size:12px;letter-spacing:.06em;color:#64748b;margin-bottom:6px}.ux-actionhead{display:flex;justify-content:space-between;align-items:center;margin:24px 0 12px}.ux-actionhead h2{font-size:19px;color:#1e3a5f}.ux-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}.ux-action{font:inherit;text-align:left;cursor:pointer;background:#fff;border:1px solid #dce4ef;border-radius:12px;padding:20px;color:#334155;transition:transform .15s,border-color .15s}.ux-action:hover{transform:translateY(-2px);border-color:#2563eb}.ux-action strong{display:block;font-size:32px;margin:12px 0 6px;line-height:1.1;font-variant-numeric:tabular-nums}.ux-action small{color:#64748b}.ux-action.urgent strong{color:#b91c1c}.ux-action.soon strong{color:#b45309}.ux-action[aria-pressed=true]{outline:2px solid #2563eb;outline-offset:2px}.ux-results{padding:18px;background:#fff;border:1px solid #dce4ef;border-radius:12px;margin-bottom:24px}.ux-results h3{font-size:15px;margin-bottom:10px}.ux-result{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;text-align:left;padding:12px 4px;border:0;border-bottom:1px solid #edf1f6;background:#fff;cursor:pointer;font:inherit;color:#334155}.ux-result:hover{background:#f8fafc}.ux-result small{display:block;margin-top:4px;color:#64748b}.ux-result b{white-space:nowrap;font-size:12px;color:#b45309}.ux-presets{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:12px 0 16px}.ux-presets button{font:inherit;font-size:13px;cursor:pointer;padding:8px 14px;border:1px solid #cbd5e1;background:white;border-radius:7px;color:#334155}.ux-presets button[aria-pressed=true]{background:#1e3a5f;color:#fff;border-color:#1e3a5f}.ux-presets span{font-size:12px;color:#64748b;margin-left:8px}.home-stats{opacity:.92}.home-stat .hs-val{font-size:25px!important}.doc-table tbody tr:hover td,.index-table tbody tr:hover td{background-color:#f3f7fc}.ux-context select:focus-visible,.ux-action:focus-visible,.ux-result:focus-visible,.ux-presets button:focus-visible{outline:2px solid #2563eb;outline-offset:3px}@media(max-width:720px){.ux-actions{grid-template-columns:1fr}.ux-action{padding:16px}.ux-action strong{display:inline-block;margin:0 12px;font-size:24px}.ux-context label{min-width:100%}.ux-context .ux-location{margin-left:0}.header{position:relative!important}}
+</style>
+<script id="ux-refresh-script">
+(function(){
+  let taskFilter='over';
+  function context(){
+    const wrap=document.getElementById('bodyWrap'); if(!wrap||!curProtocolId)return;
+    const bar=document.createElement('div');bar.className='ux-context';
+    const proto=getCurProtocol();
+    const label=document.createElement('label');label.textContent='현재 작업 기관';
+    const select=document.createElement('select');select.setAttribute('aria-label','현재 작업 기관 선택');
+    const all=document.createElement('option');all.value='';all.textContent='전체 기관 · 대시보드';select.append(all);
+    sites.forEach(s=>{const o=document.createElement('option');o.value=s.code;o.textContent=s.code+' · '+s.name;select.append(o)});
+    select.value=(curView==='site'||curView==='index')?curSite:'';
+    select.onchange=()=>{if(!select.value){switchHome();return;} if(curView==='index'){curSite=select.value;renderTabs();renderBody();}else switchSite(select.value);};
+    label.append(select);
+    const loc=document.createElement('div');loc.className='ux-location';
+    const cap=document.createElement('div');cap.className='ux-caption';cap.textContent='현재 과제';
+    const name=document.createElement('strong');name.textContent=proto?.protocolNo||proto?.name||'과제';loc.append(cap,name);
+    bar.append(loc,label);wrap.prepend(bar);
+  }
+  function homeActions(){
+    const wrap=document.getElementById('bodyWrap');
+    const due=dueItemsCached().filter(x=>x.pid===curProtocolId);
+    const groups={over:due.filter(x=>x.info.days<0),week:due.filter(x=>x.info.days>=0&&x.info.days<=7),issue:[]};
+    sites.forEach(s=>(sections[s.code]||[]).forEach(sec=>(sec.rows||[]).forEach(r=>{if(r.status==='issue')groups.issue.push({code:s.code,sname:s.name,name:r.name||r.docName||r.title||'문서 이슈',section:sec.title||sec.name||''})})));
+    const box=document.createElement('section');box.innerHTML='<div class="ux-actionhead"><h2>지금 확인할 업무</h2><span class="ux-caption">현재 과제 기준</span></div><div class="ux-actions"></div><div class="ux-results" aria-live="polite"></div>';
+    const labels={over:'기한 초과',week:'7일 이내 마감',issue:'문서 이슈'};
+    const hints={over:'기한이 지난 항목 확인 →',week:'오늘부터 7일 이내 일정 →',issue:'확인이 필요한 문서 →'};
+    function show(key){taskFilter=key;box.querySelectorAll('.ux-action').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===key)));const result=box.querySelector('.ux-results');result.replaceChildren();const title=document.createElement('h3');title.textContent=labels[key]+' · '+groups[key].length+'건';result.append(title);if(!groups[key].length){const p=document.createElement('p');p.textContent='현재 해당하는 항목이 없습니다.';p.style.cssText='color:#64748b;font-size:14px;padding:12px 0';result.append(p)}groups[key].forEach(x=>{const b=document.createElement('button');b.className='ux-result';const text=document.createElement('span');text.textContent=key==='issue'?x.name:x.kind;const sub=document.createElement('small');sub.textContent=(x.sname||'과제 공통')+(key==='issue'&&x.section?' · '+x.section:'');text.append(sub);const state=document.createElement('b');state.textContent=key==='issue'?'기관에서 확인 →':x.info.txt+' →';b.append(text,state);b.onclick=()=>gotoDue(curProtocolId,x.code);result.append(b)});}
+    Object.keys(labels).forEach((key,i)=>{const b=document.createElement('button');b.className='ux-action '+(i===0?'urgent':i===1?'soon':'');b.dataset.filter=key;b.innerHTML='<span>'+labels[key]+'</span><strong>'+groups[key].length+'</strong><small>'+hints[key]+'</small>';b.onclick=()=>show(key);box.querySelector('.ux-actions').append(b)});
+    const stats=wrap.querySelector('.home-stats');if(stats)stats.before(box);else wrap.append(box);show(taskFilter);
+  }
+  function presets(){const tool=document.querySelector('.idx-toolbar');if(!tool)return;const bar=document.createElement('div');bar.className='ux-presets';const modes=[['기본 보기',true,true,false],['Filing 작업',false,false,true],['전체 보기',true,true,true]];modes.forEach(([name,loc,note,filing])=>{const b=document.createElement('button');b.textContent=name;b.setAttribute('aria-pressed',String(showLocCol===loc&&showIdxNote===note&&showFilingCols===filing));b.onclick=()=>{showLocCol=loc;showIdxNote=note;showFilingCols=filing;renderBody();};bar.append(b)});const tip=document.createElement('span');tip.textContent='내용 클릭: 펼쳐 보기 · 더블클릭: 편집';bar.append(tip);tool.prepend(bar);}
+  const originalBody=renderBody;
+  renderBody=function(){originalBody.apply(this,arguments);context();if(curView==='home')homeActions();if(curView==='index')presets();};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>renderBody());else renderBody();
+})();
+</script>
+
 </body>
 </html>
