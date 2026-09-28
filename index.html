@@ -5556,6 +5556,12 @@ function importIndexCSV(type){
           }
         }
         const stMap={'미확인':'pend','진행중':'wip','완료':'ok','이슈':'issue'};
+        // 머리글 이름으로 선택 열 찾기 (ThisVisit, Log1_Round …)
+        const head=headerFound ? rows[start-1].map(h=>String(h||'').trim()) : [];
+        const colOf=name=>head.findIndex(h=>h.toLowerCase()===name.toLowerCase());
+        const visitCol=colOf('ThisVisit');
+        const logGroups=[]; for(let k=1;;k++){ const c=colOf(`Log${k}_Round`); if(c<0) break; logGroups.push({r:c,d:colOf(`Log${k}_Date`),s:colOf(`Log${k}_Status`),c:colOf(`Log${k}_Content`)}); }
+        const cell=(r,c)=>c>=0?String(r[c]||'').trim():'';
         // ── 섹션 헤더 판정 준비 ──────────────────────────────────
         // 예전 규칙은 "다른 칸이 다 비었고 No.가 정수면 섹션 헤더"였는데,
         // 빈 양식 CSV(= No.+문서명만 있고 나머지 공란)를 불러오면 모든 줄이
@@ -5584,7 +5590,9 @@ function importIndexCSV(type){
           if(na==='원본'||na==='사본') naType=na;
           else if(na.toUpperCase()==='NA') naType='NA';
           if(!title && !no) continue;
-          const otherEmpty=![na,status,loc,prev,thisF,note,effDate,fileName].some(c=>c);
+          const visit=cell(r,visitCol);
+          const logs=logGroups.map(g=>({round:cell(r,g.r),date:cell(r,g.d),status:cell(r,g.s)==='일부'?'partial':'done',content:cell(r,g.c)})).filter(e=>e.round||e.content);
+          const otherEmpty=![na,status,loc,prev,thisF,note,effDate,fileName,visit].some(c=>c) && !logs.length;
           const isHeader=hasDotted && otherEmpty && /^\d+$/.test(no) && !!title && hasChild(no);
           if(isHeader){
             newRows.push({n:no, t:title, h:true, custom:true});
@@ -5599,6 +5607,9 @@ function importIndexCSV(type){
               fileName:fileName,
               custom:true
             });
+            const nr=newRows[newRows.length-1];
+            if(logs.length) nr.filingLog=logs;
+            if(visit){ const m=visit.match(/^(SIV|SMV|PSV|COV)\s*#?\s*(\d+)?/i); if(m){ nr.tvType=m[1].toUpperCase(); if(m[2]) nr.tvNo=+m[2]; } }
           }
         }
         if(!newRows.length){ alert('불러올 항목이 없어요.\nCSV 형식을 확인해주세요 (No, Title, NA, Status, Location/FileName, PrevFiling, ThisFiling, Note).'); return; }
@@ -5659,17 +5670,22 @@ function exportIndexCSV(type){
   csv+='Protocol,'+csvQ1(cur?.protocolNo||cur?.name||'')+'\n';
   csv+='Index,'+csvQ1(type)+'\n\n';
   const ckCols=idxCheckCols(type);
-  csv+=['No','Title','NA','Status','Location/FileName','PrevFiling','ThisFiling','Note','EffDate','FileName']
-         .concat(ckCols.map(c=>c.label||'')).map(csvQ1).join(',')+'\n';
+  // 회차 이력은 Log1_Round, Log1_Date, Log1_Status, Log1_Content … 로 펼쳐서 내보냄 (불러오기도 같은 형식)
+  const maxLog=Math.max(0,...rows.map(r=>(r.filingLog||[]).length));
+  const logHead=[]; for(let i=1;i<=maxLog;i++) logHead.push(`Log${i}_Round`,`Log${i}_Date`,`Log${i}_Status`,`Log${i}_Content`);
+  csv+=['No','Title','NA','Status','Location/FileName','PrevFiling','ThisFiling','Note','EffDate','FileName','ThisVisit']
+         .concat(logHead).concat(ckCols.map(c=>c.label||'')).map(csvQ1).join(',')+'\n';
   const stLabel={pend:'미확인',wip:'진행중',ok:'완료',issue:'이슈'};
   rows.forEach(r=>{
     if(r.h){ // 섹션 헤더 줄: No + 제목만 채우고 나머지는 빈 칸
-      csv+=[r.n, r.t].concat(new Array(8+ckCols.length).fill('')).map(csvQ1).join(',')+'\n';
+      csv+=[r.n, r.t].concat(new Array(9+maxLog*4+ckCols.length).fill('')).map(csvQ1).join(',')+'\n';
       return;
     }
     const naOut=r.naType||(r.na?'NA':'');
+    const logCells=[]; for(let i=0;i<maxLog;i++){ const e=(r.filingLog||[])[i]; logCells.push(e?e.round||'':'', e?e.date||'':'', e?(e.status==='partial'?'일부':'완료'):'', e?e.content||'':''); }
     csv+=[r.n, r.t, naOut, r.na?'':(stLabel[r.status]||''), r.location, r.prevFiling,
-          r.thisFiling, r.note, r.effDate, r.fileName]
+          r.thisFiling, r.note, r.effDate, r.fileName, curVisitLabel(r)]
+           .concat(logCells)
            .concat(ckCols.map(c=>(r.chk&&r.chk[c.id])?'O':''))
            .map(csvQ1).join(',')+'\n';
   });
