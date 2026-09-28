@@ -3134,7 +3134,7 @@ function delFilingLogEntry(type, idx, li){
 function setFilingLogField(type, idx, li, field, val){
   const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
   r.filingLog[li][field]=val; saveData();
-  if(field==='status') renderBody();
+  if(field==='status'||field==='date') renderBody();
 }
 function copyFilingContent(type, idx, li){
   const rows=getIndexRows(type); const r=rows[idx]; if(!r||!r.filingLog||!r.filingLog[li]) return;
@@ -3163,9 +3163,9 @@ function showFilingHistory(type, idx){
     body=`<div class="fh-empty">아직 회차 기록이 없어요.<br>🗂 회차 이력에서 <b>+ 회차 기록 추가</b>로 남겨보세요.</div>`;
   }else{
     body=log.map(e=>{
-      const partial=e.status==='partial';
-      const badge=partial?'<span class="fh-badge fh-partial">일부</span>':'<span class="fh-badge fh-done">완료</span>';
-      const icon=partial?'⚠️':'✅';
+      const st=flogEff(e), partial=st==='partial';
+      const badge=st==='planned'?'<span class="fh-badge fh-planned">예정</span>':partial?'<span class="fh-badge fh-partial">일부</span>':'<span class="fh-badge fh-done">완료</span>';
+      const icon=st==='planned'?'📅':partial?'⚠️':'✅';
       const content=esc(e.content||'').replace(/\n/g,'<br>')||'<span class="fh-nocontent">(내용 없음)</span>';
       return `<div class="fh-entry${partial?' fh-e-partial':''}">
         <div class="fh-entry-top">${icon} <b>${esc(e.round||'')}</b> <span class="fh-date">${esc(e.date||'')}</span> ${badge}</div>
@@ -3223,6 +3223,11 @@ function nextSmvNo(r){
 function visitLabel(t,no){ return t==='SMV' ? ('SMV #'+(no||1)) : (t||''); }
 function curVisitLabel(r){ return r.tvType ? visitLabel(r.tvType, r.tvType==='SMV'?(r.tvNo||nextSmvNo(r)):null) : ''; }
 // 회차 이름 비교용: 'SMV #2' = 'SMV#2' = 'smv 2'
+// 오늘 날짜 (기기 시간 기준, YYYY-MM-DD)
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// 회차 기록의 실제 상태: 날짜가 오늘 이후면 '예정', 아니면 저장된 상태(완료/일부)
+function flogEff(e){ const d=String(e.date||'').trim(); return (d && d>todayStr()) ? 'planned' : (e.status==='partial'?'partial':'done'); }
+function flogBadge(e){ const st=flogEff(e); return `<span class="pf-badge ${st==='planned'?'pf-planned':st==='partial'?'pf-partial':'pf-done'}">${st==='planned'?'예정':st==='partial'?'일부':'완료'}</span>`; }
 function normRound(x){ return String(x||'').toUpperCase().replace(/[\s#]/g,''); }
 // 이번 방문(방문 구분+번호)에 해당하는 회차 기록의 위치 (없으면 -1)
 function curVisitLogIndex(r){
@@ -3236,8 +3241,8 @@ function prevFilingSummary(r){
   const log=(r.filingLog||[]).filter((_,i)=>i!==ci);
   let h='';
   if(log.length){
-    const e=log[log.length-1], partial=e.status==='partial';
-    h=`<div class="pf-sum"><span class="pf-round">${esc(e.round||'')}</span><span class="pf-date">${esc(e.date||'')}</span><span class="pf-badge ${partial?'pf-partial':'pf-done'}">${partial?'일부':'완료'}</span>${log.length>1?`<span class="pf-more">외 ${log.length-1}건</span>`:''}</div>`;
+    const e=log[log.length-1];
+    h=`<div class="pf-sum"><span class="pf-round">${esc(e.round||'')}</span><span class="pf-date">${esc(e.date||'')}</span>${flogBadge(e)}${log.length>1?`<span class="pf-more">외 ${log.length-1}건</span>`:''}</div>`;
   } else h='<div class="pf-sum pf-none">기록 없음</div>';
   // 예전에 이 칸에 직접 적어 둔 글이 있으면 지우지 않고 읽기 전용으로 보여 줌
   if((r.prevFiling||'').trim()) h+=`<div class="pf-legacy" title="예전에 이전 Filing 칸에 직접 입력한 내용 (읽기 전용)">${esc(r.prevFiling).replace(/\n/g,'<br>')}</div>`;
@@ -3258,9 +3263,9 @@ function thisVisitPicker(type,idx,r){
 function thisFilingView(type,idx,r){
   const ci=curVisitLogIndex(r);
   if(ci<0 || (r.thisFiling||'').trim()) return richField('idx',{type,idx},'thisFiling',r,'이번 방문에 Filing 할 것','idx-note');
-  const e=r.filingLog[ci], partial=e.status==='partial';
-  return `<div class="tf-logged" title="회차 이력에 기록된 내용이에요 (수정은 회차 이력에서)">
-    <div class="tf-logged-top"><span class="pf-badge ${partial?'pf-partial':'pf-done'}">${partial?'일부':'완료'}</span><span class="tf-logged-date">${esc(e.date||'')}</span>
+  const e=r.filingLog[ci], st=flogEff(e);
+  return `<div class="tf-logged${st==='planned'?' tf-planned':''}" title="회차 이력에 기록된 내용이에요 (수정은 회차 이력에서)">
+    <div class="tf-logged-top">${flogBadge(e)}<span class="tf-logged-date">${esc(e.date||'')}</span>
       <button class="tf-logged-edit" onclick="openFilingLogEdit('${type}',${idx},${ci})">✏️ 수정</button></div>
     <div class="tf-logged-body">${e.content?esc(e.content).replace(/\n/g,'<br>'):'<span class="flog-nocontent">(파일명 없음)</span>'}</div>
   </div>`;
@@ -3308,13 +3313,13 @@ function cancelFilingLogEdit(type,idx,li){
 function filingLogRowHtml(type, idx, r){
   const log=r.filingLog||[];
   const entries=log.map((e,li)=>{
-    const partial=e.status==='partial', editing=_flogEdit[flogKey(type,idx,li)]!==undefined;
+    const partial=e.status==='partial', editing=_flogEdit[flogKey(type,idx,li)]!==undefined, eff=flogEff(e);
     if(!editing) return `
-    <div class="flog-entry flog-${partial?'partial':'done'} flog-view">
+    <div class="flog-entry flog-${eff} flog-view">
       <div class="flog-top">
         <span class="flog-round-v">${esc(e.round||'')}</span>
         <span class="flog-date-v">${esc(e.date||'')}</span>
-        <span class="pf-badge ${partial?'pf-partial':'pf-done'}">${partial?'일부':'완료'}</span>
+        ${flogBadge(e)}
         <span class="flog-acts">
           <button class="flog-btn" onclick="copyFilingContent('${type}',${idx},${li})" title="이 회차 파일명 복사">📋 복사</button>
           <button class="flog-btn" onclick="editFilingLog('${type}',${idx},${li})" title="이 회차 기록 수정">✏️ 수정</button>
@@ -3324,14 +3329,14 @@ function filingLogRowHtml(type, idx, r){
       <div class="flog-content-v">${e.content?esc(e.content).replace(/\n/g,'<br>'):'<span class="flog-nocontent">(파일명 없음)</span>'}</div>
     </div>`;
     return `
-    <div class="flog-entry flog-${partial?'partial':'done'} flog-editing">
+    <div class="flog-entry flog-${eff} flog-editing">
       <div class="flog-top">
         <input class="flog-round" list="visitRoundList" value="${esc(e.round||'')}" placeholder="회차 (예: SMV #2)" onchange="setFilingLogField('${type}',${idx},${li},'round',this.value)">
         <input type="text" placeholder="YYYY-MM-DD" onfocus="dtFocus(this)" onblur="dtBlur(this)" class="flog-date" value="${esc(e.date||'')}" onchange="setFilingLogField('${type}',${idx},${li},'date',this.value)">
-        <select class="flog-status" onchange="setFilingLogField('${type}',${idx},${li},'status',this.value)">
+        ${eff==='planned'?`<span class="flog-auto" title="날짜가 오늘 이후라서 자동으로 '예정'이에요. 날짜가 지나면 완료/일부로 표시돼요">예정 (날짜 기준 자동)</span>`:`<select class="flog-status" onchange="setFilingLogField('${type}',${idx},${li},'status',this.value)">
           <option value="done"${!partial?' selected':''}>완료</option>
           <option value="partial"${partial?' selected':''}>일부</option>
-        </select>
+        </select>`}
         <span class="flog-acts">
           <button class="flog-btn flog-btn-save" onclick="saveFilingLogEdit('${type}',${idx},${li})">✓ 저장</button>
           <button class="flog-btn" onclick="cancelFilingLogEdit('${type}',${idx},${li})">취소</button>
@@ -5183,7 +5188,7 @@ function renderIndexBody(){
       <td><select class="sel ${stCls(r.status)}" onchange="setIndexField('${type}',${idx},'status',this.value)">${idxStOpts(r.status)}</select></td>
       <td><div class="idx-loc-wrap">${richField('idx',{type,idx},'location',r,'위치','idx-loc idx-loc-top rich-mono')}${richField('idx',{type,idx},'fileName',r,'파일명','idx-loc idx-loc-bot rich-mono')}${isfAlarmBadge(type,idx,r)}</div></td>
       <td><div class="prevfiling-wrap">${prevFilingSummary(r)}<button class="prevfiling-view" onclick="showFilingHistory('${type}',${idx})" title="회차별 Filing 이력 보기">🔍</button></div></td>
-      <td>${thisVisitPicker(type,idx,r)}<div class="thisfiling-wrap">${thisFilingView(type,idx,r)}<input type="text" class="idx-effdate" placeholder="시행일자" onfocus="dtFocus(this)" onblur="dtBlur(this)" value="${esc(r.effDate||'')}" onchange="setIndexField('${type}',${idx},'effDate',this.value)" title="시행일자"></div></td>
+      <td>${thisVisitPicker(type,idx,r)}<div class="thisfiling-wrap">${thisFilingView(type,idx,r)}</div></td>
       <td>${richField('idx',{type,idx},'note',r,'비고 (더블클릭 → 편집)')}${showIdxNote?rowActs:''}</td>
       ${ckCells}
     </tr>`;
@@ -9753,6 +9758,13 @@ table th{color:var(--label)}
 @media (max-width:820px){:root{--gutter:16px}}
 /* 표가 화면보다 좁으면 남는 폭을 칸들에 나눠서 꽉 채움 */
 .index-table{min-width:100%}
+
+/* 예정(미래 날짜) 상태 */
+.pf-planned{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE}
+.fh-badge.fh-planned{background:#EFF6FF;color:#1D4ED8}
+.flog-entry.flog-planned{background:#F5F9FF;border-color:#BFDBFE}
+.tf-logged.tf-planned{background:#F5F9FF;border-color:#BFDBFE}
+.flog-auto{font-size:12px;font-weight:600;color:#1D4ED8;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:4px 8px}
 </style>
 
 <style id="editorial-ui-refinement">
