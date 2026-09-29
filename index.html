@@ -5288,7 +5288,8 @@ function renderIndexBody(){
         </div>
       </div>
       ${visitScheduleHtml()}
-      <div class="idx-toolbar">
+    </div>
+      <div class="idx-toolbar${idxPinRows?' idx-pin-bar':''}">
         ${idxSelMode ? `
         <button class="idx-doselect-btn" onclick="bulkDelIndexSelected('${type}')" title="체크한 항목·섹션 삭제">🗑️ 선택 삭제 (${(getIndexRows(type).filter(r=>r.selected)).length})</button>
         <button class="idx-cancelsel-btn" onclick="toggleIdxSelMode('${type}')">취소</button>
@@ -5305,6 +5306,7 @@ function renderIndexBody(){
           <div class="tb-group" role="group" aria-label="보기">
             <span class="tb-cap">보기</span>
             <button class="tb-btn" onclick="fitIdxCols()" title="칸 비율은 그대로 두고 표 전체 너비를 화면에 맞춰요 (가로 스크롤 없애기)">↔ 화면 맞춤</button>
+            <button class="tb-btn${idxPinRows?' on':''}" onclick="toggleIdxPin()" title="${idxPinRows?'행 고정 끄기: 표를 상자 안에서 스크롤':'행 고정 켜기: 스크롤해도 도구 모음과 표 머리글이 위에 남아요'}">📌 행 고정</button>
             <button class="tb-btn${idxFreeze?' on':''}" onclick="toggleIdxFreeze()" title="가로로 스크롤해도 왼쪽 ✓ · No. · 문서명 칸이 따라다녀요">${idxFreeze?'🔒 열 고정':'🔓 열 고정'}</button>
             <button class="tb-btn${showLocCol?' on':''}" onclick="toggleLocCol()" title="위치 / 파일명 칸 ${showLocCol?'숨기기':'펼치기'}">${showLocCol?'⊟ 위치/파일명':'⊞ 위치/파일명'}</button>
             <button class="tb-btn${showIdxNote?' on':''}" onclick="toggleIdxNote()" title="비고 칸 ${showIdxNote?'숨기기 (첨부·회차 이력·항목삭제 버튼은 문서명 아래로 옮겨져요)':'펼치기'}">${showIdxNote?'⊟ 비고':'⊞ 비고'}</button>
@@ -5335,10 +5337,9 @@ function renderIndexBody(){
         </div>
         `}
       </div>
-    </div>
     <div class="idx-split"><div class="idx-split-main">
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
-    <div class="index-table-wrap" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showLocCol?'':' hide-loc'}${showIdxNote?'':' hide-note'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))-(showLocCol?0:(idxColW[5]||0))-(showIdxNote?0:(idxColW[8]||0))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
+    <div class="index-table-wrap${idxPinRows?' idx-pin':''}" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showLocCol?'':' hide-loc'}${showIdxNote?'':' hide-note'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))-(showLocCol?0:(idxColW[5]||0))-(showIdxNote?0:(idxColW[8]||0))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}${CHK.map(()=>`<col style="width:${IDX_CK_W}px">`).join('')}<col style="width:${IDX_CK_ADD_W}px"></colgroup>
       <thead><tr>
         <th>✓</th>
@@ -5789,6 +5790,9 @@ let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols
 // 위치/파일명 칸 보이기 여부 (기본: 보임)
 let showLocCol=(function(){ try{ return localStorage.getItem('showLocCol')!=='0'; }catch(e){ return true; } })();
 // 비고 칸 펼침 여부 (기본: 펼침). 접어도 첨부·회차 이력·항목삭제 버튼은 남도록 칸을 좁게만 만든다
+// 행 고정: 도구 모음 + 표 머리글을 화면 위(앱 헤더 아래)에 붙여 두기 (기본: 켬)
+let idxPinRows=(function(){ try{ return localStorage.getItem('idxPinRows')!=='0'; }catch(e){ return true; } })();
+function toggleIdxPin(){ idxPinRows=!idxPinRows; try{ localStorage.setItem('idxPinRows', idxPinRows?'1':'0'); }catch(e){} renderBody(); }
 let showIdxNote=(function(){ try{ return localStorage.getItem('showIdxNote')!=='0'; }catch(e){ return true; } })();
 
 let showNaRows=(function(){ try{ return localStorage.getItem('showNaRows')==='1'; }catch(e){ return false; } })();
@@ -9792,8 +9796,9 @@ table th{color:var(--label)}
 .idx-row-acts{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:6px}
 .idx-row-acts > *{margin:0 !important}
 /* 도구 모음 메뉴가 표 위 스크롤 막대에 가려지던 문제 */
-.idx-toolbar{position:relative;z-index:90}
+.idx-toolbar{position:relative;z-index:40}
 .tb-menu-list{z-index:100 !important}
+.idx-topscroll{z-index:5 !important}
 
 /* ── Index 표: 좁은 칸의 긴 글(경로·파일명·Filing) 읽기 편하게 ── */
 /* 1) 글꼴: rich-mono(Courier New, 한글 없음 → 굴림 대체) 대신 앱 글꼴 */
@@ -9877,6 +9882,13 @@ table th{color:var(--label)}
 .vb-add{height:30px;border:1px dashed var(--border-2,#CBD5E1);background:#fff;color:var(--blue,#2563EB);border-radius:8px;padding:0 10px;font-size:13px;font-weight:600;cursor:pointer}
 .vb-add:hover{background:var(--blue-bg,#EFF6FF);border-color:var(--blue,#2563EB)}
 .vb-empty{font-size:13px;color:var(--text-3,#94A3B8)}
+
+/* ── 행 고정: 앱 헤더 높이를 재서(--hdr-h) 그 아래에 도구 모음·표 머리글을 붙임 ── */
+.idx-pin-bar{position:sticky;top:var(--hdr-h,120px);z-index:40;background:var(--page,#F8FAFC);padding:8px 0 10px;margin:0 -4px;padding-left:4px;padding-right:4px;box-shadow:0 8px 8px -8px rgba(15,23,42,.10)}
+.index-table-wrap.idx-pin{max-height:none !important;overflow:visible !important}
+.index-table-wrap.idx-pin .index-table th{top:calc(var(--hdr-h,120px) + var(--tb-h,52px)) !important;z-index:30}
+.index-table-wrap.idx-pin .index-table.freeze-cols th:nth-child(-n+3){z-index:31 !important}
+.idx-pin + .idx-topscroll,.idx-topscroll.idx-pin-hide{display:none}
 </style>
 
 <style id="editorial-ui-refinement">
@@ -9927,47 +9939,20 @@ document.addEventListener('click',e=>{
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
 })();
 </script>
-<style id="ux-refresh">
-.header{padding:14px var(--gutter) !important}.header-top{margin-bottom:8px !important}.hn-protocol-section{margin-top:18px !important}.hn-nav{gap:12px !important}.hn-nav .tabs-wrap::after{display:none!important}.hn-nav .tabs-wrap>.tab[data-key],.hn-nav .tabs-wrap>.tab-add{display:none!important}
-.ux-context{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 20px;background:#fff;border:1px solid #dce4ef;border-radius:12px;margin-bottom:20px;box-shadow:0 3px 12px #1e3a5f05}.ux-context label{display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1;color:#64748b;font-size:12px;font-weight:600}.ux-context select{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#1e3a5f;font-size:14px}.ux-context .ux-location{margin-left:auto;color:#475569;font-size:13px}.ux-caption{font-size:12px;letter-spacing:.06em;color:#64748b;margin-bottom:6px}.ux-actionhead{display:flex;justify-content:space-between;align-items:center;margin:24px 0 12px}.ux-actionhead h2{font-size:19px;color:#1e3a5f}.ux-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}.ux-action{font:inherit;text-align:left;cursor:pointer;background:#fff;border:1px solid #dce4ef;border-radius:12px;padding:20px;color:#334155;transition:transform .15s,border-color .15s}.ux-action:hover{transform:translateY(-2px);border-color:#2563eb}.ux-action strong{display:block;font-size:32px;margin:12px 0 6px;line-height:1.1;font-variant-numeric:tabular-nums}.ux-action small{color:#64748b}.ux-action.urgent strong{color:#b91c1c}.ux-action.soon strong{color:#b45309}.ux-action[aria-pressed=true]{outline:2px solid #2563eb;outline-offset:2px}.ux-results{padding:18px;background:#fff;border:1px solid #dce4ef;border-radius:12px;margin-bottom:24px}.ux-results h3{font-size:15px;margin-bottom:10px}.ux-result{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;text-align:left;padding:12px 4px;border:0;border-bottom:1px solid #edf1f6;background:#fff;cursor:pointer;font:inherit;color:#334155}.ux-result:hover{background:#f8fafc}.ux-result small{display:block;margin-top:4px;color:#64748b}.ux-result b{white-space:nowrap;font-size:12px;color:#b45309}.ux-presets{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:12px 0 16px}.ux-presets button{font:inherit;font-size:13px;cursor:pointer;padding:8px 14px;border:1px solid #cbd5e1;background:white;border-radius:7px;color:#334155}.ux-presets button[aria-pressed=true]{background:#1e3a5f;color:#fff;border-color:#1e3a5f}.ux-presets span{font-size:12px;color:#64748b;margin-left:8px}.home-stats{opacity:.92}.home-stat .hs-val{font-size:25px!important}.doc-table tbody tr:hover td,.index-table tbody tr:hover td{background-color:#f3f7fc}.ux-context select:focus-visible,.ux-action:focus-visible,.ux-result:focus-visible,.ux-presets button:focus-visible{outline:2px solid #2563eb;outline-offset:3px}@media(max-width:720px){.ux-actions{grid-template-columns:1fr}.ux-action{padding:16px}.ux-action strong{display:inline-block;margin:0 12px;font-size:24px}.ux-context label{min-width:100%}.ux-context .ux-location{margin-left:0}.header{position:relative!important}}
-</style>
-<script id="ux-refresh-script">
+<script>
+// 앱 헤더·도구 모음의 실제 높이를 재서 CSS 변수로 (행 고정 위치 계산용)
 (function(){
-  let taskFilter='over';
-  function context(){
-    const wrap=document.getElementById('bodyWrap'); if(!wrap||!curProtocolId)return;
-    const bar=document.createElement('div');bar.className='ux-context';
-    const proto=getCurProtocol();
-    const label=document.createElement('label');label.textContent='현재 작업 기관';
-    const select=document.createElement('select');select.setAttribute('aria-label','현재 작업 기관 선택');
-    const all=document.createElement('option');all.value='';all.textContent='전체 기관 · 대시보드';select.append(all);
-    sites.forEach(s=>{const o=document.createElement('option');o.value=s.code;o.textContent=s.code+' · '+s.name;select.append(o)});
-    select.value=(curView==='site'||curView==='index')?curSite:'';
-    select.onchange=()=>{if(!select.value){switchHome();return;} if(curView==='index'){curSite=select.value;renderTabs();renderBody();}else switchSite(select.value);};
-    label.append(select);
-    const loc=document.createElement('div');loc.className='ux-location';
-    const cap=document.createElement('div');cap.className='ux-caption';cap.textContent='현재 과제';
-    const name=document.createElement('strong');name.textContent=proto?.protocolNo||proto?.name||'과제';loc.append(cap,name);
-    bar.append(loc,label);wrap.prepend(bar);
-  }
-  function homeActions(){
-    const wrap=document.getElementById('bodyWrap');
-    const due=dueItemsCached().filter(x=>x.pid===curProtocolId);
-    const groups={over:due.filter(x=>x.info.days<0),week:due.filter(x=>x.info.days>=0&&x.info.days<=7),issue:[]};
-    sites.forEach(s=>(sections[s.code]||[]).forEach(sec=>(sec.rows||[]).forEach(r=>{if(r.status==='issue')groups.issue.push({code:s.code,sname:s.name,name:r.name||r.docName||r.title||'문서 이슈',section:sec.title||sec.name||''})})));
-    const box=document.createElement('section');box.innerHTML='<div class="ux-actionhead"><h2>지금 확인할 업무</h2><span class="ux-caption">현재 과제 기준</span></div><div class="ux-actions"></div><div class="ux-results" aria-live="polite"></div>';
-    const labels={over:'기한 초과',week:'7일 이내 마감',issue:'문서 이슈'};
-    const hints={over:'기한이 지난 항목 확인 →',week:'오늘부터 7일 이내 일정 →',issue:'확인이 필요한 문서 →'};
-    function show(key){taskFilter=key;box.querySelectorAll('.ux-action').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===key)));const result=box.querySelector('.ux-results');result.replaceChildren();const title=document.createElement('h3');title.textContent=labels[key]+' · '+groups[key].length+'건';result.append(title);if(!groups[key].length){const p=document.createElement('p');p.textContent='현재 해당하는 항목이 없습니다.';p.style.cssText='color:#64748b;font-size:14px;padding:12px 0';result.append(p)}groups[key].forEach(x=>{const b=document.createElement('button');b.className='ux-result';const text=document.createElement('span');text.textContent=key==='issue'?x.name:x.kind;const sub=document.createElement('small');sub.textContent=(x.sname||'과제 공통')+(key==='issue'&&x.section?' · '+x.section:'');text.append(sub);const state=document.createElement('b');state.textContent=key==='issue'?'기관에서 확인 →':x.info.txt+' →';b.append(text,state);b.onclick=()=>gotoDue(curProtocolId,x.code);result.append(b)});}
-    Object.keys(labels).forEach((key,i)=>{const b=document.createElement('button');b.className='ux-action '+(i===0?'urgent':i===1?'soon':'');b.dataset.filter=key;b.innerHTML='<span>'+labels[key]+'</span><strong>'+groups[key].length+'</strong><small>'+hints[key]+'</small>';b.onclick=()=>show(key);box.querySelector('.ux-actions').append(b)});
-    const stats=wrap.querySelector('.home-stats');if(stats)stats.before(box);else wrap.append(box);show(taskFilter);
-  }
-  function presets(){const tool=document.querySelector('.idx-toolbar');if(!tool)return;const bar=document.createElement('div');bar.className='ux-presets';const modes=[['기본 보기',true,true,false],['Filing 작업',false,false,true],['전체 보기',true,true,true]];modes.forEach(([name,loc,note,filing])=>{const b=document.createElement('button');b.textContent=name;b.setAttribute('aria-pressed',String(showLocCol===loc&&showIdxNote===note&&showFilingCols===filing));b.onclick=()=>{showLocCol=loc;showIdxNote=note;showFilingCols=filing;renderBody();};bar.append(b)});const tip=document.createElement('span');tip.textContent='내용 클릭: 펼쳐 보기 · 더블클릭: 편집';bar.append(tip);tool.prepend(bar);}
-  const originalBody=renderBody;
-  renderBody=function(){originalBody.apply(this,arguments);context();if(curView==='home')homeActions();if(curView==='index')presets();};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>renderBody());else renderBody();
+  const set=()=>{
+    const h=document.querySelector('.header'); if(h) document.documentElement.style.setProperty('--hdr-h', h.getBoundingClientRect().height+'px');
+    const t=document.querySelector('.idx-pin-bar'); if(t) document.documentElement.style.setProperty('--tb-h', t.getBoundingClientRect().height+'px');
+    // 행 고정 중에는 표 위 가짜 스크롤 막대를 숨김 (표가 상자 안에서 스크롤하지 않으므로)
+    document.querySelectorAll('.idx-topscroll').forEach(el=>el.classList.toggle('idx-pin-hide', !!document.querySelector('.index-table-wrap.idx-pin')));
+  };
+  const ro=new ResizeObserver(set);
+  const watch=()=>{ ['.header','.idx-pin-bar'].forEach(q=>{ const el=document.querySelector(q); if(el) ro.observe(el); }); set(); };
+  let raf=0; new MutationObserver(()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; watch(); }); }).observe(document.body,{childList:true,subtree:true});
+  window.addEventListener('resize',set); document.addEventListener('DOMContentLoaded',watch); watch();
 })();
 </script>
-
 </body>
 </html>
