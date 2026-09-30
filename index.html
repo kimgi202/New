@@ -229,8 +229,8 @@ input::placeholder,textarea::placeholder{opacity:.5}
 @keyframes noteBlink{0%,100%{box-shadow:0 0 0 3px #fbdada}50%{box-shadow:0 0 0 6px #fbd5d5}}
 .note-alarm-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:16px;background:#e02424;color:#fff;font-size:12px;font-weight:800;line-height:1;vertical-align:middle}
 .ver-toggle-btn.note-collapsed{border-color:#f0b4ae;background:#fff7f6}
-.doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7),.doc-table.hide-vercols th:nth-child(8),.doc-table.hide-vercols td:nth-child(8){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0}
-.doc-table.hide-vercols th:nth-child(7)>*,.doc-table.hide-vercols td:nth-child(7)>*,.doc-table.hide-vercols th:nth-child(8)>*,.doc-table.hide-vercols td:nth-child(8)>*{display:none}
+.doc-table.hide-vercols th:nth-child(6),.doc-table.hide-vercols td:nth-child(6),.doc-table.hide-vercols th:nth-child(7),.doc-table.hide-vercols td:nth-child(7){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0}
+.doc-table.hide-vercols th:nth-child(6)>*,.doc-table.hide-vercols td:nth-child(6)>*,.doc-table.hide-vercols th:nth-child(7)>*,.doc-table.hide-vercols td:nth-child(7)>*{display:none}
 .index-table.hide-filing th:nth-child(7),.index-table.hide-filing td:nth-child(7),.index-table.hide-filing th:nth-child(8),.index-table.hide-filing td:nth-child(8){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0;width:0}
 .index-table.hide-filing th:nth-child(7)>*,.index-table.hide-filing td:nth-child(7)>*,.index-table.hide-filing th:nth-child(8)>*,.index-table.hide-filing td:nth-child(8)>*{display:none}
 .index-table.hide-filing colgroup col:nth-child(7),.index-table.hide-filing colgroup col:nth-child(8){width:0 !important}
@@ -1642,6 +1642,8 @@ table th{color:var(--label)}
 /* ── Index 표: 좁은 칸의 긴 글(경로·파일명·Filing) 읽기 편하게 ── */
 /* 1) 글꼴: rich-mono(Courier New, 한글 없음 → 굴림 대체) 대신 앱 글꼴 */
 .index-table .rich-note.rich-mono.idx-loc{font-family:var(--font) !important}
+/* 기관(IRB) 문서 표의 '서버 내 파일명' 칸도 같은 이유로 앱 글꼴 */
+.rich-note.rich-mono.tmf-input{font-family:var(--font) !important}
 /* 2) 줄바꿈: 한글 단어는 쪼개지 않고, 공백 없는 긴 경로는 넘칠 때만 끊기 */
 .index-table .idx-loc,.index-table .idx-note{word-break:keep-all !important;overflow-wrap:anywhere !important;font-size:14px !important;line-height:1.5 !important}
 /* 3) 넓게 보기: 한 번 클릭(또는 편집 중)하면 칸 위로 넓게 펼쳐서 보여 줌 */
@@ -4723,7 +4725,36 @@ function exportVisitCSV(type){
   downloadCSV(csv, `${(cur?.protocolNo||'protocol')}_${curSiteCode()}_${type}_${v.label}.csv`);
 }
 
-function render(){ renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
+// 'TMF 파일명' 칸을 없애면서, 그 칸에 적혀 있던 내용은 비고로 옮긴다.
+// 자료가 어느 길로 들어오든(내 기기·클라우드·백업 복원·가져오기·인계) 화면을 그리기 직전에 한 번 거친다.
+// 옮긴 뒤에는 원래 칸을 비우므로 같은 내용이 두 번 옮겨지지 않는다.
+let tmfMoveTold=false;
+function moveTmfNamesToNote(){
+  const todo=[];
+  Object.values(protocolData||{}).forEach(pd=>{
+    Object.values((pd&&pd.sections)||{}).forEach(arr=>{
+      (Array.isArray(arr)?arr:[]).forEach(sec=>{ ((sec&&sec.rows)||[]).forEach(r=>{ if(r && (r.tmfName||r.tmfNameHtml)) todo.push(r); }); });
+    });
+  });
+  if(!todo.length) return;
+  const toBr=t=>escHtml2(t).replace(/\n/g,'<br>');
+  if(todo.some(r=>String(r.tmfName||'').trim())) recordSnapshot('파일명 칸 → 비고 이동 전');   // 옮기기 전 상태를 백업에 남김
+  let moved=0;
+  todo.forEach(r=>{
+    const txt=String(r.tmfName||'').trim();
+    const cur=String(r.note||'');
+    if(txt && !cur.includes(txt)){                      // 비고에 이미 같은 파일명이 있으면 또 붙이지 않음
+      const has=!!cur.trim();
+      if(r.noteHtml||r.tmfNameHtml) r.noteHtml=(has?(r.noteHtml||toBr(cur))+'<br>':'')+(r.tmfNameHtml||toBr(txt));   // 서식(굵게·형광 등) 유지
+      r.note=(has?cur.replace(/\s+$/,'')+'\n':'')+txt;
+      moved++;
+    }
+    r.tmfName=''; delete r.tmfNameHtml;
+  });
+  saveData();
+  if(moved && !tmfMoveTold){ tmfMoveTold=true; setTimeout(()=>{ try{ showToastNow("'TMF 파일명' 칸에 있던 내용 "+moved+"건을 비고로 옮겼어요"); }catch(e){} },900); }
+}
+function render(){ try{ moveTmfNamesToNote(); }catch(e){ console.warn('파일명 → 비고 이동 실패',e); } renderProtocolTabs(); renderTabs(); renderBody(); renderStats(); }
 
 function renderProtocolTabs(){
   const wrap=document.getElementById('protocolTabsWrap');
@@ -6351,9 +6382,14 @@ function exportIndexCSV(type){
   downloadCSV(csv, `${(cur?.protocolNo||'protocol')}_${type}_Index.csv`);
 }
 // ── 문서 표 컬럼 폭 (드래그로 조절, 모든 섹션 공통 적용) ──
-const SEC_COL_DEFAULT=[28,30,78,160,330,260,62,116,76,200];
-let secColW=(function(){ try{const v=JSON.parse(localStorage.getItem('secColW_v2')); if(Array.isArray(v)&&v.length===10) return v.map(Number);}catch(e){} return SEC_COL_DEFAULT.slice(); })();
-function saveSecColW(){ try{ localStorage.setItem('secColW_v2', JSON.stringify(secColW)); }catch(e){} }
+// 칸 순서: ✕ · 선택 · 구분 · 문서명 · 서버 내 파일명 · 버전 · Effective Date · 상태 · 비고  (예전 'TMF 파일명' 칸은 없앰)
+const SEC_COL_DEFAULT=[28,30,78,160,425,62,116,76,365];
+let secColW=(function(){
+  try{const v=JSON.parse(localStorage.getItem('secColW_v3')); if(Array.isArray(v)&&v.length===9) return v.map(Number);}catch(e){}
+  // 예전(10칸)에 맞춰 둔 너비가 있으면: 'TMF 파일명' 칸을 빼고 그 폭을 서버 내 파일명·비고에 반씩 나눠 줌
+  try{const o=JSON.parse(localStorage.getItem('secColW_v2')); if(Array.isArray(o)&&o.length===10){ const w=o.map(Number), t=w.splice(4,1)[0]||0, h=Math.round(t/2); w[4]+=h; w[8]+=t-h; return w; }}catch(e){}
+  return SEC_COL_DEFAULT.slice(); })();
+function saveSecColW(){ try{ localStorage.setItem('secColW_v3', JSON.stringify(secColW)); }catch(e){} }
 // 버전·Effective Date 컬럼 숨기기 상태 (기본: 숨김). 아이콘으로 가로 펼치기
 let showVerCols=(function(){ try{ return localStorage.getItem('showVerCols')!=='0'; }catch(e){ return true; } })(); // 기본: 보임
 let showNoteCol=(function(){ try{ return localStorage.getItem('showNoteCol')!=='0'; }catch(e){ return true; } })(); // 비고 칸 기본: 보임
@@ -6407,7 +6443,7 @@ function fitIdxCols(){
 function fitSecCols(){
   const wrap=document.querySelector('.table-wrap'); if(!wrap) return;
   const avail=Math.max(360, wrap.clientWidth-2);
-  fitWidths(secColW, [0,1,2,3,4,5,6,7,8,9], avail, 34);
+  fitWidths(secColW, [0,1,2,3,4,5,6,7,8], avail, 34);
   saveSecColW(); renderBody();
   showToastNow('✓ 칸 너비를 화면에 맞췄어요');
 }
@@ -6456,16 +6492,16 @@ function toggleIdxNote(){ showIdxNote=!showIdxNote; try{ localStorage.setItem('s
 function toggleLocCol(){ showLocCol=!showLocCol; try{ localStorage.setItem('showLocCol', showLocCol?'1':'0'); }catch(e){} renderBody(); }
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
 function toggleNoteCol(){ showNoteCol=!showNoteCol; try{ localStorage.setItem('showNoteCol', showNoteCol?'1':'0'); }catch(e){} renderBody(); }
-// 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 문서명·TMF·서버 칸에 자동 분배
+// 숨김 상태에서 화면에 적용할 컬럼 폭: 숨긴 폭(버전+Eff)을 문서명·서버·비고 칸에 자동 분배
 function secDisplayWidths(){
   const w=secColW.slice();
   if(!showVerCols){
-    const freed=(w[6]||0)+(w[7]||0);
-    const share=Math.round(freed/4);
-    w[3]+=share; w[4]+=share; w[5]+=share; w[9]+=(freed-share*3); // 문서명·TMF·서버·비고
-    w[6]=0; w[7]=0;
+    const freed=(w[5]||0)+(w[6]||0);
+    const share=Math.round(freed/3);
+    w[3]+=share; w[4]+=share; w[8]+=(freed-share*2); // 문서명·서버·비고
+    w[5]=0; w[6]=0;
   }
-  if(!showNoteCol) w[9]=NOTE_COLLAPSED_W;
+  if(!showNoteCol) w[8]=NOTE_COLLAPSED_W;
   return w;
 }
 function secTableWidth(){ return secDisplayWidths().reduce((a,b)=>a+b,0); }
@@ -6528,17 +6564,16 @@ function renderSection(code, sec){
         <th><input type="checkbox" id="selectAllCb_${sec.id}" ${sec.rows.length&&sec.rows.every(r=>r.selected)?'checked':''} title="이 섹션의 모든 문서 선택 / 해제" onchange="toggleSelectAll('${code}','${sec.id}')"></th>
         <th title="문서 종류 (신청서·의뢰서·동의서·통지서 등). 추가할 때 선택해요.">구분<span class="col-rsz" data-ci="2"></span></th>
         <th title="문서 이름. 더블클릭하면 이름을 수정할 수 있어요.">문서명<span class="col-rsz" data-ci="3"></span></th>
-        <th title="TMF(Trial Master File)에 보관된 실제 파일명을 적어요.">TMF 파일명<span class="col-rsz" data-ci="4"></span></th>
-        <th title="사내 서버에 저장한 위치/파일명(경로)을 적어요.">서버 내 파일명<span class="col-rsz" data-ci="5"></span></th>
-        <th title="문서 버전. 동의서는 Master_Site, 변경대비표는 v1.0 → v2.0 형태로 적어요.">버전<span class="col-rsz" data-ci="6"></span></th>
-        <th title="해당 버전의 효력 발생일(Effective Date).">Effective Date<span class="col-rsz" data-ci="7"></span></th>
-        <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="8"></span></th>
-        ${showNoteCol?`<th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요. (⊟ 비고 버튼으로 접을 수 있어요)">비고<span class="col-rsz" data-ci="9"></span></th>`:`<th class="note-th-collapsed" title="비고 칸이 접혀 있어요. 클릭하면 펼쳐요." onclick="toggleNoteCol()">📝</th>`}
+        <th title="사내 서버에 저장한 위치/파일명(경로)을 적어요. 🏷️ 를 누르면 규칙에 맞는 파일명을 만들어 넣어줘요.">서버 내 파일명<span class="col-rsz" data-ci="4"></span></th>
+        <th title="문서 버전. 동의서는 Master_Site, 변경대비표는 v1.0 → v2.0 형태로 적어요.">버전<span class="col-rsz" data-ci="5"></span></th>
+        <th title="해당 버전의 효력 발생일(Effective Date).">Effective Date<span class="col-rsz" data-ci="6"></span></th>
+        <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="7"></span></th>
+        ${showNoteCol?`<th title="자유 메모. 길게 쓰면 칸이 자동으로 늘어나요. (⊟ 비고 버튼으로 접을 수 있어요)">비고<span class="col-rsz" data-ci="8"></span></th>`:`<th class="note-th-collapsed" title="비고 칸이 접혀 있어요. 클릭하면 펼쳐요." onclick="toggleNoteCol()">📝</th>`}
       </tr></thead>
       <tbody>
         ${sec.rows.map((row,idx)=>rowHtml(code,sec.id,idx,row,sec.rows.length)).join('')}
         ${isAddingHere?addDocRowHtml():''}
-        ${searchTerm&&!anyMatch?`<tr><td colspan="10" class="no-match">검색 결과 없음</td></tr>`:''}
+        ${searchTerm&&!anyMatch?`<tr><td colspan="9" class="no-match">검색 결과 없음</td></tr>`:''}
       </tbody>
     </table></div>`:''}
   </div>`;
@@ -6673,8 +6708,7 @@ function rowHtml(code,secId,idx,row,total){
       </div>
     </td>
     <td>${searchTerm.trim()?`<span class="doc-name-display">${highlight(row.name)}</span>`:richField('sec',{code,sec:secId,idx},'name',row,'문서명','rich-docname')}${histTxt}</td>
-    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR·IDV 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'tmfName',row,'파일명','tmf-input rich-mono')}</div></div></td>
-    <td>${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</td>
+    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR·IDV 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</div></div></td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
         `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap"><input class="ver-input${verAlertCls(code,row)}" title="${esc(verAlertTip(code,row))}" style="width:65px;flex-shrink:0" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#a3a3a3;font-size:14px;flex-shrink:0">_</span><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
@@ -6695,7 +6729,7 @@ function rowHtml(code,secId,idx,row,total){
 }
 
 function addDocRowHtml(){
-  return `<tr class="add-row"><td colspan="10">
+  return `<tr class="add-row"><td colspan="9">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 2px">
       <select class="add-doc-sel" id="addDtype" onchange="addDtypeVal=this.value">
         ${[['doc','제출 문서'],['compare','변경대비표'],['app','신청서(의뢰서)'],['receipt','접수증'],['consent','동의서'],['notice','통지서'],['eval','평가록'],['minutes','회의록'],['custom','기타']].map(([v,l])=>`<option value="${v}"${v===addDtypeVal?' selected':''}>${l}</option>`).join('')}
@@ -7184,7 +7218,7 @@ function deleteSite(code){
 function exportCSV(){
   const head=['Contract No.(프로토콜)','Project','Protocol No.','Sponsor','Study Type',
     '기관코드','기관명','기관Contract No.','계약일','계약금액','의뢰사(기관)','PI','계약비고',
-    '섹션','문서명','구분','TMF파일명','서버 내 파일명','버전','Master Ver.','Site Ver.',
+    '섹션','문서명','구분','서버 내 파일명','버전','Master Ver.','Site Ver.',
     'Effective Date','상태','승인서 승인일','승인서 통지일','CRA 제출일','PI 제출일',
     '접수일','승인일','비고'];
   let csv='\uFEFF'+head.map(csvQ).join(',')+'\n';
@@ -7202,7 +7236,7 @@ function exportCSV(){
             site.code, site.name, site.contractNo, site.contractDate, site.contractAmount,
             site.sponsor, site.piName, site.contractNote,
             sec.title, r.name, DTYPE_INFO[r.dtype]?.label||'',
-            r.tmfName, r.serverFileName, r.ver, r.masterVer, r.siteVer, r.effectiveDate, st,
+            r.serverFileName, r.ver, r.masterVer, r.siteVer, r.effectiveDate, st,
             isApproval?meta.approvalDate:'', isApproval?meta.noticeDate:'',
             meta.craSubmitDate, meta.piSubmitDate, r.receiptDate, r.approveDate, r.note
           ].map(csvQ1).join(',')+'\n';
@@ -8435,8 +8469,7 @@ authInit();
           <div class="tmfn-srv-prev" id="tmfnSrvPrev"></div>
         </div>
         <div class="tmfn-insert">
-          <button class="primary" onclick="tmfnInsert(false)">이 행에 입력 (TMF파일명 + 서버 내 파일명 자동)</button>
-          <button class="alt" onclick="tmfnInsert(true)">TMF파일명도 Index 포함으로 입력</button>
+          <button class="primary" onclick="tmfnInsert(false)">이 행에 입력 (서버 내 파일명)</button>
           <button class="alt" type="button" onclick="qcApplyNow()" title="행 입력 없이 QC Tracker 엑셀에만 추가해요">📊 QC Tracker에만 반영</button>
           <span class="toast" id="toast">복사됐어요</span>
         </div>
@@ -9518,7 +9551,7 @@ applyStudy();
 })();
 
 
-/* ── IRB Tracker 연동 (행 → 모달 → tmfName 입력) ── */
+/* ── IRB Tracker 연동 (행 → 모달 → '서버 내 파일명' 입력) ── */
 window.__tmfnRow=null;
 window.openTmfNamer=function(code,secId,idx){
   var T=window.__tmfn; if(!T){alert('TMF Namer 초기화 실패');return;}
@@ -9901,16 +9934,16 @@ window.tmfnInsert=function(withIdx){
   var T=window.__tmfn,r=window.__tmfnRow; if(!T)return;
   var name=T.names(withIdx); if(!name)return;
   if(r&&typeof setField==='function'){
-    // 'TMF 파일명'·'서버 내 파일명' 칸은 서식 입력칸(richField)이다.
+    // '서버 내 파일명' 칸은 서식 입력칸(richField)이다. ('TMF 파일명' 칸은 없앴다)
     // 화면에 보이는 값은 ...Html 이 우선하므로, 평문만 바꾸면
     // 한 번이라도 직접 입력한 적 있는 칸은 옛 값이 그대로 남는다.
     // 서식본을 지워야 새로 넣은 이름이 실제로 보인다.
     try{
       var sec=(typeof getSec==='function')?getSec(r.code,r.secId):null;
       var row=sec&&sec.rows&&sec.rows[r.idx];
-      if(row){ delete row.tmfNameHtml; delete row.serverFileNameHtml; }
+      if(row){ delete row.serverFileNameHtml; }
     }catch(e){}
-    // '서버 내 파일명'에는 Index 포함본(폴더 실제 저장명)을 자동으로 같이 넣는다.
+    // '서버 내 파일명'에는 Index 포함본(폴더 실제 저장명)을 넣는다.
     var linked=null, isfNo;
     try{
       var sv=T.names(true);
@@ -9925,7 +9958,7 @@ window.tmfnInsert=function(withIdx){
       if(isfNo===undefined) isfNo=tmfNo;      // 매핑표 없는 과제 → 같은 번호로 찾기
       if(isfNo) linked=tmfnLinkIsf(r, sv, tmfNo, isfNo);   // ISF Index 파일명 칸 기록 + 🔔 알람
     }catch(e){}
-    setField(r.code,r.secId,r.idx,'tmfName',name);   // 내부에서 saveData + 화면 갱신
+    try{ saveData(); renderBody(); }catch(e){}   // ISF 연결·접수번호까지 저장 + 화면 갱신
     try{qcAutoApply(String(T.names(false)).split(/,\s*/).map(function(x){return x.trim()}).filter(Boolean));}catch(e){}
     document.getElementById('tmfnOverlay').style.display='none';
     try{
