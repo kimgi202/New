@@ -1614,6 +1614,11 @@ table th{color:var(--label)}
 .tb-menu-list .tb-danger{color:#B91C1C}
 .tb-menu-list .tb-danger:hover{background:#FEF2F2}
 
+/* 원본/사본(N/A) 칸 숨기기 (4번째 칸) */
+.index-table.hide-orig th:nth-child(4),.index-table.hide-orig td:nth-child(4){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0;width:0}
+.index-table.hide-orig th:nth-child(4)>*,.index-table.hide-orig td:nth-child(4)>*{display:none}
+.index-table.hide-orig colgroup col:nth-child(4){width:0 !important}
+
 /* 위치/파일명 칸 숨기기 (6번째 칸) */
 .index-table.hide-loc th:nth-child(6),.index-table.hide-loc td:nth-child(6){padding:0 !important;border-left:none !important;border-right:none !important;overflow:hidden;max-width:0;width:0}
 .index-table.hide-loc th:nth-child(6)>*,.index-table.hide-loc td:nth-child(6)>*{display:none}
@@ -5913,6 +5918,7 @@ function renderIndexBody(){
             <button class="tb-btn" onclick="fitIdxCols()" title="칸 비율은 그대로 두고 표 전체 너비를 화면에 맞춰요 (가로 스크롤 없애기)">↔ 화면 맞춤</button>
             <button class="tb-btn${idxPinRows?' on':''}" onclick="toggleIdxPin()" title="${idxPinRows?'행 고정 끄기: 표를 상자 안에서 스크롤':'행 고정 켜기: 스크롤해도 도구 모음과 표 머리글이 위에 남아요'}">📌 행 고정</button>
             <button class="tb-btn${idxFreeze?' on':''}" onclick="toggleIdxFreeze()" title="가로로 스크롤해도 왼쪽 ✓ · No. · 문서명 칸이 따라다녀요">${idxFreeze?'🔒 열 고정':'🔓 열 고정'}</button>
+            <button class="tb-btn${showOrigCol?' on':''}" onclick="toggleOrigCol()" title="원본/사본/N/A 칸 ${showOrigCol?'숨기기':'펼치기'}">${showOrigCol?'⊟ 원본/사본':'⊞ 원본/사본'}</button>
             <button class="tb-btn${showLocCol?' on':''}" onclick="toggleLocCol()" title="위치 / 파일명 칸 ${showLocCol?'숨기기':'펼치기'}">${showLocCol?'⊟ 위치/파일명':'⊞ 위치/파일명'}</button>
             <button class="tb-btn${showIdxNote?' on':''}" onclick="toggleIdxNote()" title="비고 칸 ${showIdxNote?'숨기기 (첨부·회차 이력·항목삭제 버튼은 문서명 아래로 옮겨져요)':'펼치기'}">${showIdxNote?'⊟ 비고':'⊞ 비고'}</button>
             <button class="tb-btn${showFilingCols?' on':''}" onclick="toggleFilingCols()" title="이전·이번 Filing 칸 ${showFilingCols?'숨기기':'펼치기'}">${showFilingCols?'⊟ Filing 칸':'⊞ Filing 칸'}</button>
@@ -5944,7 +5950,7 @@ function renderIndexBody(){
       </div>
     <div class="idx-split"><div class="idx-split-main">
     <div class="idx-topscroll" id="idxTopScroll"><div id="idxTopScrollInner" style="height:1px"></div></div>
-    <div class="index-table-wrap${idxPinRows?' idx-pin':''}" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showLocCol?'':' hide-loc'}${showIdxNote?'':' hide-note'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))-(showLocCol?0:(idxColW[5]||0))-(showIdxNote?0:(idxColW[8]||0))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
+    <div class="index-table-wrap${idxPinRows?' idx-pin':''}" id="idxTableWrap"><table class="index-table${showFilingCols?'':' hide-filing'}${showOrigCol?'':' hide-orig'}${showLocCol?'':' hide-loc'}${showIdxNote?'':' hide-note'}${showNaRows?'':' hide-na'}${idxFreeze?' freeze-cols':''}" style="width:${idxColW.reduce((a,b)=>a+b,0)-(showFilingCols?0:((idxColW[6]||0)+(idxColW[7]||0)))-(showOrigCol?0:(idxColW[3]||0))-(showLocCol?0:(idxColW[5]||0))-(showIdxNote?0:(idxColW[8]||0))+CHK.length*IDX_CK_W+IDX_CK_ADD_W}px;--fz1:${idxColW[0]||0}px;--fz2:${(idxColW[0]||0)+(idxColW[1]||0)}px">
       <colgroup>${idxColW.map(w=>`<col style="width:${w}px">`).join('')}${CHK.map(()=>`<col style="width:${IDX_CK_W}px">`).join('')}<col style="width:${IDX_CK_ADD_W}px"></colgroup>
       <thead><tr>
         <th>✓</th>
@@ -6397,6 +6403,8 @@ const NOTE_COLLAPSED_W=46; // 비고 접었을 때 폭(알람 점만 표시)
 function rowHasNote(row){ return !!((row.note&&row.note.trim())||(row.issueNote&&row.issueNote.trim())); }
 function secNoteCount(sec){ return (sec.rows||[]).filter(rowHasNote).length; }
 let showFilingCols=(function(){ try{ return localStorage.getItem('showFilingCols')==='1'; }catch(e){ return false; } })();
+// 원본/사본(N/A) 칸 보이기 여부 (기본: 보임)
+let showOrigCol=(function(){ try{ return localStorage.getItem('showOrigCol')!=='0'; }catch(e){ return true; } })();
 // 위치/파일명 칸 보이기 여부 (기본: 보임)
 let showLocCol=(function(){ try{ return localStorage.getItem('showLocCol')!=='0'; }catch(e){ return true; } })();
 // 비고 칸 펼침 여부 (기본: 펼침). 접어도 첨부·회차 이력·항목삭제 버튼은 남도록 칸을 좁게만 만든다
@@ -6434,7 +6442,7 @@ function fitIdxCols(){
   const extra=idxCheckCols(type).length*IDX_CK_W+IDX_CK_ADD_W;
   const avail=Math.max(360, wrap.clientWidth-2);
   // 숨겨진 Filing 칸(6,7)은 폭을 차지하지 않으므로 대상에서 뺀다
-  const idxs=[0,1,2,3,4,5,6,7,8].filter(i=>(showFilingCols || (i!==6 && i!==7)) && (showLocCol || i!==5) && (showIdxNote || i!==8));
+  const idxs=[0,1,2,3,4,5,6,7,8].filter(i=>(showFilingCols || (i!==6 && i!==7)) && (showOrigCol || i!==3) && (showLocCol || i!==5) && (showIdxNote || i!==8));
   fitWidths(idxColW, idxs, avail-extra, 44);
   idxs.forEach(i=>{ if(idxColW[i]<IDX_COL_MIN[i]) idxColW[i]=IDX_COL_MIN[i]; });
   saveIdxColW(); renderBody();
@@ -6489,6 +6497,7 @@ function _restore(s,f){
 }
 function toggleFilingCols(){ showFilingCols=!showFilingCols; try{ localStorage.setItem('showFilingCols', showFilingCols?'1':'0'); }catch(e){} renderBody(); }
 function toggleIdxNote(){ showIdxNote=!showIdxNote; try{ localStorage.setItem('showIdxNote', showIdxNote?'1':'0'); }catch(e){} renderBody(); }
+function toggleOrigCol(){ showOrigCol=!showOrigCol; try{ localStorage.setItem('showOrigCol', showOrigCol?'1':'0'); }catch(e){} renderBody(); }
 function toggleLocCol(){ showLocCol=!showLocCol; try{ localStorage.setItem('showLocCol', showLocCol?'1':'0'); }catch(e){} renderBody(); }
 function toggleVerCols(){ showVerCols=!showVerCols; try{ localStorage.setItem('showVerCols', showVerCols?'1':'0'); }catch(e){} renderBody(); }
 function toggleNoteCol(){ showNoteCol=!showNoteCol; try{ localStorage.setItem('showNoteCol', showNoteCol?'1':'0'); }catch(e){} renderBody(); }
