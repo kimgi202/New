@@ -1275,6 +1275,40 @@ tr.idx-alarm>td:first-child{box-shadow:inset 3px 0 0 #e5484d}
 /* ═════ TMF Namer ═════ */
 .tmfn-open{border:1px solid #dfe6e2;background:#f4f8f6;border-radius:10px;font-size:12px;line-height:1;padding:3px 4px;cursor:pointer;flex:none;margin-top:2px}
 .tmfn-open:hover{background:#e3efe7}
+/* ═════ 심의별 서버명 (🗄️) ═════
+   '서버 내 파일명' 칸에는 파일명만 적고, 서버(저장 위치)는 심의마다 한 번만 적는다. */
+.srv-th-in{display:flex;align-items:center;gap:5px;min-width:0;padding-right:6px}
+.srv-th-label{flex:none}
+.srv-open{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--n5);background:#fff;color:var(--n3);border-radius:10px;font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:3px 7px 3px 4px;cursor:pointer;flex:none;white-space:nowrap}
+.srv-open:hover{border-color:var(--accent);color:var(--accent)}
+.srv-open.on{border:1px solid var(--accent);background:var(--accent-xl);padding:3px 4px}
+.srv-open:focus-visible,.srv-chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 긴 경로는 앞쪽을 줄이고 끝(실제 폴더)을 보여 준다 */
+.srv-chip{flex:0 1 auto;min-width:0;max-width:100%;direction:rtl;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-xl);border:1px solid var(--n7);border-radius:999px;padding:2px 9px;cursor:pointer;font-family:inherit;line-height:1.4}
+.srv-chip:hover{border-color:var(--accent)}
+#srvOverlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:99990;display:none;align-items:flex-start;justify-content:center;padding:12vh 14px 4vh;overflow:auto}
+#srvModal{background:#fff;border-radius:16px;padding:18px 20px 16px;width:540px;max-width:100%;box-shadow:0 18px 50px rgba(0,0,0,.25);font-size:14px;color:var(--n0);box-sizing:border-box}
+#srvModal .srv-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+#srvModal .srv-head h3{margin:0;font-size:18px;font-weight:700}
+#srvModal .srv-where{font-size:12px;color:var(--n2);background:var(--surf);border:1px solid var(--n7);border-radius:999px;padding:2px 9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#srvModal .srv-x{margin-left:auto;border:none;background:none;font-size:18px;cursor:pointer;color:var(--n3)}
+#srvModal .srv-label{display:block;font-size:13px;font-weight:700;color:var(--n1);margin-bottom:4px}
+#srvModal .srv-label span{font-weight:500;color:var(--n3);margin-left:4px}
+#srvModal #srvInput{width:100%;font:inherit;font-size:15px;color:var(--n0);background:#fff;border:1px solid var(--n7);border-radius:10px;padding:8px 10px;box-sizing:border-box;outline:none}
+#srvModal #srvInput:focus{border-color:var(--accent)}
+#srvModal .srv-hint{font-size:12.5px;color:var(--n3);margin-top:6px;line-height:1.5}
+#srvModal .srv-sub{font-size:12px;font-weight:700;color:var(--n2);margin:14px 0 6px}
+#srvModal .srv-picks{display:flex;flex-direction:column;gap:4px}
+#srvModal .srv-pick{font:inherit;font-size:13px;text-align:left;color:var(--n0);background:var(--surf);border:1px solid var(--n7);border-radius:10px;padding:5px 9px;cursor:pointer;word-break:break-all}
+#srvModal .srv-pick:hover{border-color:var(--accent);background:var(--accent-xl)}
+#srvModal .srv-split{margin-top:14px;border:1px solid #f1d9a8;background:#fffaf0;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5}
+#srvModal .srv-split code{display:block;font-family:inherit;font-size:13px;font-weight:600;background:#fff;border:1px solid #f1d9a8;border-radius:8px;padding:4px 8px;margin:6px 0 8px;word-break:break-all}
+#srvModal .srv-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px;border-top:1px dashed var(--n7);padding-top:12px}
+#srvModal .srv-btns .sp{flex:1}
+#srvModal button.srv-b{font:inherit;font-weight:600;font-size:13px;background:#fff;color:var(--n0);border:1px solid var(--n7);border-radius:10px;padding:6px 13px;cursor:pointer}
+#srvModal button.srv-b:hover{border-color:var(--accent)}
+#srvModal button.srv-b.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+#srvModal button.srv-b.danger{color:#a33}
 #tmfnOverlay{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:99990;display:none;align-items:flex-start;justify-content:center;padding:4vh 14px;overflow:auto}
 #tmfnModal{--line:var(--n7);--surface:#fff;--surface2:#f2f5f3;--ink:#243029;--muted:var(--n2);
   --accent:#2F7A46;--accent-ink:#fff;--accent-soft:#E3EFE5;--qual:#2B6E8A;--date:#A16A10;--sfx:var(--n2);--idx:#7A5FA0;--focus:#2F7A46;
@@ -6541,6 +6575,184 @@ function setupSecResizers(){
   });
 }
 
+/* ━━━ 심의별 서버명 (🗄️) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   '서버 내 파일명' 칸에는 파일명만 적는다.
+   서버(저장 위치)는 한 심의 안에서 서류마다 달라지지 않으므로
+   심의(섹션)마다 한 번만 적어 sec.meta.serverName 에 둔다.
+   표 머리글의 🗄️ 가 입구이고, 적어 둔 서버명은 그 옆에 보인다(누르면 복사). */
+function secServerName(sec){ return String((sec&&sec.meta&&sec.meta.serverName)||'').trim(); }
+function srvThHtml(code,sec){
+  const name=secServerName(sec);
+  return `<div class="srv-th-in">`
+    +`<button type="button" class="srv-open${name?' on':''}" title="${name?'이 심의의 서버명 수정':'이 심의의 서버명(저장 위치) 적기'}" onclick="openSrvModal('${code}','${sec.id}')">🗄️${name?'':'<span>서버명 적기</span>'}</button>`
+    +`<span class="srv-th-label">서버 내 파일명</span>`
+    +(name?`<button type="button" class="srv-chip" title="${esc(name)}&#10;(누르면 복사돼요)" onclick="srvCopy('${code}','${sec.id}')"><bdi>${esc(name)}</bdi></button>`:'')
+    +`</div>`;
+}
+function srvClip(text,msg){
+  const done=()=>{ try{ showToastNow(msg); }catch(e){} };
+  const fallback=()=>{
+    try{
+      const ta=document.createElement('textarea'); ta.value=text;
+      ta.style.cssText='position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove(); done();
+    }catch(e){ try{ showToastNow('복사하지 못했어요 — 직접 선택해서 복사해 주세요'); }catch(_){} }
+  };
+  try{ navigator.clipboard.writeText(text).then(done,fallback); }catch(e){ fallback(); }
+}
+function srvCopy(code,secId){
+  const name=secServerName(getSec(code,secId));
+  if(name) srvClip(name,'📋 서버명을 복사했어요');
+}
+/* 파일명 칸에 경로까지 같이 적어 둔 예전 자료를 나눠 주기 위한 판별.
+   '\\' 는 Windows 파일명에 쓸 수 없는 글자라 경로로 본다.
+   '/' 는 'v1.0/v2.0' 같은 표기에도 쓰이므로, 드라이브·UNC·URL 로 시작하거나
+   폴더가 두 단계 이상일 때만 경로로 본다. */
+function srvSplitLine(line){
+  const t=String(line||'').trim();
+  const i=Math.max(t.lastIndexOf('\\'), t.lastIndexOf('/'));
+  if(i<=0) return null;
+  const dir=t.slice(0,i).replace(/[\\/]+$/,'').trim(), file=t.slice(i+1).trim();
+  if(!dir||!file) return null;
+  const pathLike = t.charAt(i)==='\\' || /^(\\\\|[A-Za-z]:|\/|https?:\/\/)/.test(dir) || /[\\/]/.test(dir);
+  return pathLike?{dir,file}:null;
+}
+function srvKey(x){ return String(x||'').replace(/[\\/]+$/,'').trim().toLowerCase(); }
+// 이 심의의 파일명 칸에 적힌 경로를 모아, 옮길 대상(dir)과 해당 문서 수를 돌려준다.
+//   서버명이 이미 있으면 → 그 서버명과 같은 경로만 대상
+//   서버명이 비어 있으면 → 가장 많이 적힌 경로가 대상
+function srvFindPaths(sec){
+  const cur=secServerName(sec), cnt=new Map();
+  (sec.rows||[]).forEach(r=>{
+    const seen=new Set();
+    String(r.serverFileName||'').split('\n').forEach(line=>{
+      const sp=srvSplitLine(line); if(!sp) return;
+      const k=srvKey(sp.dir); if(seen.has(k)) return; seen.add(k);
+      const o=cnt.get(k)||{dir:sp.dir,n:0}; o.n++; cnt.set(k,o);
+    });
+  });
+  if(!cnt.size) return null;
+  if(cur){ const hit=cnt.get(srvKey(cur)); return hit?{dir:cur,n:hit.n,move:false}:null; }
+  let best=null; cnt.forEach(o=>{ if(!best||o.n>best.n) best=o; });
+  return {dir:best.dir,n:best.n,move:true};
+}
+function srvStripPaths(sec,dir){
+  const key=srvKey(dir); let changed=0;
+  (sec.rows||[]).forEach(r=>{
+    const before=String(r.serverFileName||''); if(!before) return;
+    const after=before.split('\n').map(line=>{ const sp=srvSplitLine(line); return (sp&&srvKey(sp.dir)===key)?sp.file:line; }).join('\n');
+    if(after===before) return;
+    // 서식본(굵게·형광 등)이 있으면 같은 경로를 거기서도 걷어낸다.
+    // 걷어낸 결과가 평문과 어긋나면 서식본을 버리고 평문으로 보여 준다(내용이 틀리게 보이는 것보다 낫다).
+    if(r.serverFileNameHtml){
+      let h=String(r.serverFileNameHtml);
+      before.split('\n').forEach(line=>{
+        const sp=srvSplitLine(line); if(!sp||srvKey(sp.dir)!==key) return;
+        const t=line.trim(), pre=escHtml2(t.slice(0,t.length-sp.file.length));
+        if(pre) h=h.split(pre).join('');
+      });
+      const tmp=document.createElement('div'); tmp.innerHTML=h.replace(/<br\s*\/?>/gi,'\n');
+      const norm=x=>String(x||'').replace(/\u00a0/g,' ').split('\n').map(l=>l.trim()).join('\n').trim();
+      if(norm(tmp.textContent)===norm(after)) r.serverFileNameHtml=h; else delete r.serverFileNameHtml;
+    }
+    r.serverFileName=after; changed++;
+  });
+  return changed;
+}
+let __srvCtx=null;
+function srvEnsureModal(){
+  let o=document.getElementById('srvOverlay');
+  if(o) return o;
+  o=document.createElement('div'); o.id='srvOverlay';
+  o.innerHTML=`<div id="srvModal" role="dialog" aria-modal="true" aria-labelledby="srvTitle">
+    <div class="srv-head"><h3 id="srvTitle">🗄️ 서버 관리</h3><span class="srv-where" id="srvWhere"></span><button type="button" class="srv-x" onclick="closeSrvModal()" title="닫기">✕</button></div>
+    <label class="srv-label" for="srvInput">서버명<span>이 심의 서류를 저장한 서버 · 폴더</span></label>
+    <input type="text" id="srvInput" autocomplete="off" spellcheck="false" placeholder="예: \\\\서버\\과제 폴더\\05 IRB\\5.1 Initial">
+    <div class="srv-hint">한 심의 안에서는 서버가 같으니 여기 한 번만 적어요. 표의 '서버 내 파일명' 칸에는 파일명만 적으면 돼요.</div>
+    <div id="srvPicks"></div>
+    <div id="srvSplit"></div>
+    <div class="srv-btns">
+      <button type="button" class="srv-b primary" onclick="srvSave()">저장</button>
+      <button type="button" class="srv-b" onclick="srvCopyInput()">📋 복사</button>
+      <span class="sp"></span>
+      <button type="button" class="srv-b danger" id="srvClearBtn" onclick="srvClear()">서버명 지우기</button>
+    </div>
+  </div>`;
+  o.addEventListener('mousedown',e=>{ if(e.target===o) closeSrvModal(); });
+  o.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ e.preventDefault(); closeSrvModal(); }
+    else if(e.key==='Enter' && e.target && e.target.id==='srvInput' && !e.isComposing){ e.preventDefault(); srvSave(); }
+  });
+  document.body.appendChild(o);
+  return o;
+}
+function srvCtxSec(){ return __srvCtx?getSec(__srvCtx.code,__srvCtx.secId):null; }
+function openSrvModal(code,secId){
+  const sec=getSec(code,secId); if(!sec) return;
+  __srvCtx={code,secId};
+  const o=srvEnsureModal();
+  const site=sites.find(x=>x.code===code);
+  document.getElementById('srvWhere').textContent=[code,site&&site.name,sec.title].filter(Boolean).join(' · ');
+  const inp=document.getElementById('srvInput'); inp.value=secServerName(sec);
+  document.getElementById('srvClearBtn').style.display=secServerName(sec)?'':'none';   // 적어 둔 게 있을 때만
+  srvRenderExtras();
+  o.style.display='flex';
+  setTimeout(()=>{ try{ inp.focus(); inp.select(); }catch(e){} },0);
+}
+function closeSrvModal(){ const o=document.getElementById('srvOverlay'); if(o) o.style.display='none'; __srvCtx=null; }
+function srvRenderExtras(){
+  const sec=srvCtxSec(); if(!sec) return;
+  const code=__srvCtx.code, cur=srvKey(secServerName(sec));
+  // 다른 심의에 적어 둔 서버명 (같은 기관 먼저) — 비슷한 경로를 다시 치지 않도록
+  const seen=new Set(cur?[cur]:[]), names=[];
+  const add=s=>{ const n=secServerName(s), k=srvKey(n); if(n&&!seen.has(k)){ seen.add(k); names.push(n); } };
+  (sections[code]||[]).forEach(s=>{ if(s.id!==sec.id) add(s); });
+  Object.keys(sections||{}).forEach(c=>{ if(c!==code) (sections[c]||[]).forEach(add); });
+  document.getElementById('srvPicks').innerHTML=names.length
+    ?`<div class="srv-sub">다른 심의에 적어 둔 서버명 — 누르면 위 칸에 채워져요</div><div class="srv-picks">`
+      +names.slice(0,6).map(n=>`<button type="button" class="srv-pick" data-v="${esc(n)}" onclick="srvPick(this)">${esc(n)}</button>`).join('')+`</div>`
+    :'';
+  const f=srvFindPaths(sec);
+  document.getElementById('srvSplit').innerHTML=f
+    ?`<div class="srv-split">파일명 칸에 ${f.move?'경로가':'이 서버명이'} 같이 적힌 문서가 <b>${f.n}건</b> 있어요.<code>${esc(f.dir)}</code>`
+      +`<button type="button" class="srv-b" onclick="srvMovePaths()">${f.move?'이 경로를 서버명으로 옮기고 파일명만 남기기':'파일명만 남기기'}</button></div>`
+    :'';
+}
+function srvPick(btn){ const inp=document.getElementById('srvInput'); inp.value=btn.dataset.v||''; inp.focus(); }
+function srvCopyInput(){
+  const v=String(document.getElementById('srvInput').value||'').trim();
+  if(v) srvClip(v,'📋 서버명을 복사했어요');
+}
+function srvSetName(sec,val){
+  const meta=ensureSecMeta(sec), v=String(val||'').trim();
+  if(v) meta.serverName=v; else delete meta.serverName;
+}
+function srvSave(){
+  const sec=srvCtxSec(); if(!sec) return;
+  const v=String(document.getElementById('srvInput').value||'').trim();
+  const was=secServerName(sec);
+  srvSetName(sec,v);
+  closeSrvModal();
+  if(v!==was){ saveData(); renderBody(); }
+  try{ showToastNow(v?'🗄️ 서버명을 저장했어요':(was?'서버명을 지웠어요':'서버명이 비어 있어요')); }catch(e){}
+}
+function srvClear(){
+  const sec=srvCtxSec(); if(!sec) return;
+  if(!confirm('이 심의의 서버명을 지울까요?\n(파일명 칸에 적은 내용은 그대로 남아요)')) return;
+  document.getElementById('srvInput').value='';
+  srvSave();
+}
+function srvMovePaths(){
+  const sec=srvCtxSec(); if(!sec) return;
+  const f=srvFindPaths(sec); if(!f) return;
+  try{ recordSnapshot('서버명 분리 전'); }catch(e){}   // ⏱ 백업 복원으로 되돌릴 수 있게
+  if(f.move) srvSetName(sec,f.dir);
+  const n=srvStripPaths(sec,f.dir);
+  closeSrvModal();
+  saveData(); renderBody();
+  try{ showToastNow((f.move?'경로를 서버명으로 옮기고 ':'')+'문서 '+n+'건에 파일명만 남겼어요'); }catch(e){}
+}
+
 function renderSection(code, sec){
   const isOpen=!collapsed[code+sec.id];
   const tot=sec.rows.length;
@@ -6573,7 +6785,7 @@ function renderSection(code, sec){
         <th><input type="checkbox" id="selectAllCb_${sec.id}" ${sec.rows.length&&sec.rows.every(r=>r.selected)?'checked':''} title="이 섹션의 모든 문서 선택 / 해제" onchange="toggleSelectAll('${code}','${sec.id}')"></th>
         <th title="문서 종류 (신청서·의뢰서·동의서·통지서 등). 추가할 때 선택해요.">구분<span class="col-rsz" data-ci="2"></span></th>
         <th title="문서 이름. 더블클릭하면 이름을 수정할 수 있어요.">문서명<span class="col-rsz" data-ci="3"></span></th>
-        <th title="사내 서버에 저장한 위치/파일명(경로)을 적어요. 🏷️ 를 누르면 규칙에 맞는 파일명을 만들어 넣어줘요.">서버 내 파일명<span class="col-rsz" data-ci="4"></span></th>
+        <th title="파일명만 적어요. 서버(저장 위치)는 🗄️ 에서 이 심의에 한 번만 적으면 돼요. 🏷️ 를 누르면 규칙에 맞는 파일명을 만들어 넣어줘요.">${srvThHtml(code,sec)}<span class="col-rsz" data-ci="4"></span></th>
         <th title="문서 버전. 동의서는 Master_Site, 변경대비표는 v1.0 → v2.0 형태로 적어요.">버전<span class="col-rsz" data-ci="5"></span></th>
         <th title="해당 버전의 효력 발생일(Effective Date).">Effective Date<span class="col-rsz" data-ci="6"></span></th>
         <th title="진행 상태: 대기 / 진행중 / 완료 / 이슈 / 해당없음.">상태<span class="col-rsz" data-ci="7"></span></th>
@@ -6717,7 +6929,7 @@ function rowHtml(code,secId,idx,row,total){
       </div>
     </td>
     <td>${searchTerm.trim()?`<span class="doc-name-display">${highlight(row.name)}</span>`:richField('sec',{code,sec:secId,idx},'name',row,'문서명','rich-docname')}${histTxt}</td>
-    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR·IDV 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'serverFileName',row,'서버 경로/파일명','tmf-input rich-mono')}</div></div></td>
+    <td><div style="display:flex;align-items:flex-start;gap:3px"><button class="tmfn-open" title="TMF 파일명 생성 (BIS·CVF·CBR·IDV 규칙)" onclick="openTmfNamer('${code}','${secId}',${idx})">🏷️</button><div style="flex:1;min-width:0">${richField('sec',{code,sec:secId,idx},'serverFileName',row,'파일명','tmf-input rich-mono')}</div></div></td>
     <td>${row.needVer?
       (row.name.includes('동의서')?
         `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap"><input class="ver-input${verAlertCls(code,row)}" title="${esc(verAlertTip(code,row))}" style="width:65px;flex-shrink:0" placeholder="Master" value="${esc(row.masterVer||'')}" onchange="${setter},'masterVer',this.value)"><span style="color:#a3a3a3;font-size:14px;flex-shrink:0">_</span><input class="ver-input" style="width:65px;flex-shrink:0" placeholder="Site" value="${esc(row.siteVer||'')}" onchange="${setter},'siteVer',this.value)"></div>`
@@ -7227,7 +7439,7 @@ function deleteSite(code){
 function exportCSV(){
   const head=['Contract No.(프로토콜)','Project','Protocol No.','Sponsor','Study Type',
     '기관코드','기관명','기관Contract No.','계약일','계약금액','의뢰사(기관)','PI','계약비고',
-    '섹션','문서명','구분','서버 내 파일명','버전','Master Ver.','Site Ver.',
+    '섹션','문서명','구분','서버명','서버 내 파일명','버전','Master Ver.','Site Ver.',
     'Effective Date','상태','승인서 승인일','승인서 통지일','CRA 제출일','PI 제출일',
     '접수일','승인일','비고'];
   let csv='\uFEFF'+head.map(csvQ).join(',')+'\n';
@@ -7245,7 +7457,7 @@ function exportCSV(){
             site.code, site.name, site.contractNo, site.contractDate, site.contractAmount,
             site.sponsor, site.piName, site.contractNote,
             sec.title, r.name, DTYPE_INFO[r.dtype]?.label||'',
-            r.serverFileName, r.ver, r.masterVer, r.siteVer, r.effectiveDate, st,
+            secServerName(sec), r.serverFileName, r.ver, r.masterVer, r.siteVer, r.effectiveDate, st,
             isApproval?meta.approvalDate:'', isApproval?meta.noticeDate:'',
             meta.craSubmitDate, meta.piSubmitDate, r.receiptDate, r.approveDate, r.note
           ].map(csvQ1).join(',')+'\n';
@@ -7398,7 +7610,7 @@ function applySiteImport(data){
 // 기관 섹션이 '만들어진 그대로(손대지 않음)'인지 — 가져오기 때 교체해도 되는지 판단
 function hoSecUntouched(sec){
   const m=sec.meta||{};
-  if(['approvalDate','noticeDate','craSubmitDate','piSubmitDate','receiptDate','approvalStartDate','approvalEndDate','recvNo','reportableDate'].some(k=>String(m[k]||'').trim())) return false;
+  if(['approvalDate','noticeDate','craSubmitDate','piSubmitDate','receiptDate','approvalStartDate','approvalEndDate','recvNo','reportableDate','serverName'].some(k=>String(m[k]||'').trim())) return false;
   if(Array.isArray(m.resubmits)&&m.resubmits.length) return false;
   if(Array.isArray(sec.attachments)&&sec.attachments.length) return false;
   return (sec.rows||[]).every(r=>(r.status||'pend')==='pend'
